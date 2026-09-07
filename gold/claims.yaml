@@ -1,0 +1,417 @@
+# Gold set — claims.
+#
+# Hand-labelled from the source PDFs BEFORE the comparability gate exists, so
+# the gate is built against a target rather than scored after the fact.
+#
+# Every entry carries `quote_contains`, a string that must appear in the raw
+# text of the cited page. `python -m fkl.cli gold --verify` checks all of them
+# against the PDFs, which makes this file self-validating: a wrong page number
+# or a mistyped figure fails immediately instead of quietly becoming the
+# standard that everything else is measured against.
+#
+# Canonical values are in base units — rupees, not millions — matching
+# `claims.value_canonical`.
+
+documents:
+  prospectus: starter-datasets/delhivery/01-delhivery-prospectus-2022-excerpt.pdf
+  ar: starter-datasets/delhivery/02-delhivery-annual-report-fy24-excerpt.pdf
+  deck: starter-datasets/delhivery/03-delhivery-q4-fy24-earnings-presentation.pdf
+  survey: starter-datasets/india-macroeconomy/01-india-economic-survey-2024-25-excerpt.pdf
+  rbi: starter-datasets/india-macroeconomy/02-rbi-annual-report-2024-25-excerpt.pdf
+  imf: starter-datasets/india-macroeconomy/03-imf-india-2025-article-iv-excerpt.pdf
+
+claims:
+
+  # --- case 1: one fact, three spellings, two documents ---------------------
+
+  - id: ar-p35-revenue-consolidated
+    doc: ar
+    page: 35
+    subject: Delhivery Limited
+    metric: revenue from operations
+    value_raw: "81,415.38"
+    canonical: 81415380000
+    unit: {dimension: currency, currency: INR, scale: million}
+    period: FY2024
+    qualifiers: {consolidation: consolidated}
+    quote_contains: "Revenue from contracts with customers"
+    note: >
+      The unit is never stated beside the number. It is declared once at page
+      scope as "(All amounts in Indian Rupees in million...)", which is the
+      whole reason context inheritance exists.
+
+  - id: deck-p5-revenue-fy24
+    doc: deck
+    page: 5
+    subject: Delhivery Limited
+    metric: revenue from operations
+    value_raw: "8,142"
+    canonical: 81420000000
+    unit: {dimension: currency, currency: INR, scale: crore}
+    period: FY2024
+    qualifiers: {consolidation: consolidated}
+    quote_contains: "₹8,142 Cr"
+    note: >
+      Same fact as ar-p35-revenue-consolidated, in crore rather than million.
+      0.006% apart, which is the deck rounding to the nearest crore.
+
+  - id: ar-p35-total-income-fy24
+    doc: ar
+    page: 35
+    subject: Delhivery Limited
+    metric: total income
+    value_raw: "85,942.34"
+    canonical: 85942340000
+    unit: {dimension: currency, currency: INR, scale: million}
+    period: FY2024
+    qualifiers: {consolidation: consolidated}
+    quote_contains: "85,942.34"
+
+  - id: deck-p16-total-income-fy24
+    doc: deck
+    page: 16
+    subject: Delhivery Limited
+    metric: total income
+    value_raw: "8,594"
+    canonical: 85940000000
+    unit: {dimension: currency, currency: INR, scale: crore}
+    period: FY2024
+    qualifiers: {consolidation: consolidated}
+    quote_contains: "8,594"
+
+  # --- case 3a: reconciled by consolidation basis ---------------------------
+  #
+  # Both bases sit in one table on one page, under the column headers
+  # "Standalone - FY ended" and "Consolidated - FY ended". A system that reads
+  # the numbers without the headers reports a 9.2% contradiction.
+
+  - id: ar-p21-revenue-standalone
+    doc: ar
+    page: 21
+    subject: Delhivery Limited
+    metric: revenue from operations
+    value_raw: "74,540.82"
+    canonical: 74540820000
+    unit: {dimension: currency, currency: INR, scale: million}
+    period: FY2024
+    qualifiers: {consolidation: standalone}
+    quote_contains: "74,540.82"
+
+  - id: ar-p21-revenue-consolidated
+    doc: ar
+    page: 21
+    subject: Delhivery Limited
+    metric: revenue from operations
+    value_raw: "81,415.38"
+    canonical: 81415380000
+    unit: {dimension: currency, currency: INR, scale: million}
+    period: FY2024
+    qualifiers: {consolidation: consolidated}
+    quote_contains: "81,415.38"
+
+  - id: ar-p21-revenue-standalone-fy23
+    doc: ar
+    page: 21
+    subject: Delhivery Limited
+    metric: revenue from operations
+    value_raw: "66,586.61"
+    canonical: 66586610000
+    unit: {dimension: currency, currency: INR, scale: million}
+    period: FY2023
+    qualifiers: {consolidation: standalone}
+    quote_contains: "66,586.61"
+
+  # --- case 2: a genuine contradiction --------------------------------------
+  #
+  # Same entity, same metric, same period, same modality, two institutions.
+  # Nothing reconciles this and nothing should.
+
+  - id: rbi-p16-gdp-fy26-projection
+    doc: rbi
+    page: 16
+    subject: India
+    metric: real GDP growth
+    value_raw: "6.5"
+    canonical: 6.5
+    unit: {dimension: percent}
+    period: FY2026
+    modality: projection
+    quote_contains: "real GDP growth for 2025-26 is projected at 6.5 per cent"
+
+  - id: imf-p12-gdp-fy26-projection
+    doc: imf
+    page: 12
+    subject: India
+    metric: real GDP growth
+    value_raw: "6.6"
+    canonical: 6.6
+    unit: {dimension: percent}
+    period: FY2026
+    modality: projection
+    quote_contains: "Current 6.6"
+    note: >
+      From the revision table, where the "Current" row supersedes "July WEO
+      6.4". The same page also says growth returns "to its potential rate of
+      6.5 percent over the medium term" — a different metric, and an easy
+      wrong pairing to make.
+
+  # --- case 3b: reconciled by estimate vintage ------------------------------
+  #
+  # Same entity, same metric, same period. 6.4 against 6.5, and both correct:
+  # the Survey quotes the first advance estimates published in January, the
+  # other two report the year as it landed.
+
+  - id: survey-p13-gdp-fy25-advance
+    doc: survey
+    page: 13
+    subject: India
+    metric: real GDP growth
+    value_raw: "6.4"
+    canonical: 6.4
+    unit: {dimension: percent}
+    period: FY2025
+    modality: estimate
+    qualifiers: {estimate_vintage: first advance estimates}
+    quote_contains: "growth for FY25 is estimated to be 6.4 per cent"
+
+  - id: rbi-p7-gdp-fy25-actual
+    doc: rbi
+    page: 7
+    subject: India
+    metric: real GDP growth
+    value_raw: "6.5"
+    canonical: 6.5
+    unit: {dimension: percent}
+    period: FY2025
+    modality: actual
+    quote_contains: "growth moderated to 6.5 per cent in 2024-25"
+
+  - id: imf-p9-gdp-fy25-actual
+    doc: imf
+    page: 9
+    subject: India
+    metric: real GDP growth
+    value_raw: "6.5"
+    canonical: 6.5
+    unit: {dimension: percent}
+    period: FY2025
+    modality: actual
+    quote_contains: "real GDP grew by 6.5 percent in FY2024/25"
+    note: >
+      Writes the same twelve months as "FY2024/25" where the RBI writes
+      "2024-25". Corroboration is impossible until those normalise.
+
+  # --- case 3c: reconciled by time (interval closure) -----------------------
+
+  - id: prospectus-p29-suvir-director
+    doc: prospectus
+    page: 29
+    claim_type: state
+    subject: Suvir Suren Sujan
+    metric: Non-Executive Director
+    value_text: Delhivery Limited
+    valid_to_is_open: true
+    quote_contains: "Suvir"
+    note: >
+      The 2022 prospectus knows of no end date. That is not a claim that he
+      serves forever — it is an open interval, and the annual report closes it.
+
+  - id: ar-p90-suvir-resigned
+    doc: ar
+    page: 90
+    claim_type: state
+    subject: Suvir Suren Sujan
+    metric: Non-Executive Director
+    value_text: Delhivery Limited
+    valid_from: 2022-05-24
+    valid_to: 2023-08-24
+    quote_contains: "resigned w.e.f. August 24, 2023"
+
+  # --- the Company Secretary succession, cardinality 1 ----------------------
+
+  - id: ar-p90-bansal-cs
+    doc: ar
+    page: 90
+    claim_type: state
+    subject: Sunil Kumar Bansal
+    metric: Company Secretary
+    value_text: Delhivery Limited
+    valid_to: 2023-05-31
+    quote_contains: "Bansal"
+
+  - id: ar-p90-vivek-cs
+    doc: ar
+    page: 90
+    claim_type: state
+    subject: Vivek Kumar
+    metric: Company Secretary
+    value_text: Delhivery Limited
+    valid_from: 2023-06-01
+    valid_to: 2024-03-27
+    quote_contains: "resigned w.e.f. March 27, 2024"
+
+  - id: ar-p90-rawat-cs
+    doc: ar
+    page: 90
+    claim_type: state
+    subject: Madhulika Rawat
+    metric: Company Secretary
+    value_text: Delhivery Limited
+    valid_from: 2024-05-17
+    valid_to_is_open: true
+    quote_contains: "Madhulika Rawat"
+
+  # --- case 1b: non-numeric corroboration -----------------------------------
+
+  - id: ar-p29-registered-office
+    doc: ar
+    page: 29
+    claim_type: state
+    subject: Delhivery Limited
+    metric: registered office
+    value_text: >-
+      N24-N34, S24-S34, Air Cargo Logistics Centre-II, Opposite Gate 6 Cargo
+      Terminal, IGI Airport, New Delhi 110037
+    quote_contains: "IGI Airport, New Delhi 110037"
+
+  - id: prospectus-p29-registered-office
+    doc: prospectus
+    page: 29
+    claim_type: state
+    subject: Delhivery Limited
+    metric: registered office
+    value_text: >-
+      N24-N34, S24-S34 Air Cargo Logistics Centre-II Opposite Gate 6 Cargo
+      Terminal Indira Gandhi International Airport New Delhi 110037
+    quote_contains: "Indira Gandhi International Airport"
+    note: >
+      The same address. "IGI Airport" against "Indira Gandhi International
+      Airport" is an abbreviation, not a different location, and no numeric
+      tolerance helps here.
+
+  # --- case 3d: identity under change ---------------------------------------
+
+  - id: prospectus-p29-cin
+    doc: prospectus
+    page: 29
+    claim_type: state
+    subject: Delhivery Limited
+    metric: CIN
+    value_text: U63090DL2011PLC221234
+    quote_contains: "U63090DL2011PLC221234"
+
+  - id: ar-p29-cin
+    doc: ar
+    page: 29
+    claim_type: state
+    subject: Delhivery Limited
+    metric: CIN
+    value_text: L63090DL2011PLC221234
+    quote_contains: "L63090DL2011PLC221234"
+    note: >
+      The prefix flips from unlisted to listed at IPO. The registration number
+      221234 does not change, and the prospectus prints it separately as
+      "Registration Number: 221234".
+
+  # --- things that must NOT be linked ---------------------------------------
+  #
+  # A gold set of only positives measures nothing: a system that links
+  # everything would score perfectly on it.
+
+  - id: ar-p35-express-parcel-revenue-fy24
+    doc: ar
+    page: 35
+    subject: Delhivery Limited
+    metric: express parcel revenue
+    value_raw: "50,765.87"
+    canonical: 50765870000
+    unit: {dimension: currency, currency: INR, scale: million}
+    period: FY2024
+    qualifiers: {consolidation: consolidated}
+    quote_contains: "50,765.87"
+    note: >
+      Sits in the same service-line table as PTL freight, one row above it,
+      under the same column headers. Two revenue figures in one currency for
+      one company in one year that must never be compared.
+
+  - id: ar-p35-ptl-freight-revenue-fy24
+    doc: ar
+    page: 35
+    subject: Delhivery Limited
+    metric: PTL freight revenue
+    value_raw: "15,174.05"
+    canonical: 15174050000
+    unit: {dimension: currency, currency: INR, scale: million}
+    period: FY2024
+    quote_contains: "15,174.05"
+
+  - id: ar-p35-other-income-fy24
+    doc: ar
+    page: 35
+    subject: Delhivery Limited
+    metric: other income
+    value_raw: "4,526.96"
+    canonical: 4526960000
+    unit: {dimension: currency, currency: INR, scale: million}
+    period: FY2024
+    qualifiers: {consolidation: consolidated}
+    quote_contains: "4,526.96"
+
+  - id: ar-p35-revenue-fy23
+    doc: ar
+    page: 35
+    subject: Delhivery Limited
+    metric: revenue from operations
+    value_raw: "72,253.01"
+    canonical: 72253010000
+    unit: {dimension: currency, currency: INR, scale: million}
+    period: FY2023
+    qualifiers: {consolidation: consolidated}
+    quote_contains: "72,253.01"
+
+  # --- the rounding case that breaks a fixed tolerance ----------------------
+
+  - id: ar-p35-traded-goods-fy23
+    doc: ar
+    page: 35
+    subject: Delhivery Limited
+    metric: revenue from sale of traded goods
+    value_raw: "16.54"
+    canonical: 16540000
+    unit: {dimension: currency, currency: INR, scale: million}
+    period: FY2023
+    qualifiers: {consolidation: consolidated}
+    quote_contains: "16.54"
+    note: >
+      The deck reports this same line as 2 crore. Twenty-one percent apart, and
+      both correct: one crore is the deck's entire precision at this magnitude.
+      A fixed relative tolerance calls this a contradiction.
+
+  - id: deck-p16-traded-goods-fy23
+    doc: deck
+    page: 16
+    subject: Delhivery Limited
+    metric: revenue from sale of traded goods
+    value_raw: "2"
+    canonical: 20000000
+    unit: {dimension: currency, currency: INR, scale: crore}
+    period: FY2023
+    quote_contains: "Revenue from traded goods"
+
+  # --- case 4: the extraction failure, kept as a case -----------------------
+
+  - id: deck-p8-ptl-freight-revenue-fy24
+    doc: deck
+    page: 8
+    subject: Delhivery Limited
+    metric: PTL freight revenue
+    value_raw: "1,517"
+    canonical: 15170000000
+    unit: {dimension: currency, currency: INR, scale: crore}
+    period: FY2024
+    quote_contains: "1,517"
+    requires_figures: true
+    note: >
+      Printed inside a chart. The number survives text extraction; the binding
+      to its series and year does not, so text-only extraction cannot attach
+      it and the claim is expected to be absent unless --figures is used.

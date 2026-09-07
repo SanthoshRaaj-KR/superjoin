@@ -1,0 +1,196 @@
+# Gold set — relations.
+#
+# The verdict each pair of claims should receive, labelled by hand before the
+# comparability gate exists. This is the target the gate is built against.
+#
+# Verdicts:
+#   CORROBORATES          same fact, agreeing values
+#   CONTRADICTS           comparable in every respect, and they disagree
+#   CONTEXTUAL            values differ, and a named axis explains why
+#   CONTEXTUAL_TEMPORAL   different periods; a trend, not a disagreement
+#   CLOSES_INTERVAL       a later assertion ends an earlier open one
+#   SUCCESSION            a cardinality-1 role passing between holders
+#   INSUFFICIENT_EVIDENCE a material axis is undetermined on one side
+#   INCOMPARABLE          not the same metric or not the same unit dimension
+#
+# `axis` names the field responsible. A CONTEXTUAL verdict without an axis is
+# not an explanation, it is a shrug — so every one of them names one.
+
+relations:
+
+  # --- case 1: corroboration ------------------------------------------------
+
+  - id: rel-cross-document-revenue
+    a: deck-p5-revenue-fy24
+    b: ar-p35-revenue-consolidated
+    verdict: CORROBORATES
+    axis: null
+    why: >
+      The same FY24 revenue in two documents and two scales — ₹8,142 Cr and
+      ₹81,415.38 Mn. 0.006% apart, which is the deck rounding to the nearest
+      crore. This pair is the reason the unit layer exists.
+
+  - id: rel-cross-document-total-income
+    a: deck-p16-total-income-fy24
+    b: ar-p35-total-income-fy24
+    verdict: CORROBORATES
+    axis: null
+    why: 8,594 Cr against 85,942.34 Mn — 0.003% apart.
+
+  - id: rel-same-fact-two-pages
+    a: ar-p21-revenue-consolidated
+    b: ar-p35-revenue-consolidated
+    verdict: CORROBORATES
+    axis: null
+    why: >
+      One document restating one figure, once in a directors' report summary
+      and once in the statement of profit and loss. Exact match.
+
+  # --- case 1b: non-numeric corroboration -----------------------------------
+
+  - id: rel-registered-office
+    a: prospectus-p29-registered-office
+    b: ar-p29-registered-office
+    verdict: CORROBORATES
+    axis: null
+    why: >
+      The same address two years apart. "Indira Gandhi International Airport"
+      and "IGI Airport" are one place, and no numeric tolerance reaches this —
+      it needs string normalisation of the value itself.
+
+  # --- case 2: genuine contradiction ----------------------------------------
+
+  - id: rel-gdp-fy26-rbi-vs-imf
+    a: rbi-p16-gdp-fy26-projection
+    b: imf-p12-gdp-fy26-projection
+    verdict: CONTRADICTS
+    axis: null
+    why: >
+      Same entity, same metric, same period, both projections. 6.5 against 6.6.
+      Two institutions forecasting differently, and nothing in either document
+      reconciles it. This is what should survive the gate.
+
+  # --- case 3a: reconciled by scope -----------------------------------------
+
+  - id: rel-standalone-vs-consolidated
+    a: ar-p21-revenue-standalone
+    b: ar-p21-revenue-consolidated
+    verdict: CONTEXTUAL
+    axis: consolidation
+    why: >
+      74,540.82 against 81,415.38 — 9.2% apart, on the same page of the same
+      document, and neither is wrong. One excludes subsidiaries. A system that
+      reports this as a contradiction has failed at the only thing that matters.
+
+  # --- case 3b: reconciled by estimate vintage ------------------------------
+
+  - id: rel-gdp-fy25-survey-vs-rbi
+    a: survey-p13-gdp-fy25-advance
+    b: rbi-p7-gdp-fy25-actual
+    verdict: CONTEXTUAL
+    axis: estimate_vintage
+    why: >
+      6.4 against 6.5 for the same year. The Economic Survey quotes the first
+      advance estimates published in January; the RBI reports the year as it
+      landed. The axis is discoverable from the Survey's own footnote rather
+      than hard-coded, which is the schema-evolution case.
+
+  - id: rel-gdp-fy25-rbi-vs-imf
+    a: rbi-p7-gdp-fy25-actual
+    b: imf-p9-gdp-fy25-actual
+    verdict: CORROBORATES
+    axis: null
+    why: >
+      Both 6.5 for the same year, written "2024-25" by one and "FY2024/25" by
+      the other. Corroboration across publishers, and impossible before period
+      normalisation.
+
+  # --- case 3c: reconciled by time ------------------------------------------
+
+  - id: rel-suvir-interval-closure
+    a: prospectus-p29-suvir-director
+    b: ar-p90-suvir-resigned
+    verdict: CLOSES_INTERVAL
+    axis: valid_time
+    why: >
+      The 2022 prospectus asserts an open directorship; the FY24 annual report
+      ends it in August 2023, after the prospectus was written. A refinement,
+      not a disagreement — the earlier document was not wrong about its own
+      moment. Calling this CONTRADICTS is the classic bitemporal mistake.
+
+  # --- the succession chain, cardinality 1 ----------------------------------
+
+  - id: rel-cs-bansal-to-vivek
+    a: ar-p90-bansal-cs
+    b: ar-p90-vivek-cs
+    verdict: SUCCESSION
+    axis: valid_time
+    why: >
+      Company Secretary is a cardinality-1 role. Bansal to May 31 2023, Vivek
+      from June 1 2023 — contiguous, so a handover rather than a conflict.
+
+  - id: rel-cs-vivek-to-rawat
+    a: ar-p90-vivek-cs
+    b: ar-p90-rawat-cs
+    verdict: SUCCESSION
+    axis: valid_time
+    gap_days: 51
+    why: >
+      Vivek to March 27 2024, Rawat from May 17 2024. A 51-day vacancy in a
+      role the company is statutorily required to fill. The gap is the finding,
+      and it only exists if intervals are modelled rather than overwritten.
+
+  # --- case 3d: identity under change ---------------------------------------
+
+  - id: rel-cin-change-at-listing
+    a: prospectus-p29-cin
+    b: ar-p29-cin
+    verdict: CONTEXTUAL
+    axis: valid_time
+    why: >
+      U63090DL2011PLC221234 becomes L63090DL2011PLC221234 at IPO. Two different
+      strings, one company — the registration number 221234 is unchanged. A
+      string comparison calls this a contradiction; an identifier-aware one
+      calls it a listing.
+
+  # --- things that must not be linked ---------------------------------------
+
+  - id: rel-different-segments
+    a: ar-p35-express-parcel-revenue-fy24
+    b: ar-p35-ptl-freight-revenue-fy24
+    verdict: INCOMPARABLE
+    axis: metric
+    why: >
+      Both are revenue, in rupees, for FY24, for one company. They are two
+      business lines and must never be compared. Their names embed at 0.62,
+      which is close enough that a similarity threshold alone would merge them.
+
+  - id: rel-different-periods
+    a: ar-p35-revenue-fy23
+    b: ar-p35-revenue-consolidated
+    verdict: CONTEXTUAL_TEMPORAL
+    axis: period
+    why: >
+      FY23 revenue against FY24 revenue. They differ because the company grew.
+      Reporting this as a contradiction is the most common way a naive system
+      manufactures conflicts, and it would do it thousands of times here.
+
+  - id: rel-revenue-vs-other-income
+    a: ar-p35-other-income-fy24
+    b: ar-p35-revenue-consolidated
+    verdict: INCOMPARABLE
+    axis: metric
+    why: Two different lines of one statement. Not the same quantity.
+
+  # --- the rounding case ----------------------------------------------------
+
+  - id: rel-traded-goods-rounding
+    a: ar-p35-traded-goods-fy23
+    b: deck-p16-traded-goods-fy23
+    verdict: CORROBORATES
+    axis: null
+    why: >
+      16.54 Mn against 2 Cr — 21% apart by any relative measure, and the same
+      fact. One crore is the deck's entire precision at this magnitude, so
+      tolerance has to come from the coarser unit's rounding granularity rather
+      than from a fixed percentage. This pair is why.

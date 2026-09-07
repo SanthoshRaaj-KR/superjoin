@@ -28,8 +28,8 @@ Under construction, phase by phase. This README is filled in as each layer lands
 | 0 | Skeleton, storage, one PDF end-to-end | done |
 | 1 | Layout analysis, context inheritance, grounding validator | done |
 | 1b | Figure pass: charts read as images, values still grounded | done, opt-in |
-| 2 | Units, periods, metric and entity registries | |
-| 2.5 | Hand-labelled gold set | |
+| 2 | Units, periods, metric and entity registries | done |
+| 2.5 | Hand-labelled gold set | done |
 | 3 | Comparability gate | |
 | 4 | Temporal engine, cross-document | |
 | 5 | React UI | |
@@ -62,6 +62,59 @@ python -m fkl.cli extract 1 --pages 20-24,33-36
 python -m fkl.cli report
 python -m fkl.cli export 1 -o ../out/ar-fy24.json
 ```
+
+Extraction is idempotent by page — re-running skips pages that already have
+claims, so a repeat costs nothing and cannot duplicate. `--force` redoes them.
+
+### The gold set
+
+~28 claims and 16 relations, hand-labelled from the source pages **before** the
+comparability gate exists, so the gate is built against a target rather than
+scored afterwards. No key needed:
+
+```bash
+python -m fkl.cli gold --verify
+```
+
+`--verify` re-reads all six PDFs and checks that every labelled quote is on the
+page it cites. That check is not ceremony: a gold set with a wrong page number
+does not fail loudly, it quietly becomes the definition of correct. Two entries
+in the first draft were wrong and this is what caught them.
+
+About a third of the labelled relations are pairs that must **not** be linked.
+A gold set of only true matches measures nothing, because a system that links
+everything scores perfectly on it.
+
+### Comparing values: what the numbers taught us
+
+Three findings from measuring this corpus, each of which changed a design:
+
+**No similarity threshold separates metric names.** Embedding fifteen predicate
+pairs with `text-embedding-3-small`:
+
+```
+should match      0.683 ─────────────────────── 0.944
+should NOT match  0.574 ─────────────── 0.846
+
+0.687  Revenue from contracts with customers :: Revenue from services   SAME
+0.846  Adjusted EBITDA :: EBITDA                                        DIFFERENT
+```
+
+Any cutoff loose enough to catch the first fuses the second. So embeddings
+generate candidates and an adjudicator decides, with dimension as a free
+pre-filter — that alone separates `Express Parcel revenue` from `Express Parcel
+shipments` at 0.801 without a model call.
+
+**Rounding tolerance cannot be a percentage.** `Revenues from sale of traded
+goods` FY23 is `16.54 ₹Mn` in the annual report and `2 ₹Cr` in the deck. That is
+21% apart and both are correct, because one crore is the deck's entire precision
+at that magnitude. Tolerance has to come from the coarser unit's granularity.
+
+**A year-end date is ambiguous and the ambiguity has to survive.** Annual report
+page 35 heads its columns `March 31, 2024` above revenue, meaning the year; page
+90 heads them identically above lease liabilities, meaning the instant. Only the
+section declaration separates them, so a period read without one is stored
+flagged rather than silently resolved.
 
 ### Do we need to read the images?
 

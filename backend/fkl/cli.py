@@ -84,6 +84,30 @@ def cmd_page(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_gold(args) -> int:
+    """Show the gold set, and optionally check it against the source PDFs.
+
+    Verification matters more than it sounds. A gold set with a wrong page
+    number or a mistyped figure does not fail loudly — it quietly becomes the
+    standard everything else is measured against. Two entries in the first draft
+    of this file were wrong, and this is what caught them.
+    """
+    from .gold import load, summarize, verify
+
+    gold = load()
+    print(summarize(gold))
+    if not args.verify:
+        return 0
+
+    result = verify(gold)
+    print()
+    print(f"checked {result.checked} quotes against the source PDFs")
+    for failure in result.failures:
+        print(f"  FAIL  {failure}")
+    print("  all verified" if result.ok else f"  {len(result.failures)} FAILED")
+    return 0 if result.ok else 1
+
+
 def parse_page_spec(spec: str | None) -> list[int] | None:
     """Turn '0-9,35,40' into a page list. None means every page."""
     if not spec:
@@ -232,6 +256,14 @@ def main(argv: list[str] | None = None) -> int:
         help="also read chart pages as images (opt-in; see fkl/llm/figures.py)",
     )
     p_extract.set_defaults(func=cmd_extract)
+
+    p_gold = sub.add_parser("gold", help="show the hand-labelled gold set")
+    p_gold.add_argument(
+        "--verify",
+        action="store_true",
+        help="re-read the PDFs and check every labelled quote is where it claims",
+    )
+    p_gold.set_defaults(func=cmd_gold)
 
     p_export = sub.add_parser("export", help="dump a document and its claims as JSON")
     p_export.add_argument("document_id", type=int)
