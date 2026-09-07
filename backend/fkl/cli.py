@@ -1,6 +1,8 @@
 """Command line entry point.
 
     python -m fkl.cli ingest <pdf> [--no-llm]
+    python -m fkl.cli extract <doc-id> [--pages 0-9,35]
+    python -m fkl.cli export <doc-id> [-o out/doc.json]
     python -m fkl.cli docs
     python -m fkl.cli models [--prefix gpt]
 
@@ -18,8 +20,10 @@ import sys
 from sqlalchemy import select
 
 from .db import init_db, session_scope
+from .export import export_document, write_json
 from .ingest import ingest_pdf
 from .models import Document
+from .pipeline import extract_document_claims
 
 
 def _configure_logging(verbose: bool) -> None:
@@ -41,6 +45,54 @@ def cmd_ingest(args: argparse.Namespace) -> int:
                   f"{result.n_pages} pages, {result.n_chars:,} chars")
             if result.profile is not None:
                 print(json.dumps(result.profile.model_dump(), indent=2))
+    return 0
+
+
+def parse_page_spec(spec: str | None) -> list[int] | None:
+    """Turn '0-9,35,40' into a page list. None means every page."""
+    if not spec:
+        return None
+    pages: set[int] = set()
+    for part in spec.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if "-" in part:
+            lo, hi = part.split("-", 1)
+            pages.update(range(int(lo), int(hi) + 1))
+        else:
+            pages.add(int(part))
+    return sorted(pages)
+
+
+def cmd_extract(args: argparse.Namespace) -> int:
+    init_db()
+    with session_scope() as session:
+        run = extract_document_claims(
+            session,
+            args.document_id,
+            pages=parse_page_spec(args.pages),
+            workers=args.workers,
+        )
+        print(
+            f"doc {run.document_id}: {run.pages_attempted} pages attempted, "
+            f"{run.pages_failed} failed -> {run.measurements} measurements, "
+            f"{run.states} states"
+        )
+        for page_no, note in run.notes:
+            print(f"  note p{page_no}: {note}")
+    return 0
+
+
+def cmd_export(args: argparse.Namespace) -> int:
+    init_db()
+    with session_scope() as session:
+        payload = export_document(session, args.document_id)
+        if args.output:
+            path = write_json(payload, args.output)
+            print(f"wrote {path}  ({payload['counts']})")
+        else:
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
     return 0
 
 
@@ -82,6 +134,17 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_ingest.add_argument("--force", action="store_true", help="re-ingest even if unchanged")
     p_ingest.set_defaults(func=cmd_ingest)
+
+    p_extract = sub.add_parser("extract", help="extract claims from an ingested document")
+    p_extract.add_argument("document_id", type=int)
+    p_extract.add_argument("--pages", help="page selection, e.g. 0-9,35,40 (default: all)")
+    p_extract.add_argument("--workers", type=int, default=6)
+    p_extract.set_defaults(func=cmd_extract)
+
+    p_export = sub.add_parser("export", help="dump a document and its claims as JSON")
+    p_export.add_argument("document_id", type=int)
+    p_export.add_argument("-o", "--output", help="write to this path instead of stdout")
+    p_export.set_defaults(func=cmd_export)
 
     p_docs = sub.add_parser("docs", help="list ingested documents")
     p_docs.set_defaults(func=cmd_docs)
