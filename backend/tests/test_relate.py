@@ -260,3 +260,59 @@ def test_as_of_answers_different_dates_differently(session):
     assert [h.filler for h in as_of(session, date(2023, 8, 1))] == ["Mr. Vivek Kumar"]
     assert [h.filler for h in as_of(session, date(2024, 6, 1))] == ["Mrs. Madhulika Rawat"]
     assert as_of(session, date(2024, 4, 15)) == []
+
+
+def test_one_run_is_one_generation_and_lists_only_its_own_survivors(session):
+    """The store is append-only, so an unfiltered query over relations returns
+    one row per pair *per run*. Listing survivors without the generation filter
+    printed every past run's findings as if they were new — and because the
+    duplicates sorted adjacently, five doubled pairs filled a top-ten list and
+    buried a real one underneath.
+    """
+    from fkl.relate import conflicts, relate_states
+
+    add(session, value_raw="6.5", value_num=6.5, unit_dimension="percent",
+        unit_scale=1.0, unit_currency=None, value_canonical=6.5, **fy("FY26"))
+    add(session, document_id=2, value_raw="6.6", value_num=6.6,
+        unit_dimension="percent", unit_scale=1.0, unit_currency=None,
+        value_canonical=6.6, **fy("FY26"))
+
+    first = relate_corpus(session)
+    second = relate_corpus(session)
+    assert second.generation == first.generation + 1
+
+    assert len(conflicts(session)) == 2            # both runs, unfiltered
+    assert len(conflicts(session, generation=second.generation)) == 1
+
+    # The interval engine shares the generation it is given, so one invocation
+    # of the CLI writes one generation across both engines.
+    states = relate_states(session, generation=second.generation)
+    assert states.generation == second.generation
+
+
+def test_both_engines_agree_on_what_one_role_is(session):
+    """The gate blocks on the resolved metric; the interval engine blocked on
+    the raw predicate string. A director redesignated from "Non Executive -
+    Nominee Director" to "Non-Executive Director" was therefore one seat to the
+    gate and two to the interval engine — so the gate compared the two titles as
+    text and reported a contradiction, and the engine that would have read the
+    dates never saw a seat with two holdings in it."""
+    from datetime import date
+
+    from fkl.relate import to_holding
+
+    session.add(Metric(id=9, canonical_name="non-executive director",
+                       dimension=None))
+    session.flush()
+    a = state(session, "Mr. Donald Francis Colleran", "Non Executive - Nominee Director",
+              metric_id=9, valid_to=date(2022, 5, 23))
+    b = state(session, "Mr. Donald Francis Colleran", "Non-Executive Director",
+              metric_id=9, valid_from=date(2022, 5, 24), valid_to=date(2023, 9, 27))
+
+    ha = to_holding(a, "Delhivery Limited", "non-executive director")
+    hb = to_holding(b, "Delhivery Limited", "non-executive director")
+    assert ha.predicate == hb.predicate
+
+    from fkl.temporal import group_slots
+
+    assert len(group_slots([ha, hb])) == 1

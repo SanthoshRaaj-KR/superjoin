@@ -111,6 +111,9 @@ def to_comparable(
         document=str(claim.document_id),
         page_no=claim.page_no,
         evidence_quote=claim.evidence_quote,
+        valid_from=claim.valid_from,
+        valid_to=claim.valid_to,
+        valid_to_is_open=bool(claim.valid_to_is_open),
     )
 
 
@@ -119,6 +122,11 @@ class RelateRun:
     blocks: int = 0
     claims: int = 0
     pairs: int = 0
+    # The generation these verdicts were written under. Carried back so a caller
+    # can list *this* run's survivors rather than every run's: the store is
+    # append-only, so an unfiltered query returns one row per pair per run, and
+    # the duplicates are silent — they look like independent findings.
+    generation: int = 0
     oversized_blocks: list[tuple[str, int]] = field(default_factory=list)
     verdicts: dict[str, int] = field(default_factory=dict)
     axes: dict[str, int] = field(default_factory=dict)
@@ -173,7 +181,7 @@ def relate_corpus(
             continue
         blocks[(claim.entity_id, claim.metric_id)].append(claim)
 
-    run = RelateRun(claims=len(claims))
+    run = RelateRun(claims=len(claims), generation=generation)
 
     for (entity_id, metric_id), members in blocks.items():
         if len(members) < 2:
@@ -309,7 +317,8 @@ def corroborations(session: Session, limit: int = 20, cross_document_only: bool 
 # --- state claims: the interval engine over a corpus ------------------------
 
 
-def to_holding(claim: Claim, primary_entity: str | None = None):
+def to_holding(claim: Claim, primary_entity: str | None = None,
+               metric_name: str | None = None):
     """A stored state claim as an interval assertion.
 
     Two shapes arrive and the discriminator is whether the claim's subject *is*
@@ -325,6 +334,16 @@ def to_holding(claim: Claim, primary_entity: str | None = None):
     the document's primary entity is the fallback, which is what makes every
     role on the annual report's KMP table block into one company's seats rather
     than into nothing.
+
+    ``metric_name`` is the canonical role, and passing it is what keeps the two
+    engines agreeing about what one seat is. The gate blocks on the resolved
+    ``metric_id``; this blocked on the raw predicate string. So Donald
+    Colleran's "Non Executive - Nominee Director (till May 23, 2022)" and his
+    "Non-Executive Director (w.e.f. May 24, 2022)" — one man, one redesignation,
+    contiguous to the day — were one seat to the gate, which compared their text
+    and reported a contradiction, and two seats to the interval engine, which
+    therefore said nothing. A redesignation announced as a conflict is the exact
+    failure this project exists to remove.
     """
     from .temporal import Holding
 
@@ -337,7 +356,7 @@ def to_holding(claim: Claim, primary_entity: str | None = None):
     return Holding(
         ref=str(claim.id),
         scope=org,
-        predicate=claim.predicate,
+        predicate=metric_name or claim.predicate,
         filler=filler,
         valid_from=claim.valid_from,
         valid_to=claim.valid_to,
@@ -368,8 +387,10 @@ def relate_states(
     primary = {
         d.id: d.primary_entity for d in session.scalars(select(Document))
     }
+    metric_names = {m.id: m.canonical_name for m in session.scalars(select(Metric))}
     holdings = [
-        to_holding(c, primary.get(c.document_id)) for c in claims.values()
+        to_holding(c, primary.get(c.document_id), metric_names.get(c.metric_id))
+        for c in claims.values()
     ]
 
     if generation is None:
@@ -377,7 +398,7 @@ def relate_states(
             Relation.generation.desc()).limit(1))
         generation = (current or 0) + 1
 
-    run = RelateRun(claims=len(claims))
+    run = RelateRun(claims=len(claims), generation=generation)
     for slot, members in group_slots(holdings).items():
         if len(members) < 2:
             continue
@@ -444,8 +465,9 @@ def as_of(session: Session, on: "date", document_ids: list[int] | None = None):
     if document_ids:
         stmt = stmt.where(Claim.document_id.in_(document_ids))
     primary = {d.id: d.primary_entity for d in session.scalars(select(Document))}
+    metric_names = {m.id: m.canonical_name for m in session.scalars(select(Metric))}
     holdings = [
-        to_holding(c, primary.get(c.document_id))
+        to_holding(c, primary.get(c.document_id), metric_names.get(c.metric_id))
         for c in session.scalars(stmt)
     ]
     return roster(holdings, on)

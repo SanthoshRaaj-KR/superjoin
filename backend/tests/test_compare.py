@@ -221,3 +221,55 @@ def test_the_explanation_is_templated_and_therefore_stable():
     b = measurement("b", "revenue", "81,415.38", "₹ Mn", "FY24",
                     qualifiers={"consolidation": "consolidated"})
     assert compare(a, b).explanation == compare(a, b).explanation
+
+
+def _role(ref, title, *, valid_from=None, valid_to=None, open_end=False):
+    from datetime import date as _d
+
+    def d(s):
+        return _d.fromisoformat(s) if s else None
+
+    return Comparable(
+        ref=ref, entity="mr. donald francis colleran", metric="non-executive director",
+        unit=parse_unit(None), period=parse_period(None), claim_type="state",
+        value_text=title, valid_from=d(valid_from), valid_to=d(valid_to),
+        valid_to_is_open=open_end,
+    )
+
+
+def test_a_redesignation_is_a_sequence_not_a_contradiction():
+    """The one finding the gate produced on state claims across the whole
+    corpus, and it was wrong.
+
+    AR p90: "Non Executive - Nominee Director (till May 23, 2022) (redesignated
+    as Non-Executive Director w.e.f. May 24, 2022)". One man, one seat, one day
+    apart. The two strings differ, so a text comparison called it a
+    contradiction — while the interval engine, which would have read the dates
+    and seen a handover, was keyed on the raw predicate and so never saw them as
+    one seat at all.
+    """
+    a = _role("a", "Non Executive - Nominee Director", valid_to="2022-05-23")
+    b = _role("b", "Non-Executive Director", valid_from="2022-05-24",
+              valid_to="2023-09-27")
+    result = compare(a, b)
+    assert result.verdict == CONTEXTUAL_TEMPORAL
+    assert result.axis == "valid_time"
+
+
+def test_states_that_overlap_in_time_are_still_compared():
+    """The exemption is for intervals that genuinely do not meet. Two claims
+    asserting different values over the *same* interval is the conflict the
+    interval engine exists to report, and excusing it would hide the case."""
+    a = _role("a", "Chief Executive Officer", valid_from="2022-01-01", open_end=True)
+    b = _role("b", "Chief Financial Officer", valid_from="2022-06-01", open_end=True)
+    assert compare(a, b).verdict == CONTRADICTS
+
+
+def test_undated_states_are_compared_on_their_values():
+    """Two assertions with no dates at all overlap by default — "true as far as
+    this document knows" covers all time. Reading absent dates as disjoint would
+    excuse every genuine conflict between two undated claims, and would break
+    the registered-office corroboration, which has no dates on either side."""
+    a = _role("a", "Company Secretary")
+    b = _role("b", "Chief Executive Officer")
+    assert compare(a, b).verdict == CONTRADICTS

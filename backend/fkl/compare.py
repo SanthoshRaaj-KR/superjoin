@@ -32,6 +32,7 @@ difference between those two is exactly what ``unknown_qualifiers`` is for.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
 
 from .periods import Period, compare_periods
 from .units import Unit, compare_units
@@ -89,6 +90,12 @@ class Comparable:
     document: str | None = None
     page_no: int | None = None
     evidence_quote: str | None = None
+    # Validity interval, for state claims. Read here only to recognise that two
+    # states never held at the same time, which is a question about *when* and
+    # not about whether they conflict.
+    valid_from: "date | None" = None
+    valid_to: "date | None" = None
+    valid_to_is_open: bool = False
 
     def axis_values(self) -> dict[str, str]:
         """Every axis this claim states, including modality."""
@@ -194,6 +201,22 @@ def compare(a: Comparable, b: Comparable) -> Verdict:
     #    engine, which reads valid_from and valid_to rather than a period label.
     period = compare_periods(a.period, b.period)
     if a.claim_type == "state" and not (a.period.known and b.period.known):
+        # Two states that never held at once are a sequence, not a
+        # disagreement — and the question of what that sequence means (a
+        # succession, a vacancy, a redesignation) belongs to the interval
+        # engine, which reads the dates. Comparing their text here produced
+        # exactly one finding in the corpus and it was wrong: a director
+        # redesignated from "Non Executive - Nominee Director" to
+        # "Non-Executive Director" the following day, reported as a
+        # contradiction because the two strings differ.
+        if _intervals_disjoint(a, b):
+            return Verdict(
+                CONTEXTUAL_TEMPORAL, "valid_time",
+                "the two states held over intervals that do not overlap — a "
+                "sequence in time, resolved by the interval engine rather than "
+                "by comparing their values",
+                a.ref, b.ref, period_relation="disjoint",
+            )
         period = type(period)("same", "state claims are not periodic", None, False)
     if period.relation == "unknown":
         return Verdict(
@@ -250,6 +273,22 @@ def compare(a: Comparable, b: Comparable) -> Verdict:
         f"every stated axis, and the values are {value.reason}",
         a.ref, b.ref, value=value, period_relation=period.relation, notes=notes,
     )
+
+
+def _intervals_disjoint(a: Comparable, b: Comparable) -> bool:
+    """Whether two state claims' validity intervals share no time at all.
+
+    Requires both sides to carry a real interval. A state with no dates at all
+    is "true as far as this document knows", which overlaps everything — and
+    treating an absence of dates as disjointness would excuse every genuine
+    conflict between two undated assertions.
+    """
+    if not any((a.valid_from, a.valid_to)) or not any((b.valid_from, b.valid_to)):
+        return False
+    start_a, start_b = a.valid_from or date.min, b.valid_from or date.min
+    end_a = date.max if (a.valid_to is None or a.valid_to_is_open) else a.valid_to
+    end_b = date.max if (b.valid_to is None or b.valid_to_is_open) else b.valid_to
+    return not (start_a <= end_b and start_b <= end_a)
 
 
 def _compare_values(a: Comparable, b: Comparable) -> ValueComparison:

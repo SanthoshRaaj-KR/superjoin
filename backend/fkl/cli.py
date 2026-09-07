@@ -30,6 +30,23 @@ from .pipeline import extract_document_claims
 from .report import corpus_report, format_reports
 
 
+def _use_utf8_output() -> None:
+    """Print UTF-8 regardless of the console's code page.
+
+    Windows terminals default to cp1252, which cannot encode the rupee sign or
+    the separators used in the corpus report — so the headline the whole project
+    builds towards either mojibakes or raises UnicodeEncodeError mid-run. The
+    documents are Indian financial filings; ₹ is not decoration.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except (ValueError, OSError):  # already detached, or not a tty
+                pass
+
+
 def _configure_logging(verbose: bool) -> None:
     logging.basicConfig(
         level=logging.DEBUG if verbose else logging.INFO,
@@ -99,6 +116,10 @@ def cmd_relate(args) -> int:
         states = relate_states(
             session,
             document_ids=[int(d) for d in args.documents] if args.documents else None,
+            # One invocation is one generation. Letting the interval engine pick
+            # its own put the two halves of a single run in different
+            # generations, so neither could be listed as "what this run found".
+            generation=run.generation,
         )
         if states.pairs:
             print()
@@ -106,7 +127,7 @@ def cmd_relate(args) -> int:
             print("    " + " · ".join(
                 f"{k} {v}" for k, v in sorted(states.verdicts.items(),
                                               key=lambda kv: -kv[1])))
-        surviving = conflicts(session, limit=args.show)
+        surviving = conflicts(session, limit=args.show, generation=run.generation)
         if surviving:
             print()
             print(f"  the {len(surviving)} widest surviving disagreement(s):")
@@ -382,6 +403,7 @@ def main(argv: list[str] | None = None) -> int:
     p_models.set_defaults(func=cmd_models)
 
     args = parser.parse_args(argv)
+    _use_utf8_output()
     _configure_logging(args.verbose)
     return args.func(args)
 

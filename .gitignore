@@ -24,3 +24,6 @@ frontend/.vite/
 # OS
 .DS_Store
 Thumbs.db
+
+# Scratch, not part of the deliverable
+PDF Fact Reconciliation System/
