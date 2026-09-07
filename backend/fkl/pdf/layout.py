@@ -54,6 +54,19 @@ ROW_TOLERANCE = 2.5
 # the top of a page always have space between them, and that space is not a
 # column boundary.
 MIN_BAND_LINES = 4
+# A vertical cut through a table is the most destructive thing this module can
+# do: the labels end up in one region and the values in another, row grouping
+# can never rejoin them, and every number on the page comes out unattached. So a
+# candidate gutter is rejected when the far side looks like a table's value
+# column rather than a page column — mostly bare figures, with rows crossing it.
+#
+# Both halves are needed, and the obvious single test does not work. Baseline
+# sharing alone says the *opposite* of what intuition suggests: measured on the
+# annual report, two genuine prose columns share 87% of their baselines (they sit
+# on one leading grid) while the table that must not be cut shares only 57%. What
+# separates them is the content — 0% numeric against 70%.
+TABLE_COLUMN_NUMERIC_SHARE = 0.5
+TABLE_COLUMN_ROW_SHARE = 0.3
 # Depth of the XY-cut recursion. A two-page landscape spread needs more levels
 # than is obvious: halves, then bands, then columns, then bands again inside a
 # column. The recursion terminates on its own when no cut is found, so this is a
@@ -216,6 +229,30 @@ def body_font_size(lines: list[Line]) -> float:
     return counter.most_common(1)[0][0]
 
 
+def _splits_a_table(lines: list[Line], gutter: float) -> bool:
+    """Whether cutting at ``gutter`` would sever a table from its row labels."""
+    left = [ln for ln in lines if ln.x1 <= gutter]
+    right = [ln for ln in lines if ln.x1 > gutter]
+    if not left or not right:
+        return False
+
+    for near, far in ((left, right), (right, left)):
+        numeric = sum(1 for ln in far if is_data_label(ln.text))
+        if numeric / len(far) < TABLE_COLUMN_NUMERIC_SHARE:
+            continue
+        # The far side is figures. It is a table column only if rows actually
+        # span the gutter; a chart's data labels sit beside prose that shares no
+        # baseline with them.
+        shared = sum(
+            1
+            for a in near
+            if any(abs(a.y0 - b.y0) <= ROW_TOLERANCE for b in far)
+        )
+        if shared / len(near) >= TABLE_COLUMN_ROW_SHARE:
+            return True
+    return False
+
+
 def _find_gutter_band(
     lines: list[Line], x0: float, x1: float, body_size: float
 ) -> tuple[float, float] | None:
@@ -273,7 +310,7 @@ def _find_gutter_band(
     # cannot rank them against each other — and the page's left margin is one of
     # them, which is how a naive scan ends up cutting off the margin instead of
     # splitting the columns.
-    best_full: tuple[int, int, int] | None = None  # (run width, a, b)
+    candidates: list[tuple[int, int, int]] = []  # (run width, a, b)
     start: int | None = None
     for i in range(width + 1):
         never = i < width and first_cover[i] == inf
@@ -282,16 +319,16 @@ def _find_gutter_band(
         elif not never and start is not None:
             a, b = start, i - 1
             run = b - a + 1
-            if (
-                run >= w
-                and sides_have_content(a, b, inf)
-                and (best_full is None or run > best_full[0])
-            ):
-                best_full = (run, a, b)
+            if run >= w and sides_have_content(a, b, inf):
+                candidates.append((run, a, b))
             start = None
-    if best_full is not None:
-        _, a, b = best_full
-        return x0 + (a + b) / 2, inf
+    # Widest first, but skipped rather than accepted when it turns out to run
+    # between a table's columns — a narrower gutter elsewhere in the region may
+    # still be the real page boundary.
+    for _run, a, b in sorted(candidates, reverse=True):
+        gutter = x0 + (a + b) / 2
+        if not _splits_a_table(lines, gutter):
+            return gutter, inf
 
     # Pass 2: no gutter survives the whole region, so find the one that reaches
     # deepest before something bridges it.
@@ -309,7 +346,14 @@ def _find_gutter_band(
     if not sides_have_content(a, b, best_death):
         return None
 
-    return x0 + (a + b) / 2, best_death
+    gutter = x0 + (a + b) / 2
+    # No fallback to a narrower candidate here: if the deepest-surviving gutter
+    # is a table's, the region is a table, and the horizontal cut this returns
+    # into is the correct way to handle it.
+    if _splits_a_table([ln for ln in lines if ln.y0 < best_death], gutter):
+        return None
+
+    return gutter, best_death
 
 
 def _find_hgap(lines: list[Line], body_size: float) -> float | None:

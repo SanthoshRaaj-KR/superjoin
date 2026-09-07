@@ -137,3 +137,52 @@ def test_heading_levels_rank_by_size():
     levels = heading_levels(9.0, [9.0, 9.0, 11.0, 18.0, 10.0, 8.0])
     assert levels == {18.0: 1, 11.0: 2, 10.0: 3}
     assert heading_levels(9.0, [9.0, 8.0]) == {}
+
+
+# --- the cut that must not happen -------------------------------------------
+
+
+def test_a_vertical_cut_never_separates_a_table_from_its_row_labels():
+    """The most destructive thing the XY-cut can do.
+
+    Annual report page 90 sets a financial table whose label column and two
+    value columns are divided by gutters that no line ever crosses — so the
+    plain "widest never-crossed gutter" rule cut straight down them, leaving
+    `Particulars` in one region and `2,001.02` in another. Row grouping works
+    inside a region, so nothing could rejoin them and every figure on the page
+    came out unattached.
+
+    That failure was invisible as a layout bug. It surfaced as a *routing*
+    signal: the page looked like a chart to the unbound-number heuristic, which
+    would have spent a vision call papering over a bug in this file.
+    """
+    doc = fitz.open(AR)
+    body = body_font_size([ln for page in doc for ln in page_lines(page)])
+    layout = analyze_page(doc[90], body)
+    doc.close()
+
+    rows = [row.text for _region, row in layout.iter_rows()]
+    assert "Particulars | March 31, 2024 | March 31, 2023" in rows
+    assert "Current | 2,001.02 | 1,902.69" in rows
+
+
+def test_genuine_page_columns_are_still_cut():
+    """The guard must not go the other way and merge real columns.
+
+    Worth its own test because the obvious discriminator is wrong: measured on
+    this document, two genuine prose columns share 87% of their baselines while
+    the table above shares 57%. Reading order, not aesthetics, is what breaks if
+    this regresses — two columns of prose get interleaved line by line.
+    """
+    doc = fitz.open(AR)
+    body = body_font_size([ln for page in doc for ln in page_lines(page)])
+    layout = analyze_page(doc[35], body)
+    doc.close()
+
+    text = "\n".join(row.text for _region, row in layout.iter_rows())
+    assert "y Truck driver shortage: Potential drivers may find the" in text
+    # The left column's second line follows its first, rather than a line from
+    # the column beside it.
+    lines = text.splitlines()
+    i = lines.index("y Truck driver shortage: Potential drivers may find the")
+    assert lines[i + 1] == "profession unattractive due to the lack of security and"
