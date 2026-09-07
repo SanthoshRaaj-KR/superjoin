@@ -87,7 +87,7 @@ def cmd_page(args: argparse.Namespace) -> int:
 def cmd_relate(args) -> int:
     """Run the comparability gate over every stored pair and report the
     reduction: how many apparent disagreements a named axis dissolved."""
-    from .relate import conflicts, format_run, relate_corpus
+    from .relate import conflicts, format_run, relate_corpus, relate_states
 
     init_db()
     with session_scope() as session:
@@ -96,6 +96,16 @@ def cmd_relate(args) -> int:
             document_ids=[int(d) for d in args.documents] if args.documents else None,
         )
         print(format_run(run))
+        states = relate_states(
+            session,
+            document_ids=[int(d) for d in args.documents] if args.documents else None,
+        )
+        if states.pairs:
+            print()
+            print(f"  interval engine: {states.blocks} slot(s), {states.pairs} pair(s)")
+            print("    " + " · ".join(
+                f"{k} {v}" for k, v in sorted(states.verdicts.items(),
+                                              key=lambda kv: -kv[1])))
         surviving = conflicts(session, limit=args.show)
         if surviving:
             print()
@@ -103,6 +113,29 @@ def cmd_relate(args) -> int:
             for relation in surviving:
                 print(f"    claims {relation.claim_a_id} vs {relation.claim_b_id}: "
                       f"{relation.explanation}")
+    return 0
+
+
+def cmd_asof(args) -> int:
+    """Who held what on a given date.
+
+    Current state is a query with an as-of clause over immutable claims, never a
+    stored field. That is what lets the board in June 2022 and the board in
+    March 2024 both be answerable, and both be correct.
+    """
+    from datetime import datetime
+
+    from .relate import as_of
+
+    on = datetime.strptime(args.date, "%Y-%m-%d").date()
+    init_db()
+    with session_scope() as session:
+        held = as_of(session, on)
+        print(f"as of {on}: {len(held)} state claim(s) in force")
+        for holding in held:
+            span = f"{holding.valid_from or '?'} -> " + (
+                "open" if holding.is_open else str(holding.valid_to))
+            print(f"    {holding.filler[:38]:<40} {holding.predicate[:44]:<46} {span}")
     return 0
 
 
@@ -314,6 +347,11 @@ def main(argv: list[str] | None = None) -> int:
     p_relate.add_argument("--show", type=int, default=10,
                           help="how many surviving disagreements to print")
     p_relate.set_defaults(func=cmd_relate)
+
+    p_asof = sub.add_parser(
+        "as-of", help="the state of the world on a given date")
+    p_asof.add_argument("date", help="ISO date, e.g. 2024-04-15")
+    p_asof.set_defaults(func=cmd_asof)
 
     p_gold = sub.add_parser("gold", help="show the hand-labelled gold set")
     p_gold.add_argument(

@@ -31,7 +31,7 @@ Under construction, phase by phase. This README is filled in as each layer lands
 | 2 | Units, periods, metric and entity registries | done |
 | 2.5 | Hand-labelled gold set | done |
 | 3 | Comparability gate | done |
-| 4 | Temporal engine, cross-document | |
+| 4 | Temporal engine, cross-document | done |
 | 5 | React UI | |
 | 6 | Macro corpus, zero code changes | |
 | 7 | Axis discovery, eval harness | |
@@ -92,6 +92,43 @@ sign convention (`Less: Exceptional Items 224.10` against `(224.10)`, the same
 figure with the sign carried by a row label); three trace to a single extraction
 error where two chart series shared a predicate. A small residual set is useful
 precisely because each survivor is traceable.
+
+### Time, and the difference between not knowing and being wrong
+
+State claims — who holds a role, what the CIN is — assert intervals, and they
+need a different engine. Two clocks: *valid time* is when something was true,
+*assertion time* is when a document said so.
+
+The 2022 prospectus lists Suvir Sujan as a serving director with no end date.
+The FY24 annual report says he resigned in August 2023. Those do not contradict
+— the prospectus was correct about its own moment. Reporting a conflict there
+is not strictness, it is an error, and it fires for every officer and address in
+any corpus that spans time.
+
+Cardinality turns "is this a conflict?" into a constraint check. Seeded from
+generic vocabulary (singular markers tested first, so `Managing Director` comes
+out 1 while `Non-Executive Director` comes out N) and corrected by evidence —
+one document listing two people in a seat at once is telling us the seat holds
+more than one. From the annual report's KMP table:
+
+```
+SUCCESSION               Bansal to 2023-05-31, then Vivek from 2023-06-01
+SUCCESSION_WITH_VACANCY  Vivek to 2024-03-27, then Rawat from 2024-05-17
+                         51 days with no Company Secretary
+```
+
+That vacancy exists only because intervals are modelled rather than
+overwritten. A store keeping "current Company Secretary" as a mutable field
+shows Rawat and nothing else.
+
+```bash
+python -m fkl.cli as-of 2024-04-15   # the seat is empty
+python -m fkl.cli as-of 2024-06-01   # Rawat
+```
+
+Current state is a query with an as-of clause over immutable claims, never a
+stored field, which is what lets two dates give two different rosters and both
+be right.
 
 ### The gold set
 

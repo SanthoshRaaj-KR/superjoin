@@ -261,3 +261,55 @@ def test_the_roster_differs_by_date_and_both_answers_are_correct():
     assert [h.filler for h in roster(chain, date(2024, 6, 1))] == ["Madhulika Rawat"]
     # And the vacancy is visible as an empty seat, not as a gap nobody notices.
     assert roster(chain, date(2024, 4, 15)) == []
+
+
+# --- which pairs are worth comparing ----------------------------------------
+
+
+def test_a_succession_is_between_neighbours_not_between_every_pair():
+    """Comparing every pair in a chain invents vacancies.
+
+    With Bansal, Vivek and Rawat in sequence, the all-pairs version reported
+    that Bansal was succeeded by Rawat after a 352-day vacancy. That is false —
+    Vivek held the role for almost all of it. A handover is a relation between
+    neighbours.
+    """
+    from fkl.temporal import succession_pairs
+
+    chain = [
+        cs("a", "Sunil Kumar Bansal", valid_to=date(2023, 5, 31)),
+        cs("b", "Vivek Kumar", valid_from=date(2023, 6, 1), valid_to=date(2024, 3, 27)),
+        cs("c", "Madhulika Rawat", valid_from=date(2024, 5, 17), valid_to_is_open=True),
+    ]
+    pairs = {(a.ref, b.ref) for a, b in succession_pairs(chain)}
+    assert pairs == {("a", "b"), ("b", "c")}
+    assert ("a", "c") not in pairs
+
+
+def test_the_same_person_is_compared_across_any_distance():
+    """An open interval gets closed by a later document however far apart the
+    two assertions sort."""
+    from fkl.temporal import succession_pairs
+
+    holdings = [
+        cs("open", "X", valid_to_is_open=True, asserted=date(2022, 1, 1)),
+        cs("mid", "Y", valid_from=date(2023, 1, 1), valid_to=date(2023, 6, 1)),
+        cs("closed", "X", valid_from=date(2024, 1, 1), valid_to=date(2024, 6, 1),
+           asserted=date(2025, 1, 1)),
+    ]
+    pairs = {(a.ref, b.ref) for a, b in succession_pairs(holdings)}
+    assert ("open", "closed") in pairs
+
+
+def test_overlapping_holders_are_compared_however_far_apart_they_sort():
+    """The constraint violation has to be reported even when the two are not
+    neighbours in start order."""
+    from fkl.temporal import succession_pairs
+
+    holdings = [
+        cs("a", "A", valid_from=date(2020, 1, 1), valid_to_is_open=True),
+        cs("b", "B", valid_from=date(2021, 1, 1), valid_to=date(2021, 6, 1)),
+        cs("c", "C", valid_from=date(2022, 1, 1), valid_to=date(2022, 6, 1)),
+    ]
+    pairs = {(a.ref, b.ref) for a, b in succession_pairs(holdings)}
+    assert ("a", "c") in pairs  # A's open interval covers C's

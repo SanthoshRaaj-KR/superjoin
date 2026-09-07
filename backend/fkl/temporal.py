@@ -67,8 +67,9 @@ _SINGULAR = re.compile(
     re.I,
 )
 _PLURAL = re.compile(
-    r"\bdirector\b|\bmember\b|\bsubsidiary\b|\bsubsidiaries\b|\bpartner\b"
-    r"|\bshareholder\b|\bauditor\b",
+    r"\bdirector\b|\bmember\b|\bsubsidiar(?:y|ies)\b|\bpartner\b"
+    r"|\bshareholder\b|\bauditor\b|\bassociates?\b|\baffiliates?\b"
+    r"|\bpromoters?\b|\btrustees?\b",
     re.I,
 )
 # Attributes an entity has exactly one of at a time.
@@ -176,10 +177,11 @@ def relate_holdings(
         return _same_filler(a, b, notes)
 
     if cardinality != 1:
-        # Many fillers allowed. Both valid, no conflict, nothing to explain.
-        if a.overlaps(b):
-            return None
-        return _succession(a, b, notes, cardinality)
+        # Many fillers allowed, so there is no seat to be handed over and none
+        # to fall vacant. Two independent directors who served at different
+        # times are simply two directors; reporting a "174-day vacancy" between
+        # them describes a constraint the role does not have.
+        return None
 
     # An attribute with no interval on either side. The CIN case: the
     # prospectus prints U63090DL2011PLC221234 and the annual report prints
@@ -319,6 +321,37 @@ def _succession(
 def _no_interval(holding: Holding) -> bool:
     """Whether a holding carries no valid-time information at all."""
     return holding.valid_from is None and holding.valid_to is None
+
+
+def succession_pairs(holdings: list[Holding]) -> list[tuple[Holding, Holding]]:
+    """The pairs in a single-holder slot that are worth comparing.
+
+    Comparing every pair reports a handover between every holder and every
+    later one: with Bansal, Vivek and Rawat in sequence it claims Bansal was
+    succeeded by Rawat after a 352-day vacancy, which is false — Vivek held the
+    role throughout. A succession is a relation between *neighbours* in the
+    chain.
+
+    Three kinds of pair survive:
+
+    - the same person in two documents, at any distance, since that is how an
+      open interval gets closed;
+    - overlapping holders, which is the constraint violation and is worth
+      reporting however far apart they sort;
+    - consecutive holders in start order, which are the real handovers.
+    """
+    ordered = sorted(holdings, key=lambda h: (h.valid_from or date.min,
+                                              h.valid_to or date.max))
+    neighbours = {
+        (id(a), id(b))
+        for a, b in zip(ordered, ordered[1:])
+    }
+    pairs: list[tuple[Holding, Holding]] = []
+    for i, a in enumerate(ordered):
+        for b in ordered[i + 1:]:
+            if a.filler == b.filler or a.overlaps(b) or (id(a), id(b)) in neighbours:
+                pairs.append((a, b))
+    return pairs
 
 
 def _asserted_before(a: Holding, b: Holding) -> bool:

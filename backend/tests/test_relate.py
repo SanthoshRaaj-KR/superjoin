@@ -180,3 +180,83 @@ def test_verdicts_are_stored_with_the_axis_and_the_explanation(session):
     assert "consolidation" in stored.explanation
     assert stored.cross_document is True
     assert stored.values_differ is True
+
+
+# --- the interval engine over stored claims ---------------------------------
+
+
+def state(session, subject, role, **kwargs) -> Claim:
+    base = dict(
+        document_id=1, page_no=90, claim_type="state", subject=subject,
+        predicate=role, value_text=role, evidence_quote="q",
+        qualifiers={}, unknown_qualifiers=[], confidence_reasons=[],
+        modality="actual",
+    )
+    base.update(kwargs)
+    claim = Claim(**base)
+    session.add(claim)
+    session.flush()
+    return claim
+
+
+def test_role_claims_block_by_the_organisations_seat(session):
+    """`org_scope` is null in the common case, because the schema reserves it
+    for a *different* organisation. So the document's primary entity is the
+    fallback — without it every role blocks alone and no succession is found.
+    """
+    from datetime import date
+
+    from fkl.relate import relate_states
+
+    session.query(Document).filter_by(id=1).one().primary_entity = "Delhivery Limited"
+    state(session, "Mr. Sunil Kumar Bansal", "Company Secretary",
+          valid_to=date(2023, 5, 31))
+    state(session, "Mr. Vivek Kumar", "Company Secretary",
+          valid_from=date(2023, 6, 1), valid_to=date(2024, 3, 27))
+    state(session, "Mrs. Madhulika Rawat", "Company Secretary",
+          valid_from=date(2024, 5, 17), valid_to_is_open=True)
+
+    run = relate_states(session)
+    assert run.blocks == 1  # one seat, three holders
+    assert run.verdicts.get("SUCCESSION") == 1
+    assert run.verdicts.get("SUCCESSION_WITH_VACANCY") == 1
+
+    vacancy = session.query(Relation).filter_by(
+        verdict="SUCCESSION_WITH_VACANCY").one()
+    assert vacancy.value_difference == 51
+
+
+def test_many_holders_of_a_plural_role_produce_no_relations(session):
+    """Otherwise every pair of directors who ever served becomes a finding and
+    buries the two that matter."""
+    from datetime import date
+
+    from fkl.relate import relate_states
+
+    session.query(Document).filter_by(id=1).one().primary_entity = "Delhivery Limited"
+    state(session, "A", "Non Executive - Independent Director",
+          valid_to=date(2023, 2, 11))
+    state(session, "B", "Non Executive - Independent Director",
+          valid_from=date(2023, 8, 4), valid_to_is_open=True)
+
+    run = relate_states(session)
+    assert run.verdicts.get("SUCCESSION_WITH_VACANCY") is None
+    assert session.query(Relation).count() == 0
+
+
+def test_as_of_answers_different_dates_differently(session):
+    """Current state is a query, never a stored field — which is what makes the
+    vacancy visible as an empty seat rather than as nothing at all."""
+    from datetime import date
+
+    from fkl.relate import as_of
+
+    session.query(Document).filter_by(id=1).one().primary_entity = "Delhivery Limited"
+    state(session, "Mr. Vivek Kumar", "Company Secretary",
+          valid_from=date(2023, 6, 1), valid_to=date(2024, 3, 27))
+    state(session, "Mrs. Madhulika Rawat", "Company Secretary",
+          valid_from=date(2024, 5, 17), valid_to_is_open=True)
+
+    assert [h.filler for h in as_of(session, date(2023, 8, 1))] == ["Mr. Vivek Kumar"]
+    assert [h.filler for h in as_of(session, date(2024, 6, 1))] == ["Mrs. Madhulika Rawat"]
+    assert as_of(session, date(2024, 4, 15)) == []

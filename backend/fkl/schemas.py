@@ -182,13 +182,34 @@ class StateClaim(ClaimBase):
     """
 
     value_text: str = Field(
-        description="The state itself, e.g. a person's name, an address, a CIN."
+        description=(
+            "The state itself and NOTHING ELSE: a role title, an address, a CIN. "
+            "Never include dates here — they belong in valid_from and valid_to. "
+            "For 'Company Secretary (Resigned w.e.f. May 31, 2023)' the "
+            "value_text is 'Company Secretary'."
+        )
     )
     valid_from: str | None = Field(
-        default=None, description="ISO date the state began, if stated. Else null."
+        default=None,
+        description=(
+            "ISO date the state began, if the page states one. These documents "
+            "write it as 'w.e.f. <date>' (with effect from), 'appointed on', "
+            "'from'. 'Non-Executive Director (w.e.f. May 24, 2022 resigned "
+            "w.e.f. August 24, 2023)' gives valid_from 2022-05-24. Null if "
+            "no start date is given."
+        ),
     )
     valid_to: str | None = Field(
-        default=None, description="ISO date the state ended, if stated. Else null."
+        default=None,
+        description=(
+            "ISO date the state ended, if the page states one. Written as "
+            "'resigned w.e.f. <date>', 'till <date>', 'ceased', 'upto'. The "
+            "example above gives valid_to 2023-08-24 and valid_to_is_open "
+            "false. A role listed with no end date gives null and "
+            "valid_to_is_open true. Extracting these is the whole point: a "
+            "resignation date left inside value_text cannot close an interval, "
+            "and every succession and vacancy in the document is then invisible."
+        ),
     )
     valid_to_is_open: bool = Field(
         default=True,

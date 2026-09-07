@@ -30,6 +30,7 @@ from __future__ import annotations
 import itertools
 import logging
 from collections import defaultdict
+from datetime import date
 from dataclasses import dataclass, field
 
 from sqlalchemy import select
@@ -303,3 +304,148 @@ def corroborations(session: Session, limit: int = 20, cross_document_only: bool 
     if cross_document_only:
         stmt = stmt.where(Relation.cross_document.is_(True))
     return list(session.scalars(stmt.limit(limit)))
+
+
+# --- state claims: the interval engine over a corpus ------------------------
+
+
+def to_holding(claim: Claim, primary_entity: str | None = None):
+    """A stored state claim as an interval assertion.
+
+    Two shapes arrive and the discriminator is whether the claim's subject *is*
+    the organisation:
+
+    - ``Mr. Sunil Kumar Bansal | Company Secretary`` is a role. The seat belongs
+      to the company, so scope is the company and the person is the filler.
+    - ``Delhivery Limited | CIN | L63090...`` is an attribute. The company is
+      the scope and the identifier fills it.
+
+    ``org_scope`` is null in the common case, because the extraction schema uses
+    it only for a *different* organisation — a named subsidiary or segment. So
+    the document's primary entity is the fallback, which is what makes every
+    role on the annual report's KMP table block into one company's seats rather
+    than into nothing.
+    """
+    from .temporal import Holding
+
+    org = claim.org_scope or primary_entity or claim.subject
+    if (claim.subject or "").strip().lower() == org.strip().lower():
+        filler = claim.value_text or ""  # an attribute of the organisation
+    else:
+        filler = claim.subject  # a person, or another company, in a slot
+
+    return Holding(
+        ref=str(claim.id),
+        scope=org,
+        predicate=claim.predicate,
+        filler=filler,
+        valid_from=claim.valid_from,
+        valid_to=claim.valid_to,
+        valid_to_is_open=bool(claim.valid_to_is_open),
+        asserted=claim.assertion_time,
+        document=str(claim.document_id),
+        page_no=claim.page_no,
+        evidence_quote=claim.evidence_quote,
+    )
+
+
+def relate_states(
+    session: Session,
+    *,
+    document_ids: list[int] | None = None,
+    generation: int | None = None,
+) -> RelateRun:
+    """Run the interval engine over every stored state claim."""
+    from .models import Document
+    from .temporal import (group_slots, infer_cardinality, observe_cardinality,
+                           relate_holdings, succession_pairs)
+
+    stmt = select(Claim).where(Claim.claim_type == "state")
+    if document_ids:
+        stmt = stmt.where(Claim.document_id.in_(document_ids))
+    claims = {c.id: c for c in session.scalars(stmt)}
+
+    primary = {
+        d.id: d.primary_entity for d in session.scalars(select(Document))
+    }
+    holdings = [
+        to_holding(c, primary.get(c.document_id)) for c in claims.values()
+    ]
+
+    if generation is None:
+        current = session.scalar(select(Relation.generation).order_by(
+            Relation.generation.desc()).limit(1))
+        generation = (current or 0) + 1
+
+    run = RelateRun(claims=len(claims))
+    for slot, members in group_slots(holdings).items():
+        if len(members) < 2:
+            continue
+        run.blocks += 1
+        seeded = infer_cardinality(members[0].predicate)
+        cardinality, note = observe_cardinality(members, seeded)
+
+        candidates = (
+            succession_pairs(members) if cardinality == 1
+            else [(a, b) for a, b in itertools.combinations(members, 2)
+                  if a.filler == b.filler]
+        )
+        for left, right in candidates:
+            verdict = relate_holdings(left, right, cardinality, note)
+            run.pairs += 1
+            if verdict is None:
+                # Cardinality allows both. Two of many directors serving at
+                # once is not a finding, and emitting it would bury the ones
+                # that are under every pair of board members who overlapped.
+                run.verdicts["NO_RELATION"] = run.verdicts.get("NO_RELATION", 0) + 1
+                continue
+
+            run.verdicts[verdict.verdict] = run.verdicts.get(verdict.verdict, 0) + 1
+            if verdict.axis:
+                run.axes[verdict.axis] = run.axes.get(verdict.axis, 0) + 1
+            if verdict.verdict == CONTRADICTS:
+                run.raw_disagreements += 1
+                run.unresolved += 1
+            elif verdict.verdict in {"CLOSES_INTERVAL", "SUCCESSION",
+                                     "SUCCESSION_WITH_VACANCY", "CONTEXTUAL"}:
+                run.raw_disagreements += 1
+                run.explained += 1
+                run.explaining_axes[verdict.axis] = (
+                    run.explaining_axes.get(verdict.axis, 0) + 1)
+
+            a, b = claims[int(verdict.a)], claims[int(verdict.b)]
+            session.add(
+                Relation(
+                    claim_a_id=a.id,
+                    claim_b_id=b.id,
+                    verdict=verdict.verdict,
+                    axis=verdict.axis,
+                    explanation=verdict.explanation,
+                    differing_axes=[],
+                    missing_axes=[],
+                    values_differ=a.value_text != b.value_text,
+                    value_difference=float(verdict.gap_days)
+                    if verdict.gap_days is not None else None,
+                    period_relation=None,
+                    cross_document=a.document_id != b.document_id,
+                    generation=generation,
+                )
+            )
+    session.flush()
+    return run
+
+
+def as_of(session: Session, on: "date", document_ids: list[int] | None = None):
+    """Who held what on a given date. A query, never a stored field."""
+    from .models import Document
+    from .temporal import roster
+
+    stmt = select(Claim).where(Claim.claim_type == "state")
+    if document_ids:
+        stmt = stmt.where(Claim.document_id.in_(document_ids))
+    primary = {d.id: d.primary_entity for d in session.scalars(select(Document))}
+    holdings = [
+        to_holding(c, primary.get(c.document_id))
+        for c in session.scalars(stmt)
+    ]
+    return roster(holdings, on)

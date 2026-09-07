@@ -85,6 +85,25 @@ scrambled. Flagging a doubtful read is more useful than a confident wrong one.
 - Skip page furniture: running headers and footers, page numbers, contents \
 lists, and marketing statements with nothing measurable in them.
 
+DATES IN ROLE AND STATUS CLAIMS
+
+These documents record every appointment and departure inside a parenthetical beside the role. Those dates are the claim's interval and they must be parsed out, never left sitting in value_text:
+
+    Mr. Sunil Kumar Bansal   Company Secretary (Resigned w.e.f. May 31, 2023)
+    Mr. Vivek Kumar          Company Secretary (w.e.f June 01, 2023 resigned
+                             w.e.f. March 27, 2024)
+    Mrs. Madhulika Rawat     Company Secretary (w.e.f. May 17, 2024)
+
+gives three state claims with value_text "Company Secretary" and:
+
+    valid_from null,       valid_to 2023-05-31, valid_to_is_open false
+    valid_from 2023-06-01, valid_to 2024-03-27, valid_to_is_open false
+    valid_from 2024-05-17, valid_to null,       valid_to_is_open true
+
+Read together those say one person succeeded another cleanly, and that the role then sat vacant for 51 days. A resignation date left inside value_text cannot close an interval, so every succession and every vacancy in the document becomes invisible. "w.e.f." means with effect from; "till", "upto" and "ceased" mark an ending.
+
+Give the role as printed but WITHOUT the dates. Where one line records two roles ("Head - New Ventures (w.e.f. August 02 2021) and Chief People Officer (w.e.f. January 15, 2024)"), emit one claim per role with its own dates.
+
 THE MISTAKE THAT MATTERS MOST
 
 A page whose context line says "no section-level declaration for: \
