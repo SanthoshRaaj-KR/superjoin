@@ -273,3 +273,72 @@ def test_undated_states_are_compared_on_their_values():
     a = _role("a", "Company Secretary")
     b = _role("b", "Chief Executive Officer")
     assert compare(a, b).verdict == CONTRADICTS
+
+
+# --- the counterfactual -----------------------------------------------------
+
+
+def test_masking_the_axis_that_explains_a_pair_restores_the_contradiction():
+    """The counterfactual, and the reason the gate is a pure function.
+
+    Standalone against consolidated revenue for FY24 is CONTEXTUAL because the
+    two claims say so. Hold `consolidation` out of the reasoning set and the
+    same two claims are a flat disagreement — which is exactly what a
+    context-blind system reports, and what this project exists to argue with.
+    Nothing is stored twice: the second verdict is recomputed.
+    """
+    a = measurement("a", "revenue", "74,540.82", "₹ Mn", "FY24",
+                    qualifiers={"consolidation": "standalone"})
+    b = measurement("b", "revenue", "81,415.38", "₹ Mn", "FY24",
+                    qualifiers={"consolidation": "consolidated"})
+
+    assert compare(a, b).verdict == CONTEXTUAL
+    assert compare(a, b).axis == "consolidation"
+    assert compare(a, b, mask_axes=["consolidation"]).verdict == CONTRADICTS
+    # and the claims themselves were not altered by the masked call
+    assert a.qualifiers == {"consolidation": "standalone"}
+    assert compare(a, b).verdict == CONTEXTUAL
+
+
+def test_masking_period_turns_a_trend_back_into_a_disagreement():
+    """FY23 revenue against FY24 revenue is a change over time. Masking the
+    period is the clearest demonstration available that the gate is doing work:
+    the numbers never moved, and the verdict did."""
+    a = measurement("a", "revenue", "72,253.01", "₹ Mn", "FY23")
+    b = measurement("b", "revenue", "81,415.38", "₹ Mn", "FY24")
+
+    assert compare(a, b).verdict == CONTEXTUAL_TEMPORAL
+    assert compare(a, b, mask_axes=["period"]).verdict == CONTRADICTS
+
+
+def test_masking_an_axis_also_unblocks_a_comparison_it_was_blocking():
+    """The subtle half. `consolidation` can reach a verdict two ways — as a
+    stated difference and as an explicit unknown — and masking has to remove
+    both. Otherwise masking the axis that is blocking a pair leaves it blocked,
+    and the toggle looks broken exactly where it is most worth showing: the
+    deck's ₹8,142 Cr against the annual report's ₹81,415.38 Mn.
+    """
+    a = measurement("a", "revenue", "8,142", "₹ Cr", "FY24",
+                    unknown_qualifiers=["consolidation"])
+    b = measurement("b", "revenue", "81,415.38", "₹ Mn", "FY24",
+                    qualifiers={"consolidation": "consolidated"})
+
+    assert compare(a, b).verdict == INSUFFICIENT_EVIDENCE
+    # Supplying the axis is what the counterfactual toggle shows: the same two
+    # figures agree to within rounding once the basis is known.
+    assert compare(a, b, mask_axes=["consolidation"]).verdict == CORROBORATES
+
+
+def test_masking_the_unit_stops_a_currency_refusal():
+    a = measurement("a", "revenue", "1,000", "$ Mn", "FY24")
+    b = measurement("b", "revenue", "1,000", "₹ Mn", "FY24")
+    assert compare(a, b).verdict == INCOMPARABLE
+    assert compare(a, b, mask_axes=["unit"]).verdict == CORROBORATES
+
+
+def test_masking_nothing_changes_nothing():
+    a = measurement("a", "revenue", "74,540.82", "₹ Mn", "FY24",
+                    qualifiers={"consolidation": "standalone"})
+    b = measurement("b", "revenue", "81,415.38", "₹ Mn", "FY24",
+                    qualifiers={"consolidation": "consolidated"})
+    assert compare(a, b, mask_axes=[]).verdict == compare(a, b).verdict

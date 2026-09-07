@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin:0; padding:0; background:#F1F0EB; color:#191C16;
+    font-family:'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; }
+  * { box-sizing:border-box; }
+  a { color:#1F4D36; text-decoration:none; }
+  a:hover { color:#123324; text-decoration:underline; }
+  input, button, select { font-family:inherit; }
+  ::selection { background:#CFE3D6; }
+  .sb::-webkit-scrollbar { width:9px; height:9px; }
+  .sb::-webkit-scrollbar-thumb { background:#D2D0C6; border-radius:9px; border:2px solid transparent; background-clip:content-box; }
+</style>
+</helmet>
+
+<div style="display:flex; min-height:100vh; align-items:stretch; background:#F1F0EB">
+
+  <!-- ── rail ─────────────────────────────────────────────────────────── -->
+  <div style="width:224px; flex:0 0 224px; background:#14180F; color:#E8EAE4; display:flex; flex-direction:column; position:sticky; top:0; height:100vh">
+    <div style="padding:20px 18px 18px; border-bottom:1px solid #262B1F">
+      <div style="display:flex; align-items:center; gap:8px">
+        <div style="width:14px; height:14px; border:2px solid #7FB894; border-radius:2px; position:relative">
+          <div style="position:absolute; inset:3px 3px auto 3px; height:2px; background:#7FB894"></div>
+        </div>
+        <div style="font-size:14px; font-weight:600; letter-spacing:-0.01em">Collation</div>
+      </div>
+      <div style="margin-top:6px; font:400 10px/1.5 'IBM Plex Mono',monospace; color:#7E8676; letter-spacing:0.06em">EVIDENCE-GROUNDED<br />FACT RECONCILIATION</div>
+    </div>
+
+    <div style="padding:12px 10px; display:flex; flex-direction:column; gap:1px; flex:1">
+      <sc-for list="{{ nav }}" as="item" hint-placeholder-count="6">
+        <div onClick="{{ item.go }}" style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border-radius:3px; cursor:pointer; font-size:13px" style-hover="background:#20261A">
+          <div style="display:flex; align-items:center; gap:9px">
+            <div style="width:3px; height:13px; border-radius:2px; background:{{ item.mark }}"></div>
+            <span style="color:{{ item.fg }}; font-weight:{{ item.weight }}">{{ item.label }}</span>
+          </div>
+          <span style="font:400 10px/1 'IBM Plex Mono',monospace; color:#6E7666">{{ item.count }}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="padding:14px 18px; border-top:1px solid #262B1F; font:400 10px/1.7 'IBM Plex Mono',monospace; color:#6E7666">
+      <div>CORPUS &nbsp;hindmark-fy24</div>
+      <div>ENGINE &nbsp;v0.9.3 · axis-aware</div>
+    </div>
+  </div>
+
+  <!-- ── main ─────────────────────────────────────────────────────────── -->
+  <div style="flex:1; min-width:0; display:flex; flex-direction:column">
+
+    <div style="display:flex; align-items:baseline; justify-content:space-between; gap:24px; padding:22px 28px 16px; border-bottom:1px solid #DEDCD3; background:#F6F5F1; position:sticky; top:0; z-index:5">
+      <div>
+        <div style="font-size:19px; font-weight:600; letter-spacing:-0.015em">{{ pageTitle }}</div>
+        <div style="margin-top:3px; font-size:12.5px; color:#6C7266; max-width:64ch">{{ pageSub }}</div>
+      </div>
+      <div style="font:400 10.5px/1.6 'IBM Plex Mono',monospace; color:#8A9083; text-align:right; white-space:nowrap">
+        <div>{{ stats.claims }} CLAIMS · {{ stats.grounded }} GROUNDED</div>
+        <div>{{ stats.quarantined }} QUARANTINED · {{ stats.relationships }} PAIRS</div>
+      </div>
+    </div>
+
+    <div class="sb" style="flex:1; padding:24px 28px 56px">
+
+      <!-- ═══ COMPARE ═══════════════════════════════════════════════════ -->
+      <sc-if value="{{ isCompare }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-start">
+
+          <div style="flex:1 1 240px; max-width:262px; min-width:220px; background:#fff; border:1px solid #DEDCD3; border-radius:4px; overflow:hidden">
+            <div style="padding:10px 12px; border-bottom:1px solid #E6E4DB; font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.09em; color:#8A9083">CANDIDATE PAIRS</div>
+            <sc-for list="{{ pairs }}" as="p" hint-placeholder-count="7">
+              <div onClick="{{ p.go }}" style="padding:10px 12px; border-bottom:1px solid #F0EEE7; cursor:pointer; background:{{ p.bg }}; border-left:2px solid {{ p.edge }}" style-hover="background:#F6F5F1">
+                <div style="font-size:12.5px; font-weight:{{ p.weight }}; line-height:1.35; color:#20241D">{{ p.label }}</div>
+                <div style="margin-top:5px; display:flex; align-items:center; gap:6px">
+                  <span style="font:500 9px/1 'IBM Plex Mono',monospace; letter-spacing:0.06em; padding:3px 5px; border-radius:2px; background:{{ p.badgeBg }}; color:{{ p.badgeFg }}">{{ p.verdict }}</span>
+                  <span style="font:400 9.5px/1 'IBM Plex Mono',monospace; color:#A2A79A">{{ p.id }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="flex:1 1 560px; min-width:0; display:flex; flex-direction:column; gap:16px">
+
+            <!-- fact A / fact B -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px">
+              <div style="background:#fff; border:1px solid #DEDCD3; border-radius:4px; padding:16px 18px">
+                <div style="display:flex; align-items:center; justify-content:space-between">
+                  <span style="font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.09em; color:#1F4D36">FACT A</span>
+                  <span style="font:400 10px/1 'IBM Plex Mono',monospace; color:#A2A79A">{{ A.id }}</span>
+                </div>
+                <div style="margin-top:12px; font:500 30px/1.1 'IBM Plex Mono',monospace; letter-spacing:-0.02em">{{ A.display }}</div>
+                <div style="margin-top:10px; display:flex; flex-direction:column; gap:3px; font:400 12px/1.5 'IBM Plex Mono',monospace; color:#4E5449">
+                  <div>{{ A.period }}</div>
+                  <div>{{ A.scope }}</div>
+                  <div>{{ A.basis }}</div>
+                </div>
+                <div style="margin-top:14px; padding-top:12px; border-top:1px solid #EFEDE6; display:grid; grid-template-columns:auto 1fr; gap:4px 14px; font-size:11.5px; color:#6C7266">
+                  <span style="color:#9AA093">Entity</span><span style="color:#20241D">{{ A.entity }}</span>
+                  <span style="color:#9AA093">Metric</span><span style="color:#20241D">{{ A.metric }}</span>
+                  <span style="color:#9AA093">Source</span><span style="color:#20241D">{{ A.source }}</span>
+                  <span style="color:#9AA093">Confidence</span><span style="font-family:'IBM Plex Mono',monospace; color:#20241D">{{ A.conf }}</span>
+                </div>
+              </div>
+
+              <div style="background:#fff; border:1px solid #DEDCD3; border-radius:4px; padding:16px 18px">
+                <div style="display:flex; align-items:center; justify-content:space-between">
+                  <span style="font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.09em; color:#1F4D36">FACT B</span>
+                  <span style="font:400 10px/1 'IBM Plex Mono',monospace; color:#A2A79A">{{ B.id }}</span>
+                </div>
+                <div style="margin-top:12px; font:500 30px/1.1 'IBM Plex Mono',monospace; letter-spacing:-0.02em">{{ B.display }}</div>
+                <div style="margin-top:10px; display:flex; flex-direction:column; gap:3px; font:400 12px/1.5 'IBM Plex Mono',monospace; color:#4E5449">
+                  <div>{{ B.period }}</div>
+                  <div>{{ B.scope }}</div>
+                  <div>{{ B.basis }}</div>
+                </div>
+                <div style="margin-top:14px; padding-top:12px; border-top:1px solid #EFEDE6; display:grid; grid-template-columns:auto 1fr; gap:4px 14px; font-size:11.5px; color:#6C7266">
+                  <span style="color:#9AA093">Entity</span><span style="color:#20241D">{{ B.entity }}</span>
+                  <span style="color:#9AA093">Metric</span><span style="color:#20241D">{{ B.metric }}</span>
+                  <span style="color:#9AA093">Source</span><span style="color:#20241D">{{ B.source }}</span>
+                  <span style="color:#9AA093">Confidence</span><span style="font-family:'IBM Plex Mono',monospace; color:#20241D">{{ B.conf }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- verdict + axes -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:16px; align-items:start">
+
+              <div style="background:#fff; border:1px solid #DEDCD3; border-radius:4px; padding:18px 20px 20px">
+                <div style="display:flex; justify-content:center; color:#C4C8BC; font:400 15px/1 'IBM Plex Mono',monospace">↓</div>
+                <div style="margin-top:14px; display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:3px; background:{{ V.bg }}; border:1px solid {{ V.edge }}">
+                  <div style="font:600 15px/1 'IBM Plex Mono',monospace; letter-spacing:0.06em; color:{{ V.fg }}">{{ V.verdict }}</div>
+                  <div style="flex:1"></div>
+                  <div style="font:400 10px/1 'IBM Plex Mono',monospace; color:{{ V.fg }}; opacity:0.7">{{ V.tag }}</div>
+                </div>
+
+                <sc-if value="{{ V.hasAxis }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:14px; padding:12px 14px; border-left:2px solid #C6A34B; background:#FBF6EA">
+                    <div style="font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.09em; color:#8A7233">DIFFERING AXIS</div>
+                    <div style="margin-top:7px; font-size:14px; font-weight:600">{{ V.axisLabel }}</div>
+                    <div style="margin-top:4px; font:400 12.5px/1.5 'IBM Plex Mono',monospace; color:#4E5449">{{ V.axisA }} &nbsp;vs&nbsp; {{ V.axisB }}</div>
+                  </div>
+                </sc-if>
+
+                <div style="margin-top:14px; font-size:13.5px; line-height:1.6; color:#3A3F36; text-wrap:pretty">{{ V.reason }}</div>
+
+                <sc-if value="{{ V.hasNorm }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:14px; display:flex; flex-wrap:wrap; gap:8px; font:400 11px/1 'IBM Plex Mono',monospace; color:#5A6055">
+                    <span style="padding:5px 8px; background:#F3F2EC; border-radius:2px">NORMALIZED A &nbsp;{{ V.normA }}</span>
+                    <span style="padding:5px 8px; background:#F3F2EC; border-radius:2px">NORMALIZED B &nbsp;{{ V.normB }}</span>
+                  </div>
+                </sc-if>
+
+                <!-- counterfactual -->
+                <div style="margin-top:20px; padding-top:16px; border-top:1px solid #EFEDE6">
+                  <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap">
+                    <div style="font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.09em; color:#8A9083">COUNTERFACTUAL · HOLD AN AXIS OUT OF REASONING</div>
+                    <div style="font:400 10px/1 'IBM Plex Mono',monospace; color:#A2A79A">POST /compare</div>
+                  </div>
+                  <div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:7px">
+                    <sc-for list="{{ masks }}" as="m" hint-placeholder-count="4">
+                      <div onClick="{{ m.toggle }}" style="cursor:pointer; padding:6px 11px; border-radius:2px; border:1px solid {{ m.edge }}; background:{{ m.bg }}; color:{{ m.fg }}; font:500 11px/1 'IBM Plex Mono',monospace; letter-spacing:0.03em" style-hover="border-color:#1F4D36">{{ m.label }}</div>
+                    </sc-for>
+                  </div>
+
+                  <sc-if value="{{ chain.show }}" hint-placeholder-val="{{ false }}">
+                    <div style="margin-top:14px; padding:14px; background:#14180F; border-radius:3px; display:flex; flex-direction:column; align-items:center; gap:6px">
+                      <div style="font:600 12px/1 'IBM Plex Mono',monospace; letter-spacing:0.06em; color:{{ chain.fromFg }}">{{ chain.from }}</div>
+                      <div style="color:#565E4C; font-size:12px">↓</div>
+                      <div style="font:400 11px/1 'IBM Plex Mono',monospace; color:#9BA391">{{ chain.via }}</div>
+                      <div style="color:#565E4C; font-size:12px">↓</div>
+                      <div style="font:600 12px/1 'IBM Plex Mono',monospace; letter-spacing:0.06em; color:{{ chain.toFg }}">{{ chain.to }}</div>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+
+              <div style="background:#fff; border:1px solid #DEDCD3; border-radius:4px; overflow:hidden">
+                <div style="padding:10px 14px; border-bottom:1px solid #E6E4DB; font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.09em; color:#8A9083">AXIS COMPARISON</div>
+                <sc-for list="{{ axes }}" as="x" hint-placeholder-count="6">
+                  <div style="padding:9px 14px; border-bottom:1px solid #F0EEE7; display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center">
+                    <div>
+                      <div style="font-size:12.5px; font-weight:500; color:#20241D">{{ x.label }}</div>
+                      <div style="margin-top:2px; font:400 10.5px/1.4 'IBM Plex Mono',monospace; color:#9AA093">{{ x.detail }}</div>
+                    </div>
+                    <div style="font:500 11px/1 'IBM Plex Mono',monospace; color:{{ x.fg }}; background:{{ x.bg }}; padding:5px 7px; border-radius:2px; white-space:nowrap">{{ x.mark }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <!-- evidence -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px">
+              <sc-for list="{{ evidence }}" as="e" hint-placeholder-count="2">
+                <div style="background:#fff; border:1px solid #DEDCD3; border-radius:4px; padding:15px 17px; display:flex; flex-direction:column">
+                  <div style="display:flex; align-items:center; justify-content:space-between; gap:10px">
+                    <span style="font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.09em; color:#8A9083">EVIDENCE · {{ e.side }}</span>
+                    <span style="font:400 10px/1 'IBM Plex Mono',monospace; color:#A2A79A">{{ e.ref }}</span>
+                  </div>
+                  <div style="margin-top:11px; font-size:13.5px; line-height:1.62; color:#20241D; text-wrap:pretty">
+                    <span style="background:#E9F0E7; box-shadow:inset 0 -1px 0 #9CBFA4; padding:1px 0">{{ e.quote }}</span>
+                  </div>
+                  <div style="margin-top:11px; font-size:11.5px; color:#6C7266">{{ e.doc }} · {{ e.section }}</div>
+                  <div style="flex:1"></div>
+                  <div onClick="{{ e.open }}" style="margin-top:13px; align-self:flex-start; cursor:pointer; padding:7px 12px; border:1px solid #1F4D36; border-radius:2px; color:#1F4D36; font:500 11px/1 'IBM Plex Mono',monospace; letter-spacing:0.04em" style-hover="background:#1F4D36; color:#fff">OPEN SOURCE PAGE →</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ═══ FACTS ═════════════════════════════════════════════════════ -->
+      <sc-if value="{{ isFacts }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:16px">
+          <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="Search metric, value, quote…" style="flex:1; min-width:200px; padding:9px 11px; border:1px solid #DEDCD3; border-radius:3px; background:#fff; font-size:13px; color:#191C16; outline:none" />
+          <sc-for list="{{ filters }}" as="f" hint-placeholder-count="4">
+            <select value="{{ f.value }}" onChange="{{ f.onChange }}" style="padding:9px 10px; border:1px solid #DEDCD3; border-radius:3px; background:#fff; font-size:12.5px; color:#3A3F36; outline:none">
+              <sc-for list="{{ f.options }}" as="o" hint-placeholder-count="3">
+                <option value="{{ o.value }}">{{ o.label }}</option>
+              </sc-for>
+            </select>
+          </sc-for>
+        </div>
+
+        <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-start">
+          <div style="flex:1 1 480px; min-width:0; background:#fff; border:1px solid #DEDCD3; border-radius:4px; overflow:hidden">
+            <div style="display:grid; grid-template-columns:1.7fr 0.9fr 0.7fr 0.9fr auto; gap:12px; padding:9px 14px; border-bottom:1px solid #E6E4DB; font:500 9.5px/1 'IBM Plex Mono',monospace; letter-spacing:0.09em; color:#8A9083">
+              <div>METRIC</div><div>VALUE</div><div>PERIOD</div><div>SCOPE</div><div>CONF</div>
+            </div>
+            <sc-for list="{{ factRows }}" as="r" hint-placeholder-count="10">
+              <div onClick="{{ r.go }}" style="display:grid; grid-template-columns:1.7fr 0.9fr 0.7fr 0.9fr auto; gap:12px; padding:10px 14px; border-bottom:1px solid #F0EEE7; cursor:pointer; align-items:baseline; background:{{ r.bg }}" style-hover="background:#F6F5F1">
+                <div>
+                  <div style="font-size:12.5px; color:#20241D; font-weight:500">{{ r.metric }}</div>
+                  <div style="margin-top:2px; font:400 10px/1 'IBM Plex Mono',monospace; color:#A2A79A">{{ r.id }} · {{ r.ref }}</div>
+                </div>
+                <div style="font:500 12.5px/1.3 'IBM Plex Mono',monospace">{{ r.display }}</div>
+                <div style="font:400 11.5px/1.3 'IBM Plex Mono',monospace; color:#4E5449">{{ r.period }}</div>
+                <div style="font-size:11.5px; color:#4E5449">{{ r.scope }}</div>
+                <div style="font:400 11.5px/1.3 'IBM Plex Mono',monospace; color:{{ r.confFg }}">{{ r.conf }}</div>
+              </div>
+            </sc-for>
+            <div style="padding:10px 14px; font:400 10.5px/1 'IBM Plex Mono',monospace; color:#A2A79A">{{ factCount }}</div>
+          </div>
+
+          <!-- fact passport -->
+          <div style="flex:1 1 300px; max-width:340px; min-width:272px; background:#fff; border:1px solid #DEDCD3; border-radius:4px; overflow:hidden; position:sticky; top:104px">
+            <div style="padding:10px 14px; border-bottom:1px solid #E6E4DB; display:flex; justify-content:space-between; align-items:center">
+              <span style="font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.09em; color:#8A9083">FACT PASSPORT</span>
+              <span style="font:400 10px/1 'IBM Plex Mono',monospace; color:#A2A79A">{{ P.id }}</span>
+            </div>
+            <div style="padding:16px 16px 18px">
+              <div style="font:500 24px/1.15 'IBM Plex Mono',monospace; letter-spacing:-0.02em">{{ P.display }}</div>
+              <div style="margin-top:5px; font-size:13px; color:#3A3F36">{{ P.metric }}</div>
+              <div style="margin-top:14px; display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:11.5px">
+                <sc-for list="{{ P.rows }}" as="row" hint-placeholder-count="9">
+                  <span style="color:#9AA093">{{ row.k }}</span>
+                  <span style="color:#20241D; font-family:{{ row.font }}">{{ row.v }}</span>
+                </sc-for>
+              </div>
+              <div style="margin-top:16px; padding-top:14px; border-top:1px solid #EFEDE6">
+                <div style="font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.09em; color:#8A9083">EVIDENCE SPAN</div>
+                <div style="margin-top:9px; font-size:12.5px; line-height:1.6; color:#20241D">
+                  <span style="background:#E9F0E7; box-shadow:inset 0 -1px 0 #9CBFA4">{{ P.quote }}</span>
+                </div>
+              </div>
+              <div style="margin-top:14px; display:flex; gap:8px; flex-wrap:wrap">
+                <div onClick="{{ P.open }}" style="cursor:pointer; padding:7px 12px; border:1px solid #1F4D36; border-radius:2px; color:#1F4D36; font:500 11px/1 'IBM Plex Mono',monospace" style-hover="background:#1F4D36; color:#fff">SOURCE PAGE →</div>
+                <div onClick="{{ P.compare }}" style="cursor:pointer; padding:7px 12px; border:1px solid #DEDCD3; border-radius:2px; color:#3A3F36; font:500 11px/1 'IBM Plex Mono',monospace" style-hover="border-color:#191C16">COMPARE</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ═══ TIMELINE ══════════════════════════════════════════════════ -->
+      <sc-if value="{{ isTimeline }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:18px">
+          <div style="display:flex; align-items:center; gap:9px; padding:8px 12px; background:#fff; border:1px solid #DEDCD3; border-radius:3px">
+            <span style="font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.09em; color:#8A9083">AS OF</span>
+            <input type="date" value="{{ asOf }}" onChange="{{ onAsOf }}" min="2017-01-01" max="2026-12-31" style="border:none; outline:none; background:transparent; font:500 12.5px/1 'IBM Plex Mono',monospace; color:#191C16" />
+          </div>
+          <div style="font-size:12.5px; color:#6C7266">{{ asOfSummary }}</div>
+        </div>
+
+        <div style="background:#fff; border:1px solid #DEDCD3; border-radius:4px; padding:18px 20px 12px">
+          <div style="position:relative">
+          <div style="padding-left:150px">
+            <div style="position:relative; height:18px; border-bottom:1px solid #E6E4DB">
+              <sc-for list="{{ ticks }}" as="t" hint-placeholder-count="10">
+                <div style="position:absolute; top:0; left:{{ t.left }}%; font:400 9.5px/1 'IBM Plex Mono',monospace; color:#A2A79A; transform:translateX(-50%)">{{ t.label }}</div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="position:absolute; top:18px; bottom:0; left:{{ asOfLeftPx }}; width:1px; background:#B4372A; z-index:3"></div>
+
+          <sc-for list="{{ tracks }}" as="tr" hint-placeholder-count="3">
+            <div style="display:grid; grid-template-columns:150px minmax(0,1fr); gap:0; align-items:center; padding:11px 0; border-bottom:1px solid #F0EEE7">
+              <div style="padding-right:14px">
+                <div style="font-size:12.5px; font-weight:500; color:#20241D">{{ tr.role }}</div>
+                <div style="margin-top:2px; font:400 10px/1 'IBM Plex Mono',monospace; color:#A2A79A">{{ tr.count }}</div>
+              </div>
+              <div style="position:relative; height:46px">
+                <sc-for list="{{ tr.gaps }}" as="g" hint-placeholder-count="0">
+                  <div title="{{ g.label }}" style="position:absolute; top:3px; height:28px; left:{{ g.left }}%; width:{{ g.width }}%; min-width:3px; background:repeating-linear-gradient(135deg,#F7E5E2 0 4px,#FBF1EF 4px 8px); border:1px dashed #C98A80; border-radius:2px; overflow:visible">
+                    <span style="position:absolute; top:30px; left:50%; transform:translateX(-50%); font:500 9px/1 'IBM Plex Mono',monospace; color:#93231A; white-space:nowrap">{{ g.label }}</span>
+                  </div>
+                </sc-for>
+                <sc-for list="{{ tr.bars }}" as="b" hint-placeholder-count="2">
+                  <div onClick="{{ b.open }}" style="position:absolute; top:5px; height:24px; left:{{ b.left }}%; width:{{ b.width }}%; background:{{ b.bg }}; border:1px solid {{ b.edge }}; border-radius:2px; display:flex; align-items:center; padding:0 8px; cursor:pointer; overflow:hidden" style-hover="border-color:#14180F">
+                    <span style="font:500 11px/1 'IBM Plex Mono',monospace; color:{{ b.fg }}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ b.holder }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+          </div>
+
+          <div style="display:flex; gap:18px; padding:12px 0 4px; font:400 10px/1 'IBM Plex Mono',monospace; color:#8A9083; flex-wrap:wrap">
+            <span style="display:flex; align-items:center; gap:6px"><span style="width:14px; height:9px; background:#E7EFE9; border:1px solid #9CBFA4; display:inline-block"></span>IN OFFICE AT AS-OF DATE</span>
+            <span style="display:flex; align-items:center; gap:6px"><span style="width:14px; height:9px; background:#F3F2EC; border:1px solid #D2D0C6; display:inline-block"></span>TENURE</span>
+            <span style="display:flex; align-items:center; gap:6px"><span style="width:14px; height:9px; background:repeating-linear-gradient(135deg,#F7E5E2 0 4px,#FBF1EF 4px 8px); border:1px dashed #C98A80; display:inline-block"></span>VACANCY</span>
+            <span style="display:flex; align-items:center; gap:6px"><span style="width:1px; height:11px; background:#B4372A; display:inline-block"></span>AS OF</span>
+          </div>
+        </div>
+
+        <div style="margin-top:20px; display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px">
+          <sc-for list="{{ successions }}" as="s" hint-placeholder-count="2">
+            <div style="background:#fff; border:1px solid #DEDCD3; border-radius:4px; padding:15px 17px">
+              <div style="display:flex; align-items:center; gap:8px">
+                <span style="font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.06em; padding:4px 6px; border-radius:2px; background:#E4E9F5; color:#2C3E75">SUCCESSION</span>
+                <span style="font-size:12px; color:#6C7266">{{ s.role }}</span>
+              </div>
+              <div style="margin-top:11px; font:500 13.5px/1.5 'IBM Plex Mono',monospace; color:#20241D">{{ s.from }} → {{ s.to }}</div>
+              <div style="margin-top:8px; font-size:12.5px; line-height:1.55; color:#4E5449; text-wrap:pretty">{{ s.reason }}</div>
+              <div onClick="{{ s.go }}" style="margin-top:12px; cursor:pointer; font:500 11px/1 'IBM Plex Mono',monospace; color:#1F4D36" style-hover="color:#123324">INSPECT PAIR →</div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <!-- ═══ DOCUMENTS ═════════════════════════════════════════════════ -->
+      <sc-if value="{{ isDocuments }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#fff; border:1px solid #DEDCD3; border-radius:4px; overflow:hidden">
+          <div style="display:grid; grid-template-columns:2.2fr 0.8fr 0.5fr 0.6fr 0.6fr 0.7fr auto; gap:12px; padding:9px 16px; border-bottom:1px solid #E6E4DB; font:500 9.5px/1 'IBM Plex Mono',monospace; letter-spacing:0.09em; color:#8A9083">
+            <div>DOCUMENT</div><div>STATUS</div><div>PAGES</div><div>CLAIMS</div><div>GROUNDED</div><div>QUARANTINE</div><div></div>
+          </div>
+          <sc-for list="{{ docRows }}" as="d" hint-placeholder-count="6">
+            <div style="display:grid; grid-template-columns:2.2fr 0.8fr 0.5fr 0.6fr 0.6fr 0.7fr auto; gap:12px; padding:12px 16px; border-bottom:1px solid #F0EEE7; align-items:center">
+              <div>
+                <div style="font-size:13px; font-weight:500; color:#20241D">{{ d.title }}</div>
+                <div style="margin-top:3px; font:400 10px/1 'IBM Plex Mono',monospace; color:#A2A79A">{{ d.meta }}</div>
+              </div>
+              <div>
+                <span style="font:500 9.5px/1 'IBM Plex Mono',monospace; letter-spacing:0.06em; padding:4px 6px; border-radius:2px; background:{{ d.bg }}; color:{{ d.fg }}">{{ d.status }}</span>
+                <sc-if value="{{ d.hasProgress }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:6px; height:3px; background:#EFEDE6; border-radius:2px; overflow:hidden">
+                    <div style="height:100%; width:{{ d.progress }}%; background:#C6A34B"></div>
+                  </div>
+                </sc-if>
+              </div>
+              <div style="font:400 12px/1 'IBM Plex Mono',monospace; color:#4E5449">{{ d.pages }}</div>
+              <div style="font:400 12px/1 'IBM Plex Mono',monospace; color:#4E5449">{{ d.claims }}</div>
+              <div style="font:400 12px/1 'IBM Plex Mono',monospace; color:#1F4D36">{{ d.grounded }}</div>
+              <div style="font:400 12px/1 'IBM Plex Mono',monospace; color:{{ d.qFg }}">{{ d.quarantined }}</div>
+              <div onClick="{{ d.go }}" style="cursor:pointer; font:500 10.5px/1 'IBM Plex Mono',monospace; color:#1F4D36; white-space:nowrap" style-hover="color:#123324">FACTS →</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="margin-top:14px; display:flex; align-items:center; gap:12px; padding:14px 16px; border:1px dashed #D2D0C6; border-radius:4px; background:#FAF9F5">
+          <div style="font:400 11px/1.5 'IBM Plex Mono',monospace; color:#8A9083">DROP PDFs TO INGEST · extraction, grounding and axis resolution run per page</div>
+        </div>
+      </sc-if>
+
+      <!-- ═══ OVERVIEW ══════════════════════════════════════════════════ -->
+      <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(158px,1fr)); gap:14px">
+          <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="6">
+            <div style="background:#fff; border:1px solid #DEDCD3; border-radius:4px; padding:15px 16px">
+              <div style="font:500 9.5px/1.4 'IBM Plex Mono',monospace; letter-spacing:0.09em; color:#8A9083">{{ t.label }}</div>
+              <div style="margin-top:10px; font:500 27px/1 'IBM Plex Mono',monospace; letter-spacing:-0.02em; color:{{ t.fg }}">{{ t.value }}</div>
+              <div style="margin-top:6px; font-size:11.5px; color:#6C7266">{{ t.note }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="margin-top:20px; display:grid; grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); gap:16px; align-items:start">
+          <div style="background:#fff; border:1px solid #DEDCD3; border-radius:4px; padding:18px 20px 20px">
+            <div style="font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.09em; color:#8A9083">RECONCILIATION FUNNEL</div>
+            <div style="margin-top:16px; display:flex; flex-direction:column; gap:10px">
+              <sc-for list="{{ funnel }}" as="f" hint-placeholder-count="3">
+                <div>
+                  <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px">
+                    <span style="font-size:13px; color:#20241D">{{ f.label }}</span>
+                    <span style="font:500 13px/1 'IBM Plex Mono',monospace; color:{{ f.fg }}">{{ f.value }}</span>
+                  </div>
+                  <div style="margin-top:6px; height:8px; background:#F3F2EC; border-radius:2px; overflow:hidden">
+                    <div style="height:100%; width:{{ f.pct }}%; background:{{ f.fg }}"></div>
+                  </div>
+                  <div style="margin-top:5px; font-size:11.5px; color:#6C7266">{{ f.note }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:#fff; border:1px solid #DEDCD3; border-radius:4px; overflow:hidden">
+            <div style="padding:10px 14px; border-bottom:1px solid #E6E4DB; font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.09em; color:#8A9083">RELATIONSHIPS</div>
+            <sc-for list="{{ pairs }}" as="p" hint-placeholder-count="7">
+              <div onClick="{{ p.go }}" style="padding:11px 14px; border-bottom:1px solid #F0EEE7; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:12px" style-hover="background:#F6F5F1">
+                <span style="font-size:12.5px; color:#20241D">{{ p.label }}</span>
+                <span style="font:500 9px/1 'IBM Plex Mono',monospace; letter-spacing:0.06em; padding:4px 6px; border-radius:2px; background:{{ p.badgeBg }}; color:{{ p.badgeFg }}; white-space:nowrap">{{ p.verdict }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ═══ QUALITY ═══════════════════════════════════════════════════ -->
+      <sc-if value="{{ isQuality }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; align-items:start">
+          <div style="background:#fff; border:1px solid #DEDCD3; border-radius:4px; padding:18px 20px">
+            <div style="font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.09em; color:#8A9083">GROUNDING</div>
+            <div style="margin-top:12px; display:flex; align-items:baseline; gap:10px">
+              <span style="font:500 32px/1 'IBM Plex Mono',monospace; letter-spacing:-0.02em; color:#1F4D36">{{ groundRate }}</span>
+              <span style="font-size:12.5px; color:#6C7266">of claims carry a sentence-level evidence span</span>
+            </div>
+            <div style="margin-top:14px; height:10px; display:flex; border-radius:2px; overflow:hidden; background:#F3F2EC">
+              <div style="width:{{ groundPct }}%; background:#1F4D36"></div>
+              <div style="width:{{ quarPct }}%; background:#C6A34B"></div>
+            </div>
+            <div style="margin-top:10px; display:flex; gap:16px; font:400 11px/1 'IBM Plex Mono',monospace; color:#5A6055; flex-wrap:wrap">
+              <span>{{ stats.grounded }} GROUNDED</span><span>{{ stats.quarantined }} QUARANTINED</span>
+            </div>
+          </div>
+
+          <div style="background:#fff; border:1px solid #DEDCD3; border-radius:4px; padding:18px 20px">
+            <div style="font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.09em; color:#8A9083">CONFIDENCE BREAKDOWN</div>
+            <div style="margin-top:14px; display:flex; flex-direction:column; gap:9px">
+              <sc-for list="{{ confidence }}" as="c" hint-placeholder-count="4">
+                <div style="display:grid; grid-template-columns:84px minmax(0,1fr) 52px; gap:10px; align-items:center">
+                  <span style="font:400 11px/1 'IBM Plex Mono',monospace; color:#4E5449">{{ c.band }}</span>
+                  <div style="height:8px; background:#F3F2EC; border-radius:2px; overflow:hidden">
+                    <div style="height:100%; width:{{ c.pct }}%; background:{{ c.fg }}"></div>
+                  </div>
+                  <span style="font:400 11px/1 'IBM Plex Mono',monospace; color:#20241D; text-align:right">{{ c.count }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px; background:#fff; border:1px solid #DEDCD3; border-radius:4px; overflow:hidden">
+          <div style="padding:10px 14px; border-bottom:1px solid #E6E4DB; font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.09em; color:#8A9083">DISCOVERED CONTEXTUAL AXES</div>
+          <sc-for list="{{ axisRows }}" as="a" hint-placeholder-count="5">
+            <div style="display:grid; grid-template-columns:1fr 2fr auto auto; gap:14px; padding:11px 14px; border-bottom:1px solid #F0EEE7; align-items:center">
+              <div style="font-size:12.5px; font-weight:500; color:#20241D">{{ a.axis }}</div>
+              <div style="font:400 11px/1.5 'IBM Plex Mono',monospace; color:#6C7266">{{ a.values }}</div>
+              <div style="font:400 11px/1 'IBM Plex Mono',monospace; color:#9AA093; white-space:nowrap">{{ a.occ }}</div>
+              <div style="font:400 11px/1 'IBM Plex Mono',monospace; color:#1F4D36; white-space:nowrap">{{ a.res }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="margin-top:16px">
+          <div style="font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.09em; color:#8A9083; margin-bottom:12px">QUARANTINED CLAIMS · {{ quarCount }}</div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px">
+            <sc-for list="{{ quarantine }}" as="q" hint-placeholder-count="6">
+              <div style="background:#fff; border:1px solid #DEDCD3; border-left:2px solid #C6A34B; border-radius:4px; padding:14px 16px">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px">
+                  <span style="font:500 9.5px/1 'IBM Plex Mono',monospace; letter-spacing:0.06em; padding:4px 6px; border-radius:2px; background:#F6EBD4; color:#7A5410">{{ q.reason }}</span>
+                  <span style="font:400 10px/1 'IBM Plex Mono',monospace; color:#A2A79A">{{ q.ref }}</span>
+                </div>
+                <div style="margin-top:11px; font:500 12.5px/1.45 'IBM Plex Mono',monospace; color:#20241D">{{ q.claim }}</div>
+                <div style="margin-top:8px; font-size:12.5px; line-height:1.55; color:#4E5449; text-wrap:pretty">{{ q.note }}</div>
+                <div style="margin-top:10px; font:400 10.5px/1 'IBM Plex Mono',monospace; color:#8A9083">CONFIDENCE {{ q.conf }} · WITHHELD FROM COMPARISON</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+  </div>
+
+  <!-- ── evidence viewer ──────────────────────────────────────────────── -->
+  <sc-if value="{{ ev.open }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeEv }}" style="position:fixed; inset:0; background:rgba(20,24,15,0.5); z-index:40"></div>
+    <div style="position:fixed; top:0; right:0; bottom:0; width:min(920px,88vw); background:#F6F5F1; border-left:1px solid #C8C6BC; z-index:41; display:flex; flex-direction:column">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 22px; border-bottom:1px solid #DEDCD3; background:#fff">
+        <div>
+          <div style="font-size:15px; font-weight:600">{{ ev.docTitle }}</div>
+          <div style="margin-top:3px; font:400 11px/1 'IBM Plex Mono',monospace; color:#8A9083">{{ ev.ref }} · {{ ev.section }}</div>
+        </div>
+        <div onClick="{{ closeEv }}" style="cursor:pointer; padding:7px 12px; border:1px solid #DEDCD3; border-radius:2px; font:500 11px/1 'IBM Plex Mono',monospace; color:#3A3F36" style-hover="border-color:#191C16">CLOSE ✕</div>
+      </div>
+
+      <div class="sb" style="flex:1; overflow:auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:0; align-items:start">
+        <div style="padding:22px">
+          <div style="background:#fff; border:1px solid #D2D0C6; box-shadow:0 1px 3px rgba(20,24,15,0.07); padding:46px 44px; position:relative">
+            <div style="position:absolute; top:14px; right:18px; font:400 9.5px/1 'IBM Plex Mono',monospace; color:#B8BCB0">{{ ev.pageLabel }}</div>
+            <div style="font-size:10px; font-weight:600; letter-spacing:0.12em; color:#8A9083; text-transform:uppercase">{{ ev.section }}</div>
+            <sc-for list="{{ ev.linesTop }}" as="l" hint-placeholder-count="5">
+              <div style="height:7px; border-radius:2px; background:#E8E6DE; margin-top:10px; width:{{ l }}%"></div>
+            </sc-for>
+            <div style="margin:20px 0; padding:14px 16px; background:#EEF4EC; border:1px solid #9CBFA4; border-radius:2px; position:relative">
+              <div style="position:absolute; top:-8px; left:12px; padding:1px 5px; background:#1F4D36; color:#fff; font:500 8.5px/1.6 'IBM Plex Mono',monospace; letter-spacing:0.06em">EVIDENCE SPAN</div>
+              <div style="font-size:14px; line-height:1.6; color:#14180F; text-wrap:pretty">{{ ev.quote }}</div>
+            </div>
+            <sc-for list="{{ ev.linesBottom }}" as="l" hint-placeholder-count="6">
+              <div style="height:7px; border-radius:2px; background:#E8E6DE; margin-top:10px; width:{{ l }}%"></div>
+            </sc-for>
+            <div style="margin-top:26px; font:400 9px/1 'IBM Plex Mono',monospace; color:#C0C4B8">PAGE RENDER · SURROUNDING BODY TEXT SHOWN AS LAYOUT BLOCKS</div>
+          </div>
+        </div>
+
+        <div style="padding:22px 22px 22px 0">
+          <div style="background:#fff; border:1px solid #DEDCD3; border-radius:4px; padding:15px 16px">
+            <div style="font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.09em; color:#8A9083">EXTRACTED CLAIM</div>
+            <div style="margin-top:10px; font:500 13px/1.5 'IBM Plex Mono',monospace; color:#20241D">{{ ev.claim }}</div>
+            <div style="margin-top:14px; padding-top:12px; border-top:1px solid #EFEDE6; display:grid; grid-template-columns:auto 1fr; gap:6px 12px; font-size:11.5px">
+              <sc-for list="{{ ev.rows }}" as="row" hint-placeholder-count="8">
+                <span style="color:#9AA093">{{ row.k }}</span>
+                <span style="color:#20241D; font-family:{{ row.font }}">{{ row.v }}</span>
+              </sc-for>
+            </div>
+          </div>
+          <div style="margin-top:14px; background:#fff; border:1px solid #DEDCD3; border-radius:4px; padding:15px 16px">
+            <div style="font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:0.09em; color:#8A9083">PROVENANCE CHAIN</div>
+            <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px; font:400 11px/1.5 'IBM Plex Mono',monospace; color:#4E5449">
+              <sc-for list="{{ ev.chain }}" as="c" hint-placeholder-count="4">
+                <div style="display:flex; gap:8px"><span style="color:#9CBFA4">▸</span><span>{{ c }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
+const VERDICT = {
+  CORROBORATES: { bg: "#E7EFE9", fg: "#1F4D36", edge: "#C3DACB", dark: "#7FB894", tag: "AGREEMENT" },
+  CONTRADICTS: { bg: "#F7E5E2", fg: "#93231A", edge: "#E6C4BE", dark: "#E08A7E", tag: "CONFLICT" },
+  CONTEXTUAL: { bg: "#F6EBD4", fg: "#7A5410", edge: "#E0CDA1", dark: "#DDB463", tag: "EXPLAINED BY CONTEXT" },
+  INSUFFICIENT_EVIDENCE: { bg: "#E9E8E2", fg: "#4A4F47", edge: "#D6D4CB", dark: "#A2A79A", tag: "WITHHELD" },
+  SUCCESSION: { bg: "#E4E9F5", fg: "#2C3E75", edge: "#C6D0E6", dark: "#8FA2CE", tag: "TEMPORAL" },
+  // The engine returns a wider vocabulary than the four headline verdicts.
+  // Falling back to the WITHHELD styling for these would tell the reader a
+  // succession or a trend was a refusal to answer, which is the opposite of
+  // what happened.
+  SUCCESSION_WITH_VACANCY: { bg: "#E4E9F5", fg: "#2C3E75", edge: "#C6D0E6", dark: "#8FA2CE", tag: "VACANCY" },
+  CLOSES_INTERVAL: { bg: "#E4E9F5", fg: "#2C3E75", edge: "#C6D0E6", dark: "#8FA2CE", tag: "REFINEMENT" },
+  CONTINUES: { bg: "#E4E9F5", fg: "#2C3E75", edge: "#C6D0E6", dark: "#8FA2CE", tag: "SAME HOLDER" },
+  CONTEXTUAL_TEMPORAL: { bg: "#F6EBD4", fg: "#7A5410", edge: "#E0CDA1", dark: "#DDB463", tag: "CHANGE OVER TIME" },
+  INCOMPARABLE: { bg: "#E9E8E2", fg: "#4A4F47", edge: "#D6D4CB", dark: "#A2A79A", tag: "NOT COMPARABLE" },
+};
+const AXIS_STATUS = {
+  match: { mark: "✓", fg: "#1F4D36", bg: "#E7EFE9" },
+  normalized: { mark: "normalized", fg: "#7A5410", bg: "#F6EBD4" },
+  differs: { mark: "differs", fg: "#93231A", bg: "#F7E5E2" },
+  masked: { mark: "masked", fg: "#4A4F47", bg: "#E9E8E2" },
+};
+const PAGES = [
+  { key: "overview", label: "Overview", title: "Corpus overview", sub: "Extraction, grounding and reconciliation state across the loaded document set." },
+  { key: "documents", label: "Documents", title: "Documents", sub: "Ingested PDFs with per-document extraction and grounding counts." },
+  { key: "facts", label: "Facts", title: "Facts", sub: "Every grounded claim as a passport: entity, metric, value, unit, period, scope, source." },
+  { key: "compare", label: "Compare", title: "Compare", sub: "Two facts, their context axes and the verdict the engine returns for the pair." },
+  { key: "timeline", label: "Timeline", title: "Timeline", sub: "Time-bound facts, office succession and recorded vacancies at a chosen date." },
+  { key: "quality", label: "Corpus quality", title: "Corpus quality", sub: "Grounding rate, confidence distribution, quarantined claims and discovered axes." },
+];
+const T0 = new Date("2017-01-01").getTime();
+const T1 = new Date("2026-12-31").getTime();
+const pos = (d) => ((new Date(d).getTime() - T0) / (T1 - T0)) * 100;
+
+class Component extends DCLogic {
+  state = {
+    page: "compare", api: null, corpus: null, docs: [], facts: [], pairs: [], quarantine: [],
+    pairId: "r-02", masked: [], result: null, busy: false,
+    factId: "f-3307", query: "", fEntity: "all", fMetric: "all", fPeriod: "all", fDoc: "all",
+    asOf: "2023-09-15", ev: null,
+  };
+
+  async componentDidMount() {
+    const mod = await import("./api.js");
+    const [corpus, docs, facts, pairs, quarantine] = await Promise.all([
+      mod.api.corpus(), mod.api.documents(), mod.api.facts(), mod.api.pairs(), mod.api.quarantine(),
+    ]);
+    this.setState({ api: mod, corpus, docs, facts, pairs, quarantine }, this.recompute);
+  }
+
+  pair() { return this.state.pairs.find((p) => p.id === this.state.pairId) || null; }
+
+  recompute = async () => {
+    const p = this.pair();
+    if (!p || !this.state.api) return;
+    this.setState({ busy: true });
+    const result = await this.state.api.api.compare(p.a, p.b, this.state.masked);
+    let baseline = result;
+    if (this.state.masked.length) baseline = await this.state.api.api.compare(p.a, p.b, []);
+    this.setState({ result, baseline, busy: false });
+  };
+
+  selectPair = (id) => this.setState({ pairId: id, masked: [], page: "compare" }, this.recompute);
+  toggleMask = (key) => this.setState((s) => ({
+    masked: s.masked.includes(key) ? s.masked.filter((k) => k !== key) : s.masked.concat(key),
+  }), this.recompute);
+
+  openEvidence = (id) => this.setState({ ev: id });
+
+  fact(id) { return this.state.facts.find((f) => f.id === id); }
+  doc(id) { return this.state.docs.find((d) => d.id === id); }
+
+  factCard(f) {
+    const fmt = this.state.api ? this.state.api.fmt : () => "";
+    const d = this.doc(f.doc);
+    if (!f) return {};
+    return {
+      id: f.id, display: fmt(f), period: f.period, scope: f.scope, basis: f.basis,
+      entity: f.entity, metric: f.metric, conf: f.confidence.toFixed(2),
+      source: d ? `${f.doc} p.${f.page}` : `p.${f.page}`,
+    };
+  }
+
+  passportRows(f) {
+    const fmt = this.state.api ? this.state.api.fmt : () => "";
+    const d = this.doc(f.doc);
+    const mono = "'IBM Plex Mono',monospace";
+    return [
+      { k: "Entity", v: f.entity, font: "inherit" },
+      { k: "Metric", v: f.metric, font: "inherit" },
+      { k: "Value", v: fmt(f), font: mono },
+      { k: "Unit", v: f.unit, font: mono },
+      { k: "Period", v: f.period, font: mono },
+      { k: "Scope", v: f.scope, font: "inherit" },
+      { k: "Basis", v: f.basis, font: "inherit" },
+      { k: "Source", v: d ? d.title : f.doc, font: "inherit" },
+      { k: "Page", v: String(f.page), font: mono },
+      { k: "Confidence", v: f.confidence.toFixed(2), font: mono },
+    ];
+  }
+
+  filteredFacts() {
+    const s = this.state;
+    const q = s.query.trim().toLowerCase();
+    return s.facts.filter((f) =>
+      (s.fEntity === "all" || f.entity === s.fEntity) &&
+      (s.fMetric === "all" || f.metric === s.fMetric) &&
+      (s.fPeriod === "all" || f.period === s.fPeriod) &&
+      (s.fDoc === "all" || f.doc === s.fDoc) &&
+      (!q || (f.metric + " " + f.claim + " " + f.quote + " " + f.id).toLowerCase().includes(q))
+    );
+  }
+
+  renderVals() {
+    const s = this.state;
+    const fmt = s.api ? s.api.fmt : () => "—";
+    const page = PAGES.find((p) => p.key === s.page) || PAGES[0];
+    const c = s.corpus || {};
+
+    const nav = PAGES.map((p) => {
+      const on = p.key === s.page;
+      const counts = {
+        overview: "", documents: String(s.docs.length), facts: String(s.facts.length),
+        compare: String(s.pairs.length), timeline: "3", quality: String(s.quarantine.length),
+      };
+      return { ...p, go: () => this.setState({ page: p.key }), mark: on ? "#7FB894" : "transparent",
+        fg: on ? "#F3F5EF" : "#A8AF9E", weight: on ? 600 : 400, count: counts[p.key] };
+    });
+
+    const pairs = s.pairs.map((p) => {
+      const v = VERDICT[p.verdict] || VERDICT.INSUFFICIENT_EVIDENCE;
+      const on = p.id === s.pairId;
+      return { id: p.id, label: p.label, verdict: p.verdict, go: () => this.selectPair(p.id),
+        bg: on ? "#F6F5F1" : "#fff", edge: on ? "#1F4D36" : "transparent", weight: on ? 600 : 400,
+        badgeBg: v.bg, badgeFg: v.fg };
+    });
+
+    // ── compare
+    const p = this.pair();
+    const A = p ? this.fact(p.a) : null;
+    const B = p ? this.fact(p.b) : null;
+    const r = s.result;
+    const vs = r ? VERDICT[r.verdict] || VERDICT.INSUFFICIENT_EVIDENCE : VERDICT.INSUFFICIENT_EVIDENCE;
+    const axes = r ? r.axes.map((x) => {
+      const st = AXIS_STATUS[x.status];
+      return { label: x.label, mark: st.mark, fg: st.fg, bg: st.bg,
+        detail: x.status === "match" ? String(x.a) : `${x.a} → ${x.b}` };
+    }) : [];
+
+    const maskable = r ? r.axes.filter((x) => ["scope", "basis", "period", "unit"].includes(x.key)) : [];
+    const masks = maskable.map((x) => {
+      const on = s.masked.includes(x.key);
+      return { label: (on ? "◼ " : "◻ ") + "Mask " + ({ scope: "Scope", basis: "Basis", period: "Period", unit: "Unit" }[x.key] || x.label),
+        toggle: () => this.toggleMask(x.key),
+        bg: on ? "#14180F" : "#fff", fg: on ? "#E8EAE4" : "#3A3F36", edge: on ? "#14180F" : "#DEDCD3" };
+    });
+
+    const base = s.baseline;
+    const chain = {
+      show: !!(s.masked.length && base && r && base.verdict !== r.verdict),
+      from: base ? base.verdict : "",
+      to: r ? r.verdict : "",
+      via: "Mask " + s.masked.map((k) => k[0].toUpperCase() + k.slice(1)).join(" + "),
+      fromFg: base ? (VERDICT[base.verdict] || VERDICT.INSUFFICIENT_EVIDENCE).dark : "#fff",
+      toFg: r ? (VERDICT[r.verdict] || VERDICT.INSUFFICIENT_EVIDENCE).dark : "#fff",
+    };
+
+    const evidence = [A, B].filter(Boolean).map((f, i) => {
+      const d = this.doc(f.doc);
+      return { side: i === 0 ? "FACT A" : "FACT B", ref: `${f.doc} · p.${f.page}`,
+        quote: f.quote || "No sentence-level evidence span was located for this claim.",
+        doc: d ? d.title : f.doc, section: f.section, open: () => this.openEvidence(f.id) };
+    });
+
+    const V = r ? {
+      verdict: r.verdict, reason: r.reason, bg: vs.bg, fg: vs.fg, edge: vs.edge, tag: vs.tag,
+      hasAxis: !!r.differingAxis,
+      axisLabel: r.differingAxis ? r.differingAxis.label : "",
+      axisA: r.differingAxis ? r.differingAxis.a : "",
+      axisB: r.differingAxis ? r.differingAxis.b : "",
+      hasNorm: !!(r.normalized && r.normalized.a && r.normalized.a.dim !== "TENURE"),
+      normA: r.normalized && r.normalized.a ? `${r.normalized.a.value.toLocaleString("en-IN", { maximumFractionDigits: 1 })} ${r.normalized.a.unit}` : "",
+      normB: r.normalized && r.normalized.b ? `${r.normalized.b.value.toLocaleString("en-IN", { maximumFractionDigits: 1 })} ${r.normalized.b.unit}` : "",
+    } : { verdict: "…", reason: "", bg: "#E9E8E2", fg: "#4A4F47", edge: "#D6D4CB", tag: "", hasAxis: false, hasNorm: false };
+
+    // ── facts
+    const uniq = (k) => Array.from(new Set(s.facts.map((f) => f[k]))).sort();
+    const opt = (label, vals) => [{ value: "all", label: `All ${label}` }].concat(vals.map((v) => ({ value: v, label: v })));
+    const filters = [
+      { value: s.fEntity, options: opt("entities", uniq("entity")), onChange: (e) => this.setState({ fEntity: e.target.value }) },
+      { value: s.fMetric, options: opt("metrics", uniq("metric")), onChange: (e) => this.setState({ fMetric: e.target.value }) },
+      { value: s.fPeriod, options: opt("periods", uniq("period")), onChange: (e) => this.setState({ fPeriod: e.target.value }) },
+      { value: s.fDoc, options: opt("documents", uniq("doc")), onChange: (e) => this.setState({ fDoc: e.target.value }) },
+    ];
+    const rows = this.filteredFacts();
+    const factRows = rows.map((f) => ({
+      id: f.id, metric: f.metric, display: fmt(f), period: f.period, scope: f.scope,
+      conf: f.confidence.toFixed(2), confFg: f.confidence < 0.6 ? "#93231A" : f.confidence < 0.85 ? "#7A5410" : "#1F4D36",
+      ref: `${f.doc} p.${f.page}`, bg: f.id === s.factId ? "#F6F5F1" : "#fff",
+      go: () => this.setState({ factId: f.id }),
+    }));
+    const pf = this.fact(s.factId) || rows[0];
+    const P = pf ? {
+      id: pf.id, display: fmt(pf), metric: pf.metric, rows: this.passportRows(pf),
+      quote: pf.quote || "No evidence span — claim is quarantined.",
+      open: () => this.openEvidence(pf.id),
+      compare: () => {
+        const hit = s.pairs.find((x) => x.a === pf.id || x.b === pf.id);
+        if (hit) this.selectPair(hit.id); else this.setState({ page: "compare" });
+      },
+    } : { id: "", display: "—", metric: "", rows: [], quote: "" };
+
+    // ── timeline
+    const tenures = s.facts.filter((f) => f.kind === "tenure");
+    const roles = Array.from(new Set(tenures.map((t) => t.role)));
+    const asOfT = new Date(s.asOf).getTime();
+    const inOffice = (t) => (!t.start || asOfT >= new Date(t.start).getTime()) && (!t.end || asOfT <= new Date(t.end).getTime());
+    const tracks = roles.map((role) => {
+      // A document that records only a resignation gives no start date. The
+      // holding is real and belongs on the timeline; it is drawn from the
+      // origin and marked, rather than dropped for being incomplete.
+      const START0 = "2017-01-01";
+      const ts = tenures.filter((t) => t.role === role)
+        .sort((a, b) => new Date(a.start || START0) - new Date(b.start || START0));
+      const gaps = [];
+      for (let i = 0; i < ts.length - 1; i++) {
+        if (!ts[i].end) continue;
+        const days = Math.round((new Date(ts[i + 1].start) - new Date(ts[i].end)) / 864e5) - 1;
+        if (days > 0) gaps.push({ left: pos(ts[i].end), width: pos(ts[i + 1].start) - pos(ts[i].end), label: days + "d vacant" });
+      }
+      return {
+        role, count: ts.length + (ts.length === 1 ? " holder" : " holders"),
+        bars: ts.map((t) => {
+          const on = inOffice(t);
+          return { holder: t.holder + (t.start ? "" : " (start not stated)"),
+            left: pos(t.start || START0), width: pos(t.end || "2026-09-07") - pos(t.start || START0),
+            bg: on ? "#E7EFE9" : "#F3F2EC", edge: on ? "#9CBFA4" : "#D2D0C6", fg: on ? "#1F4D36" : "#5A6055",
+            open: () => this.openEvidence(t.id) };
+        }),
+        gaps,
+      };
+    });
+    const holdersNow = tenures.filter(inOffice);
+    const vacantRoles = roles.filter((role) => !holdersNow.some((h) => h.role === role));
+    const asOfSummary = holdersNow.length
+      ? holdersNow.map((h) => `${h.role}: ${h.holder}`).join(" · ") + (vacantRoles.length ? ` · vacant: ${vacantRoles.join(", ")}` : "")
+      : "No office holders recorded at this date.";
+    const ticks = [];
+    for (let y = 2017; y <= 2026; y++) ticks.push({ label: String(y), left: pos(`${y}-01-01`) });
+    const successions = s.pairs.filter((x) => x.verdict === "SUCCESSION").map((x) => {
+      const a = this.fact(x.a), b = this.fact(x.b);
+      const days = Math.round((new Date(b.start) - new Date(a.end)) / 864e5) - 1;
+      return { role: a.role, from: a.holder, to: b.holder, go: () => this.selectPair(x.id),
+        reason: days > 0
+          ? `Office vacant ${days} days between ${a.end} and ${b.start}. Both spans grounded in ${a.doc}.`
+          : `Continuous handover with no recorded vacancy. Both spans grounded in ${a.doc}.` };
+    });
+
+    // ── documents
+    const st = { indexed: { bg: "#E7EFE9", fg: "#1F4D36" }, extracting: { bg: "#F6EBD4", fg: "#7A5410" }, queued: { bg: "#E9E8E2", fg: "#4A4F47" } };
+    const docRows = s.docs.map((d) => ({
+      title: d.title, meta: `${d.id} · ${d.org} · ${(d.bytes / 1048576).toFixed(1)} MB · ${d.uploaded}`,
+      status: d.status.toUpperCase(), bg: st[d.status].bg, fg: st[d.status].fg,
+      hasProgress: d.status === "extracting", progress: Math.round((d.progress || 0) * 100),
+      pages: d.pages, claims: d.claims, grounded: d.grounded, quarantined: d.quarantined,
+      qFg: d.quarantined > 20 ? "#93231A" : "#7A5410",
+      go: () => this.setState({ page: "facts", fDoc: d.id }),
+    }));
+
+    // ── overview
+    const tiles = [
+      { label: "DOCUMENTS", value: c.documents || 0, note: `${c.pages || 0} pages ingested`, fg: "#191C16" },
+      { label: "CLAIMS EXTRACTED", value: (c.claims || 0).toLocaleString("en-IN"), note: "sentence-level candidates", fg: "#191C16" },
+      { label: "GROUNDED", value: (c.grounded || 0).toLocaleString("en-IN"), note: "carry an evidence span", fg: "#1F4D36" },
+      { label: "QUARANTINED", value: c.quarantined || 0, note: "withheld from comparison", fg: "#7A5410" },
+      { label: "RELATIONSHIPS", value: c.relationships || 0, note: "fact pairs reconciled", fg: "#191C16" },
+      { label: "CONTRADICTIONS", value: c.contradictions || 0, note: "unexplained by any axis", fg: "#93231A" },
+    ];
+    const raw = c.raw || 0;
+    const funnel = [
+      { label: "Raw disagreements", value: raw, pct: 100, fg: "#5A6055", note: "pairs whose values did not match on first pass" },
+      { label: "Contextual resolutions", value: c.contextual || 0, pct: raw ? ((c.contextual || 0) / raw) * 100 : 0, fg: "#7A5410", note: "explained by a differing context axis" },
+      { label: "Genuine contradictions", value: c.contradictions || 0, pct: raw ? ((c.contradictions || 0) / raw) * 100 : 0, fg: "#93231A", note: "all axes matched, values still conflict" },
+    ];
+
+    // ── quality
+    const conf = (c.confidence || []);
+    const cmax = Math.max(1, ...conf.map((x) => x.count));
+    const confidence = conf.map((x, i) => ({ band: x.band, count: x.count.toLocaleString("en-IN"),
+      pct: (x.count / cmax) * 100, fg: ["#1F4D36", "#3E7A55", "#C6A34B", "#93231A"][i] || "#5A6055" }));
+    const total = (c.claims || 1);
+    const axisRows = (c.axes || []).map((a) => ({ axis: a.axis, values: a.values.join(" · "),
+      occ: a.occurrences.toLocaleString("en-IN") + " spans", res: a.resolves + " resolutions" }));
+    const quarantine = s.quarantine.map((q) => ({ reason: q.reason.replace(/_/g, " ").toUpperCase(),
+      ref: `${q.doc} · p.${q.page}`, claim: q.claim, note: q.note, conf: q.confidence.toFixed(2) }));
+
+    // ── evidence viewer
+    const ef = s.ev ? this.fact(s.ev) : null;
+    const ed = ef ? this.doc(ef.doc) : null;
+    const ev = ef ? {
+      open: true, docTitle: ed ? ed.title : ef.doc, ref: `${ef.doc} · page ${ef.page}`,
+      section: ef.section, pageLabel: `${ef.page} / ${ed ? ed.pages : "—"}`,
+      quote: ef.quote || "No sentence-level evidence span was located within ±2 pages of the extracted value.",
+      claim: ef.claim, rows: this.passportRows(ef),
+      linesTop: [96, 92, 98, 88, 94], linesBottom: [95, 98, 90, 96, 84, 92],
+      chain: [
+        `${ef.doc} · page ${ef.page} · ${ef.section}`,
+        `span located at char offset ${1200 + ef.page * 7}–${1200 + ef.page * 7 + (ef.quote || "").length}`,
+        `axes resolved from governing heading: scope=${ef.scope}, basis=${ef.basis}`,
+        `period anchored to ${ef.period}`,
+        `confidence ${ef.confidence.toFixed(2)} · ${ef.noEvidence ? "quarantined" : "grounded"}`,
+      ],
+    } : { open: false, linesTop: [], linesBottom: [], rows: [], chain: [] };
+
+    return {
+      nav, pairs, pageTitle: page.title, pageSub: page.sub,
+      isCompare: s.page === "compare", isFacts: s.page === "facts", isTimeline: s.page === "timeline",
+      isDocuments: s.page === "documents", isOverview: s.page === "overview", isQuality: s.page === "quality",
+      stats: { claims: (c.claims || 0).toLocaleString("en-IN"), grounded: (c.grounded || 0).toLocaleString("en-IN"),
+        quarantined: c.quarantined || 0, relationships: c.relationships || 0 },
+      A: A ? this.factCard(A) : {}, B: B ? this.factCard(B) : {},
+      V, axes, masks, chain, evidence,
+      query: s.query, onQuery: (e) => this.setState({ query: e.target.value }),
+      filters, factRows, factCount: `${rows.length} of ${s.facts.length} facts`, P,
+      asOf: s.asOf, onAsOf: (e) => this.setState({ asOf: e.target.value }),
+      asOfSummary, ticks, tracks, successions,
+      asOfLeftPx: `calc(150px + ${pos(s.asOf)}% - ${(pos(s.asOf) / 100) * 150}px)`,
+      docRows, tiles, funnel,
+      groundRate: total ? Math.round(((c.grounded || 0) / total) * 100) + "%" : "—",
+      groundPct: total ? ((c.grounded || 0) / total) * 100 : 0,
+      quarPct: total ? ((c.quarantined || 0) / total) * 100 : 0,
+      confidence, axisRows, quarantine, quarCount: s.quarantine.length,
+      ev, closeEv: () => this.setState({ ev: null }),
+    };
+  }
+}
+
+</script>
+</body>
+</html>

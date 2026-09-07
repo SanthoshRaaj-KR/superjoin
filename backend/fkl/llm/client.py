@@ -10,6 +10,13 @@ Two deliberate constraints:
   changes between runs is not a verdict.
 - No key, no silent fallback. If ``OPENAI_API_KEY`` is unset the caller gets a
   clear error rather than an empty result that looks like a clean run.
+- **Bounded time.** The SDK defaults to a *600-second* timeout, and it retries
+  twice on top of that. Add a caller's own retry loop and one unlucky request
+  blocks for the better part of an hour while looking like a slow corpus run —
+  which is how this was found: a review pass that took five minutes took
+  twenty-five on the next attempt, and the difference was one hung socket. The
+  timeout here is a minute, so a call and its retries are bounded at about
+  three. Network retries stay the SDK's job and belong nowhere else.
 """
 
 from __future__ import annotations
@@ -26,6 +33,11 @@ from ..config import SETTINGS
 log = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
+
+# One model call should not be able to outlast a human's patience. Extraction
+# calls on a dense page finish well inside this; anything that does not has
+# failed in a way waiting will not fix.
+REQUEST_TIMEOUT = 60.0
 
 _client: Any | None = None
 _raw: Any | None = None
@@ -45,7 +57,9 @@ def get_client() -> Any:
         )
     if _client is None:
         _client = instructor.from_openai(
-            OpenAI(api_key=SETTINGS.openai_api_key), mode=instructor.Mode.TOOLS
+            OpenAI(api_key=SETTINGS.openai_api_key,
+                   timeout=REQUEST_TIMEOUT),
+            mode=instructor.Mode.TOOLS,
         )
     return _client
 
@@ -64,7 +78,8 @@ def raw_client() -> OpenAI:
             "OPENAI_API_KEY is not set. Copy .env.example to .env and add a key."
         )
     if _raw is None:
-        _raw = OpenAI(api_key=SETTINGS.openai_api_key)
+        _raw = OpenAI(api_key=SETTINGS.openai_api_key,
+                      timeout=REQUEST_TIMEOUT)
     return _raw
 
 

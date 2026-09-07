@@ -144,8 +144,24 @@ def _material_axes(a: Comparable, b: Comparable) -> set[str]:
     )
 
 
-def compare(a: Comparable, b: Comparable) -> Verdict:
-    """Compare two claims. Pure, deterministic, and explains itself."""
+def compare(a: Comparable, b: Comparable,
+            mask_axes: "tuple[str, ...] | list[str]" = ()) -> Verdict:
+    """Compare two claims. Pure, deterministic, and explains itself.
+
+    ``mask_axes`` holds an axis out of the reasoning set — the counterfactual.
+    It exists because the most useful thing this gate can demonstrate is not the
+    verdict but its *dependence*: mask `consolidation` and the standalone
+    against consolidated pair stops being explained and becomes a contradiction;
+    restore it and the contradiction dissolves again. That is only convincing
+    because ``compare`` is a pure function, so the second answer is genuinely
+    recomputed rather than a stored alternative being shown.
+
+    Masking is not the same as deleting context. The axis is removed from the
+    reasoning set for this call only; the claims are untouched.
+    """
+    masked = set(mask_axes or ())
+    if masked:
+        a, b = _mask(a, masked), _mask(b, masked)
 
     # 1. Blocking. Different subjects or different quantities are not a
     #    disagreement about anything.
@@ -166,7 +182,7 @@ def compare(a: Comparable, b: Comparable) -> Verdict:
 
     # 2. Units, for measurements. A currency mismatch stops here rather than
     #    being converted at an invented rate.
-    if a.claim_type == "measurement":
+    if a.claim_type == "measurement" and "unit" not in masked:
         units = compare_units(a.unit, b.unit)
         if not units.comparable:
             verdict = (
@@ -204,7 +220,14 @@ def compare(a: Comparable, b: Comparable) -> Verdict:
     #    INSUFFICIENT_EVIDENCE. Their temporal handling belongs to the interval
     #    engine, which reads valid_from and valid_to rather than a period label.
     period = compare_periods(a.period, b.period)
-    if a.claim_type == "state" and not (a.period.known and b.period.known):
+    if "period" in masked:
+        # Held out of the reasoning set: the two claims are treated as covering
+        # the same time so that the values themselves get to decide. This is the
+        # counterfactual that matters most — masking `period` is what turns a
+        # trend back into the disagreement a context-blind system would report.
+        period = type(period)("same", "period held out of the reasoning set",
+                              None, False)
+    elif a.claim_type == "state" and not (a.period.known and b.period.known):
         # Two states that never held at once are a sequence, not a
         # disagreement — and the question of what that sequence means (a
         # succession, a vacancy, a redesignation) belongs to the interval
@@ -277,6 +300,32 @@ def compare(a: Comparable, b: Comparable) -> Verdict:
         f"every stated axis, and the values are {value.reason}",
         a.ref, b.ref, value=value, period_relation=period.relation, notes=notes,
     )
+
+
+def _mask(claim: Comparable, axes: "tuple[str, ...] | list[str]") -> Comparable:
+    """A copy of a claim with some axes held out of the reasoning set.
+
+    Qualifiers are dropped from ``unknown_qualifiers`` as well as from
+    ``qualifiers``. Masking an axis has to remove *both* ways it can reach a
+    verdict — otherwise masking the very axis that is blocking a comparison
+    would leave it blocked, and the toggle would look broken exactly where it is
+    most worth showing.
+
+    ``period`` and ``unit`` are structure rather than qualifiers and are handled
+    in ``compare`` itself, by skipping their tests.
+    """
+    from dataclasses import replace
+
+    masked = set(axes)
+    changes: dict = {}
+    qualifiers = {k: v for k, v in (claim.qualifiers or {}).items() if k not in masked}
+    changes["qualifiers"] = qualifiers
+    changes["unknown_qualifiers"] = [
+        x for x in (claim.unknown_qualifiers or []) if x not in masked
+    ]
+    if "modality" in masked:
+        changes["modality"] = ""
+    return replace(claim, **changes)
 
 
 def _intervals_disjoint(a: Comparable, b: Comparable) -> bool:

@@ -456,10 +456,14 @@ def _prompt(a: Comparable, b: Comparable, leads: list[Lead]) -> str:
 
 # A transient network failure is not evidence that the page draws no
 # distinction, but it looks exactly like one from the caller's side: the
-# investigation returns nothing and the contradiction is reported. Two runs of
-# the same corpus then disagree about the same pages, which is the property this
-# project spends most of its design budget avoiding.
-NETWORK_ATTEMPTS = 3
+# investigation returns nothing and the contradiction is reported, and two runs
+# over the same corpus disagree about the same pages.
+#
+# One extra attempt, not three. The SDK already retries twice with backoff
+# inside each of these, so three attempts here is nine requests — and with the
+# SDK's default ten-minute timeout that is an hour of waiting disguised as a
+# slow run. Bounded at the client instead; see llm/client.py.
+NETWORK_ATTEMPTS = 2
 NETWORK_BACKOFF = 2.0
 
 

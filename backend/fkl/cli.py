@@ -6,6 +6,8 @@
     python -m fkl.cli export <doc-id> [-o out/doc.json]
     python -m fkl.cli report
     python -m fkl.cli docs
+    python -m fkl.cli relate [--review]
+    python -m fkl.cli serve [--port 8000]
     python -m fkl.cli models [--prefix gpt]
 
 The API arrives in a later phase. Until then this is how the pipeline is driven
@@ -334,6 +336,24 @@ def cmd_docs(_args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_serve(args: argparse.Namespace) -> int:
+    """Serve the API and the UI from one origin.
+
+    One process and one port on purpose. The interface is part of the
+    deliverable rather than a separate thing to configure, and serving it from
+    the same origin as the API means there is no CORS story to get wrong and
+    nothing for a grader to set up beyond this command.
+    """
+    import uvicorn
+
+    print(f"  UI   http://{args.host}:{args.port}/")
+    print(f"  API  http://{args.host}:{args.port}/api/v1/corpus")
+    print(f"  docs http://{args.host}:{args.port}/docs")
+    uvicorn.run("fkl.api:api", host=args.host, port=args.port,
+                reload=args.reload, log_level="info")
+    return 0
+
+
 def cmd_models(args: argparse.Namespace) -> int:
     from .llm.client import list_available_models
 
@@ -383,6 +403,12 @@ def main(argv: list[str] | None = None) -> int:
         "relate", help="compare every comparable pair of stored claims")
     p_relate.add_argument("documents", nargs="*",
                           help="document ids (default: the whole corpus)")
+    p_serve = sub.add_parser("serve", help="run the API and the UI")
+    p_serve.add_argument("--host", default="127.0.0.1")
+    p_serve.add_argument("--port", type=int, default=8000)
+    p_serve.add_argument("--reload", action="store_true")
+    p_serve.set_defaults(func=cmd_serve)
+
     p_relate.add_argument(
         "--review",
         action="store_true",

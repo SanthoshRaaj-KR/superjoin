@@ -309,6 +309,8 @@ def relate_corpus(
                     recovery_method=recovery.method if recovery else None,
                     recovery_reason=recovery.reason if recovery else None,
                     recovery_confidence=recovery.confidence if recovery else None,
+                    recovery_a_value=recovery.a_value if recovery else None,
+                    recovery_b_value=recovery.b_value if recovery else None,
                 )
             )
 

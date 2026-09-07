@@ -445,3 +445,9 @@ class Relation(Base):
     recovery_method: Mapped[str | None] = mapped_column(String(48))
     recovery_reason: Mapped[str | None] = mapped_column(Text)
     recovery_confidence: Mapped[float | None] = mapped_column(Float)
+    # The values themselves, so a later comparison of the same two claims can
+    # be made with the context the review recovered instead of without it.
+    # Without these the API would re-derive a bare CONTRADICTS on every page
+    # view and disagree with its own stored verdict.
+    recovery_a_value: Mapped[str | None] = mapped_column(Text)
+    recovery_b_value: Mapped[str | None] = mapped_column(Text)
