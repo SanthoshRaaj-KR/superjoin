@@ -157,6 +157,16 @@ class Claim(Base):
 
     # --- grounding ---
     evidence_quote: Mapped[str] = mapped_column(Text)
+    # Character span of the quote within the page text, where the match tier
+    # allows exact offsets. Stored so a viewer can highlight the real
+    # characters rather than search for the quote again and possibly find a
+    # different occurrence of it.
+    evidence_start: Mapped[int | None] = mapped_column(Integer)
+    evidence_end: Mapped[int | None] = mapped_column(Integer)
+    # How the quote was matched: exact | normalized | dehyphenated |
+    # reconstructed. Kept because "found in the raw page" and "found only in
+    # our rebuilt rendering of the page" are different strengths of evidence.
+    grounding_method: Mapped[str | None] = mapped_column(String(24))
     assertion_time: Mapped[date | None] = mapped_column(Date, index=True)
 
     # --- decomposed confidence; never blended into a single float ---

@@ -25,8 +25,8 @@ Under construction, phase by phase. This README is filled in as each layer lands
 
 | Phase | Scope | State |
 |---|---|---|
-| 0 | Skeleton, storage, one PDF end-to-end | in progress |
-| 1 | Document tree, context inheritance, grounding validator | |
+| 0 | Skeleton, storage, one PDF end-to-end | done |
+| 1 | Layout analysis, context inheritance, grounding validator | done |
 | 2 | Units, periods, metric and entity registries | |
 | 2.5 | Hand-labelled gold set | |
 | 3 | Comparability gate | |
@@ -40,6 +40,32 @@ Under construction, phase by phase. This README is filled in as each layer lands
 ```bash
 pip install -r backend/requirements.txt
 cp .env.example .env      # then add your OPENAI_API_KEY
+cd backend
+```
+
+Ingest and inspect a document. `--no-llm` runs layout analysis and context
+inheritance with no API key and no spend:
+
+```bash
+python -m fkl.cli ingest ../starter-datasets/delhivery/*.pdf --no-llm
+python -m fkl.cli page 2 35          # page 35 as the extractor will see it
+python -m fkl.cli page 2 35 --raw    # the same page as the PDF stores it
+```
+
+The difference between those two commands is most of Phase 1. With a key set:
+
+```bash
+python -m fkl.cli models --prefix gpt   # what your key can actually see
+python -m fkl.cli ingest ../starter-datasets/delhivery/02-*.pdf
+python -m fkl.cli extract 1 --pages 20-24,33-36
+python -m fkl.cli report
+python -m fkl.cli export 1 -o ../out/ar-fy24.json
+```
+
+Run the tests. They stub the single model call, so the suite needs no key:
+
+```bash
+python -m pytest tests/ -q
 ```
 
 Fuller instructions land with the API in a later phase.

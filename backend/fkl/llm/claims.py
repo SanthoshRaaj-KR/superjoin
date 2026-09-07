@@ -5,14 +5,22 @@ decides whether two claims agree; that is a deterministic step downstream. The
 division matters because "do these contradict?" is a question a language model
 will always answer, confidently, whether or not the two things are comparable.
 
-At this phase the unit of extraction is a single page in isolation. That is a
-known weakness, not an oversight. Units and bases in these documents are
-declared at section scope — an annual report page says
-``(All amounts in Indian Rupees in million)`` once, in a header, and then prints
-bare numbers for pages afterwards. Page-at-a-time extraction cannot see that,
-so a fraction of the claims here will carry an unknown unit. The context tree
-that fixes it is the next phase, and the gap between the two runs is the
-argument for building it.
+What the model is shown is not the raw PDF text. It is the page after layout
+analysis: reading order restored, table rows rebuilt from separately drawn
+cells, headings marked, and the context in force stated inline with the wording
+it was read from. A financial table reaches the model as
+
+    [CONTEXT IN FORCE] consolidation=consolidated (from "Consolidated financial
+    performance"); currency=INR (from "(₹ in Million)"); scale=million (...);
+    not stated anywhere in scope: period
+    Particulars | March 31, 2024 | March 31, 2023
+    Revenue from contracts with customers | 81,415.38 | 72,253.01
+
+rather than as a column of loose numbers with their labels elsewhere on the
+page. The context lines are evidence, not instructions: they quote what the
+document said and where, so the model can override them from local text — and
+the axes named as unstated are what it should report as unknown rather than
+guess.
 """
 
 from __future__ import annotations
@@ -25,7 +33,7 @@ from .client import structured
 
 log = logging.getLogger(__name__)
 
-MAX_PAGE_CHARS = 12_000
+MAX_PAGE_CHARS = 14_000
 MIN_PAGE_CHARS = 60
 
 
@@ -37,26 +45,39 @@ periods, and states that hold over time such as roles, addresses and identifiers
 
 What matters most is CONTEXT, not coverage. A number without its unit, period \
 and basis is worthless downstream — worse than worthless, because it will be \
-compared against something it is not comparable to. Getting fifteen claims right \
-with their context intact is far better than getting forty with bare numbers.
+compared against something it is not comparable to. Fifteen claims with their \
+context intact are far better than forty bare numbers.
 
-So:
+HOW THE PAGE IS PRESENTED
+
+The page has been laid out for you, not given to you raw:
+
+- Lines beginning `[CONTEXT IN FORCE]` state the context declared by the \
+section you are inside, quoting the exact wording it was read from. This is \
+evidence, not instruction. Use it when the page gives you nothing closer, and \
+override it when the local text says otherwise — a sentence saying "on a \
+standalone basis" beats an inherited "consolidated" every time.
+- A `[CONTEXT IN FORCE]` line ending with "not stated anywhere in scope: X" \
+means nobody declared X. Do not guess X. Put it in unknown_qualifiers.
+- Lines beginning with `#` are headings; more hashes means deeper.
+- Cells within one table row are separated by ` | `. The row above a run of \
+such lines is usually the column header, and it usually carries the period.
+
+RULES
 
 - Copy the document's own wording for the predicate. Do not translate it into a \
 standard metric name.
-- Read units, periods, currencies and bases from wherever the page declares \
-them: column headers, table titles, section notes, parenthetical remarks at the \
-top of the page. They are usually not next to the number.
-- When something that matters is genuinely not on the page, name that axis in \
-unknown_qualifiers. Do not guess it, and do not omit it. An unstated \
-consolidation basis is a fact about the page, and the system needs it.
-- evidence_quote must be an exact substring of the page text. It is verified \
-against the source, and a claim whose quote does not match is discarded.
-- Lower confidence_extraction and say why when a table's columns do not line up, \
-when a value is far from its label, or when the text order looks scrambled. \
-Flagging a doubtful read is more useful than a confident wrong one.
-- Skip page furniture: headers, footers, page numbers, contents lists, \
-boilerplate, marketing statements with no measurable content.
+- When something material is genuinely not on the page, name that axis in \
+unknown_qualifiers. An unstated consolidation basis is itself a fact about the \
+page, and the system needs it. Do not guess, and do not omit.
+- evidence_quote must be copied exactly from the page text as shown, including \
+any ` | ` separators if you are quoting a table row. It is verified against the \
+source document and the claim is discarded if the value is not inside it.
+- Lower confidence_extraction and say why when a table's columns do not line \
+up, when a value sits far from its label, or when the text order looks \
+scrambled. Flagging a doubtful read is more useful than a confident wrong one.
+- Skip page furniture: running headers and footers, page numbers, contents \
+lists, and marketing statements with nothing measurable in them.
 
 If the page has no extractable facts, return empty lists and say why in \
 page_notes."""
@@ -67,8 +88,8 @@ def _context_header(profile: dict | None, page_no: int) -> str:
 
     Only what the profiler was confident enough to assert. A null default is
     passed through as null rather than filled with a plausible guess: an
-    invented default is indistinguishable from a stated one once it is written
-    into a claim.
+    invented default is indistinguishable from a stated one once it has been
+    written into a claim.
     """
     if not profile:
         return f"[PAGE {page_no}] Document context: unknown (document not profiled)."

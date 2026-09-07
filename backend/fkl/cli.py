@@ -4,6 +4,7 @@
     python -m fkl.cli page <doc-id> <page-no> [--raw]
     python -m fkl.cli extract <doc-id> [--pages 0-9,35]
     python -m fkl.cli export <doc-id> [-o out/doc.json]
+    python -m fkl.cli report
     python -m fkl.cli docs
     python -m fkl.cli models [--prefix gpt]
 
@@ -26,6 +27,7 @@ from .ingest import ingest_pdf
 from .context import MATERIAL_AXES
 from .models import Document, Page
 from .pipeline import extract_document_claims
+from .report import corpus_report, format_reports
 
 
 def _configure_logging(verbose: bool) -> None:
@@ -109,11 +111,22 @@ def cmd_extract(args: argparse.Namespace) -> int:
             workers=args.workers,
         )
         print(
-            f"doc {run.document_id}: {run.pages_attempted} pages attempted, "
-            f"{run.pages_failed} failed -> {run.measurements} measurements, "
-            f"{run.states} states"
+            f"doc {run.document_id}: {run.pages_attempted} pages, "
+            f"{run.pages_failed} failed"
         )
-        for page_no, note in run.notes:
+        print(
+            f"  proposed {run.proposed} -> kept {run.claims} "
+            f"({run.measurements} measurements, {run.states} states), "
+            f"refused {run.refused}  "
+            f"[grounding precision {run.grounding_precision:.0%}]"
+        )
+        if run.grounding_methods:
+            print("  matched: " + " · ".join(
+                f"{k} {v}" for k, v in sorted(run.grounding_methods.items())))
+        if run.quarantine_reasons:
+            print("  refused: " + " · ".join(
+                f"{k} {v}" for k, v in sorted(run.quarantine_reasons.items())))
+        for page_no, note in run.notes[:10]:
             print(f"  note p{page_no}: {note}")
     return 0
 
@@ -127,6 +140,13 @@ def cmd_export(args: argparse.Namespace) -> int:
             print(f"wrote {path}  ({payload['counts']})")
         else:
             print(json.dumps(payload, indent=2, ensure_ascii=False))
+    return 0
+
+
+def cmd_report(_args: argparse.Namespace) -> int:
+    init_db()
+    with session_scope() as session:
+        print(format_reports(corpus_report(session)))
     return 0
 
 
@@ -185,6 +205,9 @@ def main(argv: list[str] | None = None) -> int:
     p_export.add_argument("document_id", type=int)
     p_export.add_argument("-o", "--output", help="write to this path instead of stdout")
     p_export.set_defaults(func=cmd_export)
+
+    p_report = sub.add_parser("report", help="extraction quality across the corpus")
+    p_report.set_defaults(func=cmd_report)
 
     p_docs = sub.add_parser("docs", help="list ingested documents")
     p_docs.set_defaults(func=cmd_docs)
