@@ -29,6 +29,7 @@ from fkl.render import (  # noqa: E402
 REPO = Path(__file__).resolve().parents[2]
 AR = REPO / "starter-datasets/delhivery/02-delhivery-annual-report-fy24-excerpt.pdf"
 RBI = REPO / "starter-datasets/india-macroeconomy/02-rbi-annual-report-2024-25-excerpt.pdf"
+DECK = REPO / "starter-datasets/delhivery/03-delhivery-q4-fy24-earnings-presentation.pdf"
 
 
 def decl_dict(text, **kwargs):
@@ -209,3 +210,58 @@ def test_has_figures_separates_prose_pages_from_data_pages(annual_report):
     doc, _body = annual_report
     assert has_figures(doc[35].get_text())
     assert not has_figures("A page of prose with no measurements on it at all.")
+
+
+# --- chart pages ------------------------------------------------------------
+
+
+def test_a_bare_figure_is_never_a_heading():
+    """The earnings deck sets 6pt body text and 8pt chart labels.
+
+    A purely size-based heading rule promotes every number on a chart page to a
+    section heading, and the inheritance walk then hangs context off `8,142` as
+    though it were a title.
+    """
+    from fkl.pdf.layout import is_data_label
+
+    assert is_data_label("8,142")
+    assert is_data_label("62%")
+    assert is_data_label("(1,579)")
+    # Periods, units and labels are not figures, however short.
+    assert not is_data_label("FY24")
+    assert not is_data_label("(₹ Cr)")
+    assert not is_data_label("YoY: 11%")
+    assert not is_data_label("Express Parcel")
+
+    doc = fitz.open(DECK)
+    body = body_font_size([ln for page in doc for ln in page_lines(page)])
+    rendered = render_page(analyze_page(doc[8], body), None, body)
+    doc.close()
+
+    for line in rendered.text.splitlines():
+        if line.startswith("#"):
+            assert not is_data_label(line.lstrip("# ")), f"figure promoted to heading: {line}"
+
+
+def test_unbound_numbers_identify_pages_text_extraction_cannot_serve():
+    """The routing signal for the figure pass.
+
+    It deliberately does not try to recognise a chart. Recognising charts from
+    vector paths does not work on this corpus — a ruled financial table draws
+    more paths than a bar chart does. It measures the failure directly instead:
+    numbers read successfully but impossible to bind to a series or a period.
+    """
+    doc = fitz.open(DECK)
+    body = body_font_size([ln for page in doc for ln in page_lines(page)])
+    chart = render_page(analyze_page(doc[8], body), None, body)
+    doc.close()
+
+    doc = fitz.open(AR)
+    ar_body = body_font_size([ln for page in doc for ln in page_lines(page)])
+    table = render_page(analyze_page(doc[35], ar_body), None, ar_body)
+    doc.close()
+
+    # A chart page: numbers everywhere, almost none of them attached to a row.
+    assert chart.unbound_ratio > 0.7
+    # A table page: the same layout pass binds its numbers into rows.
+    assert table.unbound_ratio < 0.3

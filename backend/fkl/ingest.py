@@ -158,6 +158,8 @@ def _render_pages(
         rendered = render_page(extracted_page.layout, row.profile_json, extracted.body_size)
         page_row.rendered_text = rendered.text
         page_row.context_json = rendered.frames
+        page_row.unbound_numbers = rendered.unbound_numbers
+        page_row.bound_numbers = rendered.bound_numbers
         declared = figure_context_coverage(rendered, extracted_page.text)
         if declared is None:
             continue  # no figures on this page; context coverage says nothing

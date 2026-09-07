@@ -111,6 +111,14 @@ class Page(Base):
     rendered_text: Mapped[str | None] = mapped_column(Text)
     context_json: Mapped[list | None] = mapped_column(JSON)
 
+    # How many figures on this page sit inside a reconstructed row (bound, and
+    # therefore meaningful) versus alone on a line (unbound — a chart label
+    # whose series and period were lost when the page was flattened). The ratio
+    # is what routes a page to the figure pass, and storing it keeps that
+    # decision auditable rather than recomputed and forgotten.
+    unbound_numbers: Mapped[int | None] = mapped_column(Integer)
+    bound_numbers: Mapped[int | None] = mapped_column(Integer)
+
     document: Mapped[Document] = relationship(back_populates="pages")
 
 

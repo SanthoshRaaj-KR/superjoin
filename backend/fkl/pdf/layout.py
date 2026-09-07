@@ -32,6 +32,7 @@ gutters, gaps, baselines and relative font size, which every typeset PDF has.
 
 from __future__ import annotations
 
+import re
 import statistics
 from collections import Counter
 from dataclasses import dataclass, field
@@ -58,6 +59,28 @@ MIN_BAND_LINES = 4
 # column. The recursion terminates on its own when no cut is found, so this is a
 # guard against pathological input rather than a tuning knob.
 MAX_CUT_DEPTH = 8
+
+
+# A line that is nothing but a figure: "8,142", "62%", "(1,579)", "₹ Cr 4,191".
+# These are chart data labels and table cells, never headings, however large the
+# type. The earnings deck sets 6pt body text and 8pt data labels, so a
+# size-based rule alone promotes every number on the page to a heading.
+_DATA_LABEL = re.compile(
+    r"^[\s(\[]*[₹$€£]?\s*[-+]?\d[\d,\s]*\.?\d*\s*"
+    r"(%|bn|mn|cr|k|x|tn|pp|bps)?\s*[)\]]*$",
+    re.I,
+)
+
+
+def is_data_label(text: str) -> bool:
+    """Whether a line is a bare figure rather than prose.
+
+    Used to keep chart labels out of the heading hierarchy, and to count how
+    many numbers on a page are floating free of any row that would give them a
+    meaning.
+    """
+    stripped = text.strip()
+    return bool(stripped) and bool(_DATA_LABEL.match(stripped))
 
 
 @dataclass

@@ -24,7 +24,7 @@ import re
 from dataclasses import dataclass
 
 from .context import MATERIAL_AXES, ContextFrame, ScopedRow, scope_page
-from .pdf.layout import PageLayout
+from .pdf.layout import PageLayout, is_data_label
 
 
 @dataclass
@@ -32,10 +32,17 @@ class RenderedPage:
     page_no: int
     text: str
     frames: list[dict]  # one entry per context change, for storage and the UI
+    unbound_numbers: int = 0
+    bound_numbers: int = 0
 
     @property
     def n_chars(self) -> int:
         return len(self.text)
+
+    @property
+    def unbound_ratio(self) -> float:
+        total = self.unbound_numbers + self.bound_numbers
+        return self.unbound_numbers / total if total else 0.0
 
 
 def _frame_line(frame: ContextFrame) -> str:
@@ -105,8 +112,34 @@ def render_scoped(page_no: int, scoped: list[ScopedRow]) -> RenderedPage:
     return RenderedPage(page_no=page_no, text=text, frames=frames)
 
 
+def count_number_binding(layout: PageLayout) -> tuple[int, int]:
+    """Count figures on the page that are attached to something, and figures
+    that are floating free.
+
+    A number inside a reconstructed row sits beside its label and its column
+    header, so it means something. A number alone on its own line means nothing
+    yet: it is a chart data label whose series and period were lost when the
+    page was flattened into text.
+
+    This is the honest way to ask whether a page needs more than text
+    extraction. It does not try to recognise a chart — recognising charts from
+    vector paths does not work here, because a ruled financial table draws more
+    paths than a bar chart does. It measures the failure directly instead:
+    numbers successfully read but impossible to bind.
+    """
+    unbound = bound = 0
+    for _region, row in layout.iter_rows():
+        if row.is_table_row:
+            bound += sum(1 for cell in row.cells if is_data_label(cell.text))
+        elif is_data_label(row.text):
+            unbound += 1
+    return unbound, bound
+
+
 def render_page(layout: PageLayout, profile: dict | None, body_size: float) -> RenderedPage:
-    return render_scoped(layout.page_no, scope_page(layout, profile, body_size))
+    rendered = render_scoped(layout.page_no, scope_page(layout, profile, body_size))
+    rendered.unbound_numbers, rendered.bound_numbers = count_number_binding(layout)
+    return rendered
 
 
 def page_unknown_axes(rendered: RenderedPage) -> list[str]:

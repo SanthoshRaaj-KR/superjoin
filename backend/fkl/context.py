@@ -38,7 +38,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from .pdf.layout import PageLayout, Row, heading_levels
+from .pdf.layout import PageLayout, Row, heading_levels, is_data_label
 
 # Axes that materially change what a monetary or statistical figure means. When
 # one of these is undeclared, the figure is not comparable — it is unlabelled.
@@ -328,7 +328,15 @@ def scope_page(
             )
             continue
 
-        level = levels.get(row.size) if not row.is_table_row else None
+        # A bare figure is never a heading, whatever size it is set in. The
+        # earnings deck sets 6pt body text and 8pt chart labels, so a purely
+        # size-based rule turns every number on a chart page into a section
+        # heading — and then inherits context from it.
+        level = (
+            None
+            if row.is_table_row or is_data_label(text)
+            else levels.get(row.size)
+        )
 
         if level is not None:
             while len(stack) > 1 and stack[-1]["level"] >= level:
