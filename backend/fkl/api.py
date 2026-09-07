@@ -188,7 +188,11 @@ def _title(document: Document) -> str:
     """A readable name. `doc_type` is a slug for routing, not a title."""
     stem = Path(document.filename).stem
     stem = stem.split("-", 1)[-1] if stem[:2].isdigit() else stem
-    return stem.replace("-", " ").replace("_", " ").strip().title()
+    words = stem.replace("-", " ").replace("_", " ").split()
+    # Title-case the words, but a token carrying digits is an identifier —
+    # FY24, Q4, 2024-25 — and "Fy24" is just wrong.
+    return " ".join(w.upper() if any(c.isdigit() for c in w) else w.capitalize()
+                    for w in words)
 
 
 def _sections(session) -> dict:
@@ -493,7 +497,13 @@ def create_app() -> FastAPI:
                     select(func.count(func.distinct(
                         Claim.document_id * 100000 + Claim.page_no)))) or 0,
                 "claims": claims,
+                # Every stored claim is grounded — an ungrounded one never
+                # reaches the table, it goes to quarantine with a reason code.
+                # So the honest denominator for a grounding *rate* is what the
+                # model proposed, not what survived; dividing the survivors by
+                # themselves reports 100% and measures nothing.
                 "grounded": claims,
+                "proposed": claims + quarantined,
                 "quarantined": quarantined,
                 "relationships": len(relations),
                 "raw": differing,

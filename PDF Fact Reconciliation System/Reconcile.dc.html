@@ -51,7 +51,7 @@
     </div>
 
     <div style="padding:14px 18px; border-top:1px solid #262B1F; font:400 10px/1.7 'IBM Plex Mono',monospace; color:#6E7666">
-      <div>CORPUS &nbsp;hindmark-fy24</div>
+      <div>CORPUS &nbsp;{{ corpusName }}</div>
       <div>ENGINE &nbsp;v0.9.3 · axis-aware</div>
     </div>
   </div>
@@ -596,7 +596,16 @@ class Component extends DCLogic {
     const [corpus, docs, facts, pairs, quarantine] = await Promise.all([
       mod.api.corpus(), mod.api.documents(), mod.api.facts(), mod.api.pairs(), mod.api.quarantine(),
     ]);
-    this.setState({ api: mod, corpus, docs, facts, pairs, quarantine }, this.recompute);
+    // Ids come from whatever corpus is loaded, so the opening selection has to
+    // be chosen from the data rather than named in advance. The pair list is
+    // returned most-interesting first — a contradiction the engine withdrew on
+    // review leads it — so the first row is the right thing to open on.
+    const pairId = pairs.some((p) => p.id === this.state.pairId)
+      ? this.state.pairId : (pairs[0] || {}).id;
+    const factId = facts.some((f) => f.id === this.state.factId)
+      ? this.state.factId : (facts[0] || {}).id;
+    this.setState({ api: mod, corpus, docs, facts, pairs, quarantine, pairId, factId },
+      this.recompute);
   }
 
   pair() { return this.state.pairs.find((p) => p.id === this.state.pairId) || null; }
@@ -621,10 +630,17 @@ class Component extends DCLogic {
   fact(id) { return this.state.facts.find((f) => f.id === id); }
   doc(id) { return this.state.docs.find((d) => d.id === id); }
 
+  // Every key the template binds, present from the first render. The runtime
+  // resolves a {{ }} binding once and warns "never resolved" if the key was
+  // missing when it tried — so handing back a bare {} before the fetch lands
+  // permanently blanks the panel, which is exactly what it did.
+  static BLANK_CARD = { id: "", display: "—", period: "", scope: "", basis: "",
+                        entity: "", metric: "", conf: "", source: "" };
+
   factCard(f) {
+    if (!f) return Component.BLANK_CARD;
     const fmt = this.state.api ? this.state.api.fmt : () => "";
     const d = this.doc(f.doc);
-    if (!f) return {};
     return {
       id: f.id, display: fmt(f), period: f.period, scope: f.scope, basis: f.basis,
       entity: f.entity, metric: f.metric, conf: f.confidence.toFixed(2),
@@ -698,10 +714,20 @@ class Component extends DCLogic {
         detail: x.status === "match" ? String(x.a) : `${x.a} → ${x.b}` };
     }) : [];
 
-    const maskable = r ? r.axes.filter((x) => ["scope", "basis", "period", "unit"].includes(x.key)) : [];
+    // The four fixed context axes, plus any the corpus introduced itself —
+    // `estimate_vintage`, `sign_convention`, `area`, whatever a second look
+    // recovered. Masking the axis that actually decided a verdict is the
+    // counterfactual worth showing, and a hardcoded list of four cannot offer
+    // it for an axis nobody anticipated. Entity and metric are excluded: they
+    // are what makes two claims about the same thing, not context that can be
+    // held out.
+    const FIXED = ["scope", "basis", "period", "unit"];
+    const maskable = r ? r.axes.filter(
+      (x) => FIXED.includes(x.key) || !["entity", "metric"].includes(x.key)) : [];
     const masks = maskable.map((x) => {
       const on = s.masked.includes(x.key);
       return { label: (on ? "◼ " : "◻ ") + "Mask " + ({ scope: "Scope", basis: "Basis", period: "Period", unit: "Unit" }[x.key] || x.label),
+        key: x.key,
         toggle: () => this.toggleMask(x.key),
         bg: on ? "#14180F" : "#fff", fg: on ? "#E8EAE4" : "#3A3F36", edge: on ? "#14180F" : "#DEDCD3" };
     });
@@ -839,7 +865,9 @@ class Component extends DCLogic {
     const cmax = Math.max(1, ...conf.map((x) => x.count));
     const confidence = conf.map((x, i) => ({ band: x.band, count: x.count.toLocaleString("en-IN"),
       pct: (x.count / cmax) * 100, fg: ["#1F4D36", "#3E7A55", "#C6A34B", "#93231A"][i] || "#5A6055" }));
-    const total = (c.claims || 1);
+    // What the extractor proposed, not what survived. Grounded/grounded is
+    // 100% by construction and says nothing about extraction quality.
+    const total = (c.proposed || c.claims || 1);
     const axisRows = (c.axes || []).map((a) => ({ axis: a.axis, values: a.values.join(" · "),
       occ: a.occurrences.toLocaleString("en-IN") + " spans", res: a.resolves + " resolutions" }));
     const quarantine = s.quarantine.map((q) => ({ reason: q.reason.replace(/_/g, " ").toUpperCase(),
@@ -865,11 +893,12 @@ class Component extends DCLogic {
 
     return {
       nav, pairs, pageTitle: page.title, pageSub: page.sub,
+      corpusName: (s.docs[0] && s.docs[0].org) || "—",
       isCompare: s.page === "compare", isFacts: s.page === "facts", isTimeline: s.page === "timeline",
       isDocuments: s.page === "documents", isOverview: s.page === "overview", isQuality: s.page === "quality",
       stats: { claims: (c.claims || 0).toLocaleString("en-IN"), grounded: (c.grounded || 0).toLocaleString("en-IN"),
         quarantined: c.quarantined || 0, relationships: c.relationships || 0 },
-      A: A ? this.factCard(A) : {}, B: B ? this.factCard(B) : {},
+      A: this.factCard(A), B: this.factCard(B),
       V, axes, masks, chain, evidence,
       query: s.query, onQuery: (e) => this.setState({ query: e.target.value }),
       filters, factRows, factCount: `${rows.length} of ${s.facts.length} facts`, P,

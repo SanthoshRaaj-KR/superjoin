@@ -1,0 +1,59 @@
+- generic [ref=e4]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: Collation
+      - generic [ref=e11]: EVIDENCE-GROUNDEDFACT RECONCILIATION
+    - generic [ref=e12]:
+      - generic [ref=e13] [cursor=pointer]: Overview
+      - generic [ref=e17] [cursor=pointer]:
+        - generic [ref=e18]: Documents
+        - generic [ref=e21]: "0"
+      - generic [ref=e22] [cursor=pointer]:
+        - generic [ref=e23]: Facts
+        - generic [ref=e26]: "0"
+      - generic [ref=e27] [cursor=pointer]:
+        - generic [ref=e28]: Compare
+        - generic [ref=e31]: "0"
+      - generic [ref=e32] [cursor=pointer]:
+        - generic [ref=e33]: Timeline
+        - generic [ref=e36]: "3"
+      - generic [ref=e37] [cursor=pointer]:
+        - generic [ref=e38]: Corpus quality
+        - generic [ref=e41]: "0"
+    - generic [ref=e42]:
+      - generic [ref=e43]: CORPUS hindmark-fy24
+      - generic [ref=e44]: ENGINE v0.9.3 · axis-aware
+  - generic [ref=e45]:
+    - generic [ref=e46]:
+      - generic [ref=e47]:
+        - generic [ref=e48]: Compare
+        - generic [ref=e49]: Two facts, their context axes and the verdict the engine returns for the pair.
+      - generic [ref=e50]:
+        - generic [ref=e51]: 0 CLAIMS · 0 GROUNDED
+        - generic [ref=e52]: 0 QUARANTINED · 0 PAIRS
+    - generic [ref=e54]:
+      - generic [ref=e55]: CANDIDATE PAIRS
+      - generic [ref=e57]:
+        - generic [ref=e58]:
+          - generic [ref=e59]:
+            - generic [ref=e60]: FACT A
+            - generic [ref=e63]:
+              - generic [ref=e64]: Entity
+              - generic [ref=e66]: Metric
+              - generic [ref=e68]: Source
+              - generic [ref=e70]: Confidence
+          - generic [ref=e72]:
+            - generic [ref=e73]: FACT B
+            - generic [ref=e76]:
+              - generic [ref=e77]: Entity
+              - generic [ref=e79]: Metric
+              - generic [ref=e81]: Source
+              - generic [ref=e83]: Confidence
+        - generic [ref=e85]:
+          - generic [ref=e86]:
+            - generic [ref=e87]: ↓
+            - generic [ref=e88]: …
+            - generic [ref=e91]:
+              - generic [ref=e92]: COUNTERFACTUAL · HOLD AN AXIS OUT OF REASONING
+              - generic [ref=e93]: POST /compare
+          - generic [ref=e94]: AXIS COMPARISON

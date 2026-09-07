@@ -32,9 +32,9 @@ Under construction, phase by phase. This README is filled in as each layer lands
 | 2.5 | Hand-labelled gold set | done |
 | 3 | Comparability gate | done |
 | 4 | Temporal engine, cross-document | done |
-| 5 | React UI | |
-| 6 | Macro corpus, zero code changes | |
-| 7 | Axis discovery, eval harness | |
+| 5 | Reconciliation review, API, UI wired to it | done |
+| 6 | Macro corpus, zero code changes | done |
+| 7 | Axis discovery, eval harness | partly — axes are discovered on review |
 
 ## Setup and Run Instructions
 
@@ -42,7 +42,27 @@ Under construction, phase by phase. This README is filled in as each layer lands
 pip install -r backend/requirements.txt
 cp .env.example .env      # then add your OPENAI_API_KEY
 cd backend
+python -m fkl.cli serve   # UI and API on http://127.0.0.1:8000/
 ```
+
+The UI and the API are one process on one port, so there is no CORS story and
+nothing to configure. `/docs` gives the OpenAPI surface if you would rather
+read the data than the screens.
+
+The interface has five screens, and the one worth opening first is **Compare**.
+It lists candidate pairs with the contradictions the engine *withdrew on
+review* at the top, and each one can be taken apart: the two facts, every
+context axis with a ✓ or a difference, the evidence span from each source page,
+and the verdict. Below that is a row of **mask** buttons — hold an axis out of
+the reasoning set and the verdict recomputes live against `POST /compare`:
+
+```
+INSUFFICIENT_EVIDENCE  →  Mask Time_reference  →  CONTRADICTS
+```
+
+`time_reference` is not a built-in axis. The system found it on a second look
+at IMF page 9, and it is maskable for the same reason every other axis is —
+the vocabulary is open all the way through, including in the UI.
 
 Ingest and inspect a document. `--no-llm` runs layout analysis and context
 inheritance with no API key and no spend:
@@ -189,8 +209,15 @@ more than one. From the annual report's KMP table:
 ```
 SUCCESSION               Bansal to 2023-05-31, then Vivek from 2023-06-01
 SUCCESSION_WITH_VACANCY  Vivek to 2024-03-27, then Rawat from 2024-05-17
-                         51 days with no Company Secretary
+                         50 days with no Company Secretary
 ```
+
+Fifty, not fifty-one. The two dates are 51 days apart and the seat is empty on
+50 of them — 28 March through 16 May. The engine keeps both numbers because
+they answer different questions: the date difference is what the contiguity
+test reads (a gap of 1 is a clean handover, not a one-day vacancy), and the
+vacancy is what a reader should be told. Conflating them put an off-by-one in
+the most visible finding in the corpus, and the UI's timeline is what caught it.
 
 That vacancy exists only because intervals are modelled rather than
 overwritten. A store keeping "current Company Secretary" as a mutable field

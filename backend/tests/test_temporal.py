@@ -355,3 +355,45 @@ def test_two_accounts_of_one_spell_that_disagree_still_contradict():
     verdict = relate_holdings(a, b)
     assert verdict.verdict == CONTRADICTS
     assert "overlapping" in verdict.explanation
+
+
+def test_the_vacancy_is_a_day_shorter_than_the_gap_between_the_dates():
+    """An off-by-one in the most visible finding the engine produces.
+
+    Vivek's last day is 2024-03-27 and Rawat's first is 2024-05-17. The dates
+    are 51 days apart; the seat is empty on 50 of them — 28 March through 16
+    May. `gap_days` has to stay the date difference because that is what the
+    contiguity test reads (a gap of 1 is a clean handover, not a one-day
+    vacancy), so the two numbers are kept apart rather than reconciled.
+    """
+    from fkl.temporal import SUCCESSION_WITH_VACANCY, Holding, relate_holdings
+
+    a = Holding(ref="a", scope="Delhivery Limited", predicate="company secretary",
+                filler="Mr. Vivek Kumar", valid_from=date(2023, 6, 1),
+                valid_to=date(2024, 3, 27))
+    b = Holding(ref="b", scope="Delhivery Limited", predicate="company secretary",
+                filler="Mrs. Madhulika Rawat", valid_from=date(2024, 5, 17),
+                valid_to_is_open=True)
+
+    verdict = relate_holdings(a, b)
+    assert verdict.verdict == SUCCESSION_WITH_VACANCY
+    assert verdict.gap_days == 51
+    assert verdict.vacant_days == 50
+    assert "unfilled for 50 days" in verdict.explanation
+
+
+def test_a_clean_handover_reports_no_vacancy_at_all():
+    """Bansal to 31 May, Vivek from 1 June: one day apart by subtraction, and
+    zero days unfilled. The distinction is the whole reason the two numbers
+    are not the same field."""
+    from fkl.temporal import SUCCESSION, Holding, relate_holdings
+
+    a = Holding(ref="a", scope="Delhivery Limited", predicate="company secretary",
+                filler="Mr. Sunil Kumar Bansal", valid_to=date(2023, 5, 31))
+    b = Holding(ref="b", scope="Delhivery Limited", predicate="company secretary",
+                filler="Mr. Vivek Kumar", valid_from=date(2023, 6, 1),
+                valid_to=date(2024, 3, 27))
+
+    verdict = relate_holdings(a, b)
+    assert verdict.verdict == SUCCESSION
+    assert verdict.vacant_days == 0

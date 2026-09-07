@@ -165,6 +165,22 @@ class TemporalVerdict:
     cardinality: int | None = None
     notes: list[str] = field(default_factory=list)
 
+    @property
+    def vacant_days(self) -> int | None:
+        """Days the seat was actually empty.
+
+        Not the same number as ``gap_days``, and conflating them is an
+        off-by-one in the most visible finding the engine produces. Vivek's
+        last day is 2024-03-27 and Rawat's first is 2024-05-17: the dates are
+        51 days apart, and the role is unfilled on 50 of them — 28 March
+        through 16 May. ``gap_days`` stays the date difference because that is
+        what the contiguity test needs (a gap of 1 is a clean handover, not a
+        one-day vacancy); this is what a reader should be told.
+        """
+        if self.gap_days is None:
+            return None
+        return max(0, self.gap_days - 1)
+
 
 def relate_holdings(
     a: Holding, b: Holding, cardinality: int = 1, cardinality_note: str | None = None
@@ -342,9 +358,8 @@ def _succession(
     return TemporalVerdict(
         SUCCESSION_WITH_VACANCY, "valid_time",
         f"{first.filler} to {first.valid_to}, then {second.filler} from "
-        f"{second.valid_from} — {gap} days between the outgoing holder's last "
-        f"day and the incoming holder's first, with {a.predicate} of {a.scope} "
-        f"unfilled in between",
+        f"{second.valid_from} — {a.predicate} of {a.scope} unfilled for "
+        f"{gap - 1} days between them",
         first.ref, second.ref, gap_days=gap, cardinality=cardinality, notes=notes,
     )
 

@@ -1,0 +1,2453 @@
+- generic [ref=f4e4]:
+  - generic [ref=f4e5]:
+    - generic [ref=f4e6]:
+      - generic [ref=f4e7]: Collation
+      - generic [ref=f4e11]: EVIDENCE-GROUNDEDFACT RECONCILIATION
+    - generic [ref=f4e12]:
+      - generic [ref=f4e13] [cursor=pointer]: Overview
+      - generic [ref=f4e17] [cursor=pointer]:
+        - generic [ref=f4e18]: Documents
+        - generic [ref=f4e21]: "5"
+      - generic [ref=f4e22] [cursor=pointer]:
+        - generic [ref=f4e23]: Facts
+        - generic [ref=f4e26]: "276"
+      - generic [ref=f4e27] [cursor=pointer]:
+        - generic [ref=f4e28]: Compare
+        - generic [ref=f4e31]: "60"
+      - generic [ref=f4e32] [cursor=pointer]:
+        - generic [ref=f4e33]: Timeline
+        - generic [ref=f4e36]: "3"
+      - generic [ref=f4e37] [cursor=pointer]:
+        - generic [ref=f4e38]: Corpus quality
+        - generic [ref=f4e41]: "5"
+    - generic [ref=f4e42]:
+      - generic [ref=f4e43]: CORPUS Delhivery Limited
+      - generic [ref=f4e44]: ENGINE v0.9.3 · axis-aware
+  - generic [ref=f4e45]:
+    - generic [ref=f4e46]:
+      - generic [ref=f4e47]:
+        - generic [ref=f4e48]: Facts
+        - generic [ref=f4e49]: "Every grounded claim as a passport: entity, metric, value, unit, period, scope, source."
+      - generic [ref=f4e50]:
+        - generic [ref=f4e51]: 276 CLAIMS · 276 GROUNDED
+        - generic [ref=f4e52]: 5 QUARANTINED · 447 PAIRS
+    - generic [ref=f4e53]:
+      - generic [ref=f4e330]:
+        - textbox "Search metric, value, quote…" [ref=f4e331]
+        - combobox [ref=f4e332]:
+          - option [selected]
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+        - combobox [ref=f4e333]:
+          - option [selected]
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+        - combobox [ref=f4e334]:
+          - option [selected]
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+          - option
+        - combobox [ref=f4e335]:
+          - option [selected]
+          - option
+          - option
+          - option
+          - option
+          - option
+      - generic [ref=f4e336]:
+        - generic [ref=f4e337]:
+          - generic [ref=f4e338]:
+            - generic [ref=f4e339]: METRIC
+            - generic [ref=f4e340]: VALUE
+            - generic [ref=f4e341]: PERIOD
+            - generic [ref=f4e342]: SCOPE
+            - generic [ref=f4e343]: CONF
+          - generic [ref=f4e344] [cursor=pointer]:
+            - generic [ref=f4e345]:
+              - generic [ref=f4e346]: Revenue from contracts with customers
+              - generic [ref=f4e347]: f-1 · D-01 p.35
+            - generic [ref=f4e348]: ₹81,415.38M
+            - generic [ref=f4e349]: FY2024
+            - generic [ref=f4e350]: consolidated
+            - generic [ref=f4e351]: "0.60"
+          - generic [ref=f4e352] [cursor=pointer]:
+            - generic [ref=f4e353]:
+              - generic [ref=f4e354]: Revenue from contracts with customers
+              - generic [ref=f4e355]: f-2 · D-01 p.35
+            - generic [ref=f4e356]: ₹72,253.01M
+            - generic [ref=f4e357]: FY2023
+            - generic [ref=f4e358]: consolidated
+            - generic [ref=f4e359]: "0.60"
+          - generic [ref=f4e360] [cursor=pointer]:
+            - generic [ref=f4e361]:
+              - generic [ref=f4e362]: Other income
+              - generic [ref=f4e363]: f-3 · D-01 p.35
+            - generic [ref=f4e364]: ₹4,526.96M
+            - generic [ref=f4e365]: FY2024
+            - generic [ref=f4e366]: consolidated
+            - generic [ref=f4e367]: "0.60"
+          - generic [ref=f4e368] [cursor=pointer]:
+            - generic [ref=f4e369]:
+              - generic [ref=f4e370]: Other income
+              - generic [ref=f4e371]: f-4 · D-01 p.35
+            - generic [ref=f4e372]: ₹3,049.48M
+            - generic [ref=f4e373]: FY2023
+            - generic [ref=f4e374]: consolidated
+            - generic [ref=f4e375]: "0.60"
+          - generic [ref=f4e376] [cursor=pointer]:
+            - generic [ref=f4e377]:
+              - generic [ref=f4e378]: Total income
+              - generic [ref=f4e379]: f-5 · D-01 p.35
+            - generic [ref=f4e380]: ₹85,942.34M
+            - generic [ref=f4e381]: FY2024
+            - generic [ref=f4e382]: consolidated
+            - generic [ref=f4e383]: "0.60"
+          - generic [ref=f4e384] [cursor=pointer]:
+            - generic [ref=f4e385]:
+              - generic [ref=f4e386]: Total income
+              - generic [ref=f4e387]: f-6 · D-01 p.35
+            - generic [ref=f4e388]: ₹75,302.49M
+            - generic [ref=f4e389]: FY2023
+            - generic [ref=f4e390]: consolidated
+            - generic [ref=f4e391]: "0.60"
+          - generic [ref=f4e392] [cursor=pointer]:
+            - generic [ref=f4e393]:
+              - generic [ref=f4e394]: Freight, Handling and Servicing Costs
+              - generic [ref=f4e395]: f-7 · D-01 p.35
+            - generic [ref=f4e396]: ₹59,707.49M
+            - generic [ref=f4e397]: FY2024
+            - generic [ref=f4e398]: consolidated
+            - generic [ref=f4e399]: "0.60"
+          - generic [ref=f4e400] [cursor=pointer]:
+            - generic [ref=f4e401]:
+              - generic [ref=f4e402]: Freight, Handling and Servicing Costs
+              - generic [ref=f4e403]: f-8 · D-01 p.35
+            - generic [ref=f4e404]: ₹56,694.8M
+            - generic [ref=f4e405]: FY2023
+            - generic [ref=f4e406]: consolidated
+            - generic [ref=f4e407]: "0.60"
+          - generic [ref=f4e408] [cursor=pointer]:
+            - generic [ref=f4e409]:
+              - generic [ref=f4e410]: Change in inventory of traded goods
+              - generic [ref=f4e411]: f-9 · D-01 p.35
+            - generic [ref=f4e412]: ₹0M
+            - generic [ref=f4e413]: FY2024
+            - generic [ref=f4e414]: consolidated
+            - generic [ref=f4e415]: "0.60"
+          - generic [ref=f4e416] [cursor=pointer]:
+            - generic [ref=f4e417]:
+              - generic [ref=f4e418]: Change in inventory of traded goods
+              - generic [ref=f4e419]: f-10 · D-01 p.35
+            - generic [ref=f4e420]: ₹15.76M
+            - generic [ref=f4e421]: FY2023
+            - generic [ref=f4e422]: consolidated
+            - generic [ref=f4e423]: "0.60"
+          - generic [ref=f4e424] [cursor=pointer]:
+            - generic [ref=f4e425]:
+              - generic [ref=f4e426]: Employee benefits expense
+              - generic [ref=f4e427]: f-11 · D-01 p.35
+            - generic [ref=f4e428]: ₹14,367.7M
+            - generic [ref=f4e429]: FY2024
+            - generic [ref=f4e430]: consolidated
+            - generic [ref=f4e431]: "0.60"
+          - generic [ref=f4e432] [cursor=pointer]:
+            - generic [ref=f4e433]:
+              - generic [ref=f4e434]: Employee benefits expense
+              - generic [ref=f4e435]: f-12 · D-01 p.35
+            - generic [ref=f4e436]: ₹14,000.34M
+            - generic [ref=f4e437]: FY2023
+            - generic [ref=f4e438]: consolidated
+            - generic [ref=f4e439]: "0.60"
+          - generic [ref=f4e440] [cursor=pointer]:
+            - generic [ref=f4e441]:
+              - generic [ref=f4e442]: Other expenses
+              - generic [ref=f4e443]: f-13 · D-01 p.35
+            - generic [ref=f4e444]: ₹6,073.78M
+            - generic [ref=f4e445]: FY2024
+            - generic [ref=f4e446]: consolidated
+            - generic [ref=f4e447]: "0.60"
+          - generic [ref=f4e448] [cursor=pointer]:
+            - generic [ref=f4e449]:
+              - generic [ref=f4e450]: Other expenses
+              - generic [ref=f4e451]: f-14 · D-01 p.35
+            - generic [ref=f4e452]: ₹6,058.19M
+            - generic [ref=f4e453]: FY2023
+            - generic [ref=f4e454]: consolidated
+            - generic [ref=f4e455]: "0.60"
+          - generic [ref=f4e456] [cursor=pointer]:
+            - generic [ref=f4e457]:
+              - generic [ref=f4e458]: Depreciation and amortisation expense
+              - generic [ref=f4e459]: f-15 · D-01 p.35
+            - generic [ref=f4e460]: ₹7,215.5M
+            - generic [ref=f4e461]: FY2024
+            - generic [ref=f4e462]: consolidated
+            - generic [ref=f4e463]: "0.60"
+          - generic [ref=f4e464] [cursor=pointer]:
+            - generic [ref=f4e465]:
+              - generic [ref=f4e466]: Depreciation and amortisation expense
+              - generic [ref=f4e467]: f-16 · D-01 p.35
+            - generic [ref=f4e468]: ₹8,311.44M
+            - generic [ref=f4e469]: FY2023
+            - generic [ref=f4e470]: consolidated
+            - generic [ref=f4e471]: "0.60"
+          - generic [ref=f4e472] [cursor=pointer]:
+            - generic [ref=f4e473]:
+              - generic [ref=f4e474]: Finance costs
+              - generic [ref=f4e475]: f-17 · D-01 p.35
+            - generic [ref=f4e476]: ₹885.2M
+            - generic [ref=f4e477]: FY2024
+            - generic [ref=f4e478]: consolidated
+            - generic [ref=f4e479]: "0.60"
+          - generic [ref=f4e480] [cursor=pointer]:
+            - generic [ref=f4e481]:
+              - generic [ref=f4e482]: Finance costs
+              - generic [ref=f4e483]: f-18 · D-01 p.35
+            - generic [ref=f4e484]: ₹888.3M
+            - generic [ref=f4e485]: FY2023
+            - generic [ref=f4e486]: consolidated
+            - generic [ref=f4e487]: "0.60"
+          - generic [ref=f4e488] [cursor=pointer]:
+            - generic [ref=f4e489]:
+              - generic [ref=f4e490]: Profit/(Loss) before exceptional items, share of profit of an associate and tax
+              - generic [ref=f4e491]: f-19 · D-01 p.35
+            - generic [ref=f4e492]: ₹-2,307.33M
+            - generic [ref=f4e493]: FY2024
+            - generic [ref=f4e494]: consolidated
+            - generic [ref=f4e495]: "0.60"
+          - generic [ref=f4e496] [cursor=pointer]:
+            - generic [ref=f4e497]:
+              - generic [ref=f4e498]: Profit/(Loss) before exceptional items, share of profit of an associate and tax
+              - generic [ref=f4e499]: f-20 · D-01 p.35
+            - generic [ref=f4e500]: ₹-10,666.34M
+            - generic [ref=f4e501]: FY2023
+            - generic [ref=f4e502]: consolidated
+            - generic [ref=f4e503]: "0.60"
+          - generic [ref=f4e504] [cursor=pointer]:
+            - generic [ref=f4e505]:
+              - generic [ref=f4e506]: Share of profit/(loss) of associate (net)
+              - generic [ref=f4e507]: f-21 · D-01 p.35
+            - generic [ref=f4e508]: ₹86.95M
+            - generic [ref=f4e509]: FY2024
+            - generic [ref=f4e510]: consolidated
+            - generic [ref=f4e511]: "0.60"
+          - generic [ref=f4e512] [cursor=pointer]:
+            - generic [ref=f4e513]:
+              - generic [ref=f4e514]: Share of profit/(loss) of associate (net)
+              - generic [ref=f4e515]: f-22 · D-01 p.35
+            - generic [ref=f4e516]: ₹135.74M
+            - generic [ref=f4e517]: FY2023
+            - generic [ref=f4e518]: consolidated
+            - generic [ref=f4e519]: "0.60"
+          - generic [ref=f4e520] [cursor=pointer]:
+            - generic [ref=f4e521]:
+              - generic [ref=f4e522]: Exceptional items
+              - generic [ref=f4e523]: f-23 · D-01 p.35
+            - generic [ref=f4e524]: ₹-224.1M
+            - generic [ref=f4e525]: FY2024
+            - generic [ref=f4e526]: consolidated
+            - generic [ref=f4e527]: "0.60"
+          - generic [ref=f4e528] [cursor=pointer]:
+            - generic [ref=f4e529]:
+              - generic [ref=f4e530]: Profit/(Loss) before tax
+              - generic [ref=f4e531]: f-24 · D-01 p.35
+            - generic [ref=f4e532]: ₹-2,444.48M
+            - generic [ref=f4e533]: FY2024
+            - generic [ref=f4e534]: consolidated
+            - generic [ref=f4e535]: "0.60"
+          - generic [ref=f4e536] [cursor=pointer]:
+            - generic [ref=f4e537]:
+              - generic [ref=f4e538]: Profit/(Loss) before tax
+              - generic [ref=f4e539]: f-25 · D-01 p.35
+            - generic [ref=f4e540]: ₹-10,530.6M
+            - generic [ref=f4e541]: FY2023
+            - generic [ref=f4e542]: consolidated
+            - generic [ref=f4e543]: "0.60"
+          - generic [ref=f4e544] [cursor=pointer]:
+            - generic [ref=f4e545]:
+              - generic [ref=f4e546]: Tax expense
+              - generic [ref=f4e547]: f-26 · D-01 p.35
+            - generic [ref=f4e548]: ₹47.38M
+            - generic [ref=f4e549]: FY2024
+            - generic [ref=f4e550]: consolidated
+            - generic [ref=f4e551]: "0.60"
+          - generic [ref=f4e552] [cursor=pointer]:
+            - generic [ref=f4e553]:
+              - generic [ref=f4e554]: Tax expense
+              - generic [ref=f4e555]: f-27 · D-01 p.35
+            - generic [ref=f4e556]: ₹-452.81M
+            - generic [ref=f4e557]: FY2023
+            - generic [ref=f4e558]: consolidated
+            - generic [ref=f4e559]: "0.60"
+          - generic [ref=f4e560] [cursor=pointer]:
+            - generic [ref=f4e561]:
+              - generic [ref=f4e562]: Profit/(loss) for the period/year
+              - generic [ref=f4e563]: f-28 · D-01 p.35
+            - generic [ref=f4e564]: ₹-2,491.86M
+            - generic [ref=f4e565]: FY2024
+            - generic [ref=f4e566]: consolidated
+            - generic [ref=f4e567]: "0.60"
+          - generic [ref=f4e568] [cursor=pointer]:
+            - generic [ref=f4e569]:
+              - generic [ref=f4e570]: Profit/(loss) for the period/year
+              - generic [ref=f4e571]: f-29 · D-01 p.35
+            - generic [ref=f4e572]: ₹-10,077.79M
+            - generic [ref=f4e573]: FY2023
+            - generic [ref=f4e574]: consolidated
+            - generic [ref=f4e575]: "0.60"
+          - generic [ref=f4e576] [cursor=pointer]:
+            - generic [ref=f4e577]:
+              - generic [ref=f4e578]: EBITDA
+              - generic [ref=f4e579]: f-30 · D-01 p.35
+            - generic [ref=f4e580]: ₹1,266.41M
+            - generic [ref=f4e581]: FY2024
+            - generic [ref=f4e582]: consolidated
+            - generic [ref=f4e583]: "0.60"
+          - generic [ref=f4e584] [cursor=pointer]:
+            - generic [ref=f4e585]:
+              - generic [ref=f4e586]: EBITDA
+              - generic [ref=f4e587]: f-31 · D-01 p.35
+            - generic [ref=f4e588]: ₹-4,516.08M
+            - generic [ref=f4e589]: FY2023
+            - generic [ref=f4e590]: consolidated
+            - generic [ref=f4e591]: "0.60"
+          - generic [ref=f4e592] [cursor=pointer]:
+            - generic [ref=f4e593]:
+              - generic [ref=f4e594]: Adjusted EBITDA1
+              - generic [ref=f4e595]: f-32 · D-01 p.35
+            - generic [ref=f4e596]: ₹757.86M
+            - generic [ref=f4e597]: FY2024
+            - generic [ref=f4e598]: consolidated
+            - generic [ref=f4e599]: "0.60"
+          - generic [ref=f4e600] [cursor=pointer]:
+            - generic [ref=f4e601]:
+              - generic [ref=f4e602]: Adjusted EBITDA1
+              - generic [ref=f4e603]: f-33 · D-01 p.35
+            - generic [ref=f4e604]: ₹-4,038.66M
+            - generic [ref=f4e605]: FY2023
+            - generic [ref=f4e606]: consolidated
+            - generic [ref=f4e607]: "0.60"
+          - generic [ref=f4e608] [cursor=pointer]:
+            - generic [ref=f4e609]:
+              - generic [ref=f4e610]: Revenues from express parcel services
+              - generic [ref=f4e611]: f-34 · D-01 p.35
+            - generic [ref=f4e612]: ₹50,765.87M
+            - generic [ref=f4e613]: FY2024
+            - generic [ref=f4e614]: consolidated
+            - generic [ref=f4e615]: "0.60"
+          - generic [ref=f4e616] [cursor=pointer]:
+            - generic [ref=f4e617]:
+              - generic [ref=f4e618]: Revenues from express parcel services
+              - generic [ref=f4e619]: f-35 · D-01 p.35
+            - generic [ref=f4e620]: ₹45,522.22M
+            - generic [ref=f4e621]: FY2023
+            - generic [ref=f4e622]: consolidated
+            - generic [ref=f4e623]: "0.60"
+          - generic [ref=f4e624] [cursor=pointer]:
+            - generic [ref=f4e625]:
+              - generic [ref=f4e626]: Revenues from part truckload services
+              - generic [ref=f4e627]: f-36 · D-01 p.35
+            - generic [ref=f4e628]: ₹15,174.05M
+            - generic [ref=f4e629]: FY2024
+            - generic [ref=f4e630]: consolidated
+            - generic [ref=f4e631]: "0.60"
+          - generic [ref=f4e632] [cursor=pointer]:
+            - generic [ref=f4e633]:
+              - generic [ref=f4e634]: Revenues from part truckload services
+              - generic [ref=f4e635]: f-37 · D-01 p.35
+            - generic [ref=f4e636]: ₹11,565.38M
+            - generic [ref=f4e637]: FY2023
+            - generic [ref=f4e638]: consolidated
+            - generic [ref=f4e639]: "0.60"
+          - generic [ref=f4e640] [cursor=pointer]:
+            - generic [ref=f4e641]:
+              - generic [ref=f4e642]: Revenues from truckload services
+              - generic [ref=f4e643]: f-38 · D-01 p.35
+            - generic [ref=f4e644]: ₹6,087.96M
+            - generic [ref=f4e645]: FY2024
+            - generic [ref=f4e646]: consolidated
+            - generic [ref=f4e647]: "0.60"
+          - generic [ref=f4e648] [cursor=pointer]:
+            - generic [ref=f4e649]:
+              - generic [ref=f4e650]: Revenues from truckload services
+              - generic [ref=f4e651]: f-39 · D-01 p.35
+            - generic [ref=f4e652]: ₹4,362.17M
+            - generic [ref=f4e653]: FY2023
+            - generic [ref=f4e654]: consolidated
+            - generic [ref=f4e655]: "0.60"
+          - generic [ref=f4e656] [cursor=pointer]:
+            - generic [ref=f4e657]:
+              - generic [ref=f4e658]: Revenues from supply chain services
+              - generic [ref=f4e659]: f-40 · D-01 p.35
+            - generic [ref=f4e660]: ₹7,760.29M
+            - generic [ref=f4e661]: FY2024
+            - generic [ref=f4e662]: consolidated
+            - generic [ref=f4e663]: "0.60"
+          - generic [ref=f4e664] [cursor=pointer]:
+            - generic [ref=f4e665]:
+              - generic [ref=f4e666]: Revenues from supply chain services
+              - generic [ref=f4e667]: f-41 · D-01 p.35
+            - generic [ref=f4e668]: ₹7,817.47M
+            - generic [ref=f4e669]: FY2023
+            - generic [ref=f4e670]: consolidated
+            - generic [ref=f4e671]: "0.60"
+          - generic [ref=f4e672] [cursor=pointer]:
+            - generic [ref=f4e673]:
+              - generic [ref=f4e674]: Revenues from cross-border services
+              - generic [ref=f4e675]: f-42 · D-01 p.35
+            - generic [ref=f4e676]: ₹1,525.31M
+            - generic [ref=f4e677]: FY2024
+            - generic [ref=f4e678]: consolidated
+            - generic [ref=f4e679]: "0.60"
+          - generic [ref=f4e680] [cursor=pointer]:
+            - generic [ref=f4e681]:
+              - generic [ref=f4e682]: Revenues from cross-border services
+              - generic [ref=f4e683]: f-43 · D-01 p.35
+            - generic [ref=f4e684]: ₹2,957.68M
+            - generic [ref=f4e685]: FY2023
+            - generic [ref=f4e686]: consolidated
+            - generic [ref=f4e687]: "0.60"
+          - generic [ref=f4e688] [cursor=pointer]:
+            - generic [ref=f4e689]:
+              - generic [ref=f4e690]: Others
+              - generic [ref=f4e691]: f-44 · D-01 p.35
+            - generic [ref=f4e692]: ₹101.9M
+            - generic [ref=f4e693]: FY2024
+            - generic [ref=f4e694]: consolidated
+            - generic [ref=f4e695]: "0.60"
+          - generic [ref=f4e696] [cursor=pointer]:
+            - generic [ref=f4e697]:
+              - generic [ref=f4e698]: Others
+              - generic [ref=f4e699]: f-45 · D-01 p.35
+            - generic [ref=f4e700]: ₹11.55M
+            - generic [ref=f4e701]: FY2023
+            - generic [ref=f4e702]: consolidated
+            - generic [ref=f4e703]: "0.60"
+          - generic [ref=f4e704] [cursor=pointer]:
+            - generic [ref=f4e705]:
+              - generic [ref=f4e706]: Revenues from sale of traded goods
+              - generic [ref=f4e707]: f-46 · D-01 p.35
+            - generic [ref=f4e708]: ₹0M
+            - generic [ref=f4e709]: FY2024
+            - generic [ref=f4e710]: consolidated
+            - generic [ref=f4e711]: "0.60"
+          - generic [ref=f4e712] [cursor=pointer]:
+            - generic [ref=f4e713]:
+              - generic [ref=f4e714]: Revenues from sale of traded goods
+              - generic [ref=f4e715]: f-47 · D-01 p.35
+            - generic [ref=f4e716]: ₹16.54M
+            - generic [ref=f4e717]: FY2023
+            - generic [ref=f4e718]: consolidated
+            - generic [ref=f4e719]: "0.60"
+          - generic [ref=f4e720] [cursor=pointer]:
+            - generic [ref=f4e721]:
+              - generic [ref=f4e722]: Express parcel shipment volumes
+              - generic [ref=f4e723]: f-48 · D-01 p.35
+            - generic [ref=f4e724]: 74,00,00,000 count
+            - generic [ref=f4e725]: FY2024
+            - generic [ref=f4e726]: consolidated
+            - generic [ref=f4e727]: "0.70"
+          - generic [ref=f4e728] [cursor=pointer]:
+            - generic [ref=f4e729]:
+              - generic [ref=f4e730]: Express parcel shipment volumes
+              - generic [ref=f4e731]: f-49 · D-01 p.35
+            - generic [ref=f4e732]: 66,30,00,000 count
+            - generic [ref=f4e733]: FY2023
+            - generic [ref=f4e734]: consolidated
+            - generic [ref=f4e735]: "0.70"
+          - generic [ref=f4e736] [cursor=pointer]:
+            - generic [ref=f4e737]:
+              - generic [ref=f4e738]: PTL volumes
+              - generic [ref=f4e739]: f-50 · D-01 p.35
+            - generic [ref=f4e740]: 14,29,000 mass tonnes
+            - generic [ref=f4e741]: FY2024
+            - generic [ref=f4e742]: consolidated
+            - generic [ref=f4e743]: "0.70"
+          - generic [ref=f4e744] [cursor=pointer]:
+            - generic [ref=f4e745]:
+              - generic [ref=f4e746]: PTL volumes
+              - generic [ref=f4e747]: f-51 · D-01 p.35
+            - generic [ref=f4e748]: 11,01,000 mass tonnes
+            - generic [ref=f4e749]: FY2023
+            - generic [ref=f4e750]: consolidated
+            - generic [ref=f4e751]: "0.70"
+          - generic [ref=f4e752] [cursor=pointer]:
+            - generic [ref=f4e753]:
+              - generic [ref=f4e754]: FY24 revenue from services
+              - generic [ref=f4e755]: f-52 · D-02 p.5
+            - generic [ref=f4e756]: ₹8,142 Cr
+            - generic [ref=f4e757]: FY2024
+            - generic [ref=f4e758]: —
+            - generic [ref=f4e759]: "0.70"
+          - generic [ref=f4e760] [cursor=pointer]:
+            - generic [ref=f4e761]:
+              - generic [ref=f4e762]: EBITDA
+              - generic [ref=f4e763]: f-53 · D-02 p.5
+            - generic [ref=f4e764]: ₹127 Cr
+            - generic [ref=f4e765]: FY2024
+            - generic [ref=f4e766]: —
+            - generic [ref=f4e767]: "0.70"
+          - generic [ref=f4e768] [cursor=pointer]:
+            - generic [ref=f4e769]:
+              - generic [ref=f4e770]: EBITDA margin
+              - generic [ref=f4e771]: f-54 · D-02 p.5
+            - generic [ref=f4e772]: 1.6%
+            - generic [ref=f4e773]: FY2024
+            - generic [ref=f4e774]: —
+            - generic [ref=f4e775]: "0.70"
+          - generic [ref=f4e776] [cursor=pointer]:
+            - generic [ref=f4e777]:
+              - generic [ref=f4e778]: Adj. EBITDA
+              - generic [ref=f4e779]: f-55 · D-02 p.5
+            - generic [ref=f4e780]: ₹76 Cr
+            - generic [ref=f4e781]: FY2024
+            - generic [ref=f4e782]: —
+            - generic [ref=f4e783]: "0.70"
+          - generic [ref=f4e784] [cursor=pointer]:
+            - generic [ref=f4e785]:
+              - generic [ref=f4e786]: Adj. EBITDA margin
+              - generic [ref=f4e787]: f-56 · D-02 p.5
+            - generic [ref=f4e788]: 0.9%
+            - generic [ref=f4e789]: FY2024
+            - generic [ref=f4e790]: —
+            - generic [ref=f4e791]: "0.70"
+          - generic [ref=f4e792] [cursor=pointer]:
+            - generic [ref=f4e793]:
+              - generic [ref=f4e794]: FY24 revenue from services
+              - generic [ref=f4e795]: f-57 · D-02 p.5
+            - generic [ref=f4e796]: ₹-452 Cr
+            - generic [ref=f4e797]: FY2023
+            - generic [ref=f4e798]: —
+            - generic [ref=f4e799]: "0.70"
+          - generic [ref=f4e800] [cursor=pointer]:
+            - generic [ref=f4e801]:
+              - generic [ref=f4e802]: FY23 EBITDA
+              - generic [ref=f4e803]: f-58 · D-02 p.5
+            - generic [ref=f4e804]: ₹-404 Cr
+            - generic [ref=f4e805]: FY2023
+            - generic [ref=f4e806]: —
+            - generic [ref=f4e807]: "0.70"
+          - generic [ref=f4e808] [cursor=pointer]:
+            - generic [ref=f4e809]:
+              - generic [ref=f4e810]: EBITDA margin
+              - generic [ref=f4e811]: f-59 · D-02 p.5
+            - generic [ref=f4e812]: "-6.3%"
+            - generic [ref=f4e813]: FY2023
+            - generic [ref=f4e814]: —
+            - generic [ref=f4e815]: "0.70"
+          - generic [ref=f4e816] [cursor=pointer]:
+            - generic [ref=f4e817]:
+              - generic [ref=f4e818]: FY23 Adj. EBITDA margin
+              - generic [ref=f4e819]: f-60 · D-02 p.5
+            - generic [ref=f4e820]: "-5.6%"
+            - generic [ref=f4e821]: FY2023
+            - generic [ref=f4e822]: —
+            - generic [ref=f4e823]: "0.70"
+          - generic [ref=f4e824] [cursor=pointer]:
+            - generic [ref=f4e825]:
+              - generic [ref=f4e826]: YoY growth rate of revenue from services (excluding revenue from traded goods)
+              - generic [ref=f4e827]: f-61 · D-02 p.5
+            - generic [ref=f4e828]: 12.7%
+            - generic [ref=f4e829]: FY2024
+            - generic [ref=f4e830]: —
+            - generic [ref=f4e831]: "0.70"
+          - generic [ref=f4e832] [cursor=pointer]:
+            - generic [ref=f4e833]:
+              - generic [ref=f4e834]: Express parcel shipment volumes
+              - generic [ref=f4e835]: f-62 · D-02 p.5
+            - generic [ref=f4e836]: 74,00,00,000 count
+            - generic [ref=f4e837]: FY2024
+            - generic [ref=f4e838]: —
+            - generic [ref=f4e839]: "0.70"
+          - generic [ref=f4e840] [cursor=pointer]:
+            - generic [ref=f4e841]:
+              - generic [ref=f4e842]: YoY growth rate of express parcel shipments
+              - generic [ref=f4e843]: f-63 · D-02 p.5
+            - generic [ref=f4e844]: 11.5%
+            - generic [ref=f4e845]: FY2024
+            - generic [ref=f4e846]: —
+            - generic [ref=f4e847]: "0.70"
+          - generic [ref=f4e848] [cursor=pointer]:
+            - generic [ref=f4e849]:
+              - generic [ref=f4e850]: YoY growth rate of PTL freight tonnage
+              - generic [ref=f4e851]: f-64 · D-02 p.5
+            - generic [ref=f4e852]: 29.8%
+            - generic [ref=f4e853]: FY2024
+            - generic [ref=f4e854]: —
+            - generic [ref=f4e855]: "0.70"
+          - generic [ref=f4e856] [cursor=pointer]:
+            - generic [ref=f4e857]:
+              - generic [ref=f4e858]: PTL freight tonnage since inception
+              - generic [ref=f4e859]: f-65 · D-02 p.5
+            - generic [ref=f4e860]: 48,00,000 mass tonnes
+            - generic [ref=f4e861]: FY2024
+            - generic [ref=f4e862]: —
+            - generic [ref=f4e863]: "0.70"
+          - generic [ref=f4e864] [cursor=pointer]:
+            - generic [ref=f4e865]:
+              - generic [ref=f4e866]: Revenue for services (A)
+              - generic [ref=f4e867]: f-66 · D-02 p.16
+            - generic [ref=f4e868]: ₹1,860 Cr
+            - generic [ref=f4e869]: Q4 FY2023
+            - generic [ref=f4e870]: —
+            - generic [ref=f4e871]: "0.70"
+          - generic [ref=f4e872] [cursor=pointer]:
+            - generic [ref=f4e873]:
+              - generic [ref=f4e874]: Revenue for services (A)
+              - generic [ref=f4e875]: f-67 · D-02 p.16
+            - generic [ref=f4e876]: ₹2,194 Cr
+            - generic [ref=f4e877]: Q3 FY2024
+            - generic [ref=f4e878]: —
+            - generic [ref=f4e879]: "0.70"
+          - generic [ref=f4e880] [cursor=pointer]:
+            - generic [ref=f4e881]:
+              - generic [ref=f4e882]: Revenue for services (A)
+              - generic [ref=f4e883]: f-68 · D-02 p.16
+            - generic [ref=f4e884]: ₹2,076 Cr
+            - generic [ref=f4e885]: Q4 FY2024
+            - generic [ref=f4e886]: —
+            - generic [ref=f4e887]: "0.70"
+          - generic [ref=f4e888] [cursor=pointer]:
+            - generic [ref=f4e889]:
+              - generic [ref=f4e890]: Revenue for services (A)
+              - generic [ref=f4e891]: f-69 · D-02 p.16
+            - generic [ref=f4e892]: ₹7,224 Cr
+            - generic [ref=f4e893]: FY2023
+            - generic [ref=f4e894]: —
+            - generic [ref=f4e895]: "0.70"
+          - generic [ref=f4e896] [cursor=pointer]:
+            - generic [ref=f4e897]:
+              - generic [ref=f4e898]: Revenue for services (A)
+              - generic [ref=f4e899]: f-70 · D-02 p.16
+            - generic [ref=f4e900]: ₹8,142 Cr
+            - generic [ref=f4e901]: FY2024
+            - generic [ref=f4e902]: —
+            - generic [ref=f4e903]: "0.70"
+          - generic [ref=f4e904] [cursor=pointer]:
+            - generic [ref=f4e905]:
+              - generic [ref=f4e906]: Revenues from sale of traded goods
+              - generic [ref=f4e907]: f-71 · D-02 p.16
+            - generic [ref=f4e908]: ₹0 Cr
+            - generic [ref=f4e909]: Q4 FY2023
+            - generic [ref=f4e910]: —
+            - generic [ref=f4e911]: "0.70"
+          - generic [ref=f4e912] [cursor=pointer]:
+            - generic [ref=f4e913]:
+              - generic [ref=f4e914]: Revenues from sale of traded goods
+              - generic [ref=f4e915]: f-72 · D-02 p.16
+            - generic [ref=f4e916]: ₹2 Cr
+            - generic [ref=f4e917]: FY2023
+            - generic [ref=f4e918]: —
+            - generic [ref=f4e919]: "0.70"
+          - generic [ref=f4e920] [cursor=pointer]:
+            - generic [ref=f4e921]:
+              - generic [ref=f4e922]: Revenue from customers (A+B)
+              - generic [ref=f4e923]: f-73 · D-02 p.16
+            - generic [ref=f4e924]: ₹1,860 Cr
+            - generic [ref=f4e925]: Q4 FY2023
+            - generic [ref=f4e926]: —
+            - generic [ref=f4e927]: "0.70"
+          - generic [ref=f4e928] [cursor=pointer]:
+            - generic [ref=f4e929]:
+              - generic [ref=f4e930]: Revenue from customers (A+B)
+              - generic [ref=f4e931]: f-74 · D-02 p.16
+            - generic [ref=f4e932]: ₹2,194 Cr
+            - generic [ref=f4e933]: Q3 FY2024
+            - generic [ref=f4e934]: —
+            - generic [ref=f4e935]: "0.70"
+          - generic [ref=f4e936] [cursor=pointer]:
+            - generic [ref=f4e937]:
+              - generic [ref=f4e938]: Revenue from customers (A+B)
+              - generic [ref=f4e939]: f-75 · D-02 p.16
+            - generic [ref=f4e940]: ₹2,076 Cr
+            - generic [ref=f4e941]: Q4 FY2024
+            - generic [ref=f4e942]: —
+            - generic [ref=f4e943]: "0.70"
+          - generic [ref=f4e944] [cursor=pointer]:
+            - generic [ref=f4e945]:
+              - generic [ref=f4e946]: Revenue from customers (A+B)
+              - generic [ref=f4e947]: f-76 · D-02 p.16
+            - generic [ref=f4e948]: ₹7,225 Cr
+            - generic [ref=f4e949]: FY2023
+            - generic [ref=f4e950]: —
+            - generic [ref=f4e951]: "0.70"
+          - generic [ref=f4e952] [cursor=pointer]:
+            - generic [ref=f4e953]:
+              - generic [ref=f4e954]: Revenue from customers (A+B)
+              - generic [ref=f4e955]: f-77 · D-02 p.16
+            - generic [ref=f4e956]: ₹8,142 Cr
+            - generic [ref=f4e957]: FY2024
+            - generic [ref=f4e958]: —
+            - generic [ref=f4e959]: "0.70"
+          - generic [ref=f4e960] [cursor=pointer]:
+            - generic [ref=f4e961]:
+              - generic [ref=f4e962]: Other income
+              - generic [ref=f4e963]: f-78 · D-02 p.16
+            - generic [ref=f4e964]: ₹75 Cr
+            - generic [ref=f4e965]: Q4 FY2023
+            - generic [ref=f4e966]: —
+            - generic [ref=f4e967]: "0.70"
+          - generic [ref=f4e968] [cursor=pointer]:
+            - generic [ref=f4e969]:
+              - generic [ref=f4e970]: Other income
+              - generic [ref=f4e971]: f-79 · D-02 p.16
+            - generic [ref=f4e972]: ₹131 Cr
+            - generic [ref=f4e973]: Q3 FY2024
+            - generic [ref=f4e974]: —
+            - generic [ref=f4e975]: "0.70"
+          - generic [ref=f4e976] [cursor=pointer]:
+            - generic [ref=f4e977]:
+              - generic [ref=f4e978]: Other income
+              - generic [ref=f4e979]: f-80 · D-02 p.16
+            - generic [ref=f4e980]: ₹119 Cr
+            - generic [ref=f4e981]: Q4 FY2024
+            - generic [ref=f4e982]: —
+            - generic [ref=f4e983]: "0.70"
+          - generic [ref=f4e984] [cursor=pointer]:
+            - generic [ref=f4e985]:
+              - generic [ref=f4e986]: Other income
+              - generic [ref=f4e987]: f-81 · D-02 p.16
+            - generic [ref=f4e988]: ₹305 Cr
+            - generic [ref=f4e989]: FY2023
+            - generic [ref=f4e990]: —
+            - generic [ref=f4e991]: "0.70"
+          - generic [ref=f4e992] [cursor=pointer]:
+            - generic [ref=f4e993]:
+              - generic [ref=f4e994]: Other income
+              - generic [ref=f4e995]: f-82 · D-02 p.16
+            - generic [ref=f4e996]: ₹453 Cr
+            - generic [ref=f4e997]: FY2024
+            - generic [ref=f4e998]: —
+            - generic [ref=f4e999]: "0.70"
+          - generic [ref=f4e1000] [cursor=pointer]:
+            - generic [ref=f4e1001]:
+              - generic [ref=f4e1002]: Total income
+              - generic [ref=f4e1003]: f-83 · D-02 p.16
+            - generic [ref=f4e1004]: ₹1,934 Cr
+            - generic [ref=f4e1005]: Q4 FY2023
+            - generic [ref=f4e1006]: —
+            - generic [ref=f4e1007]: "0.70"
+          - generic [ref=f4e1008] [cursor=pointer]:
+            - generic [ref=f4e1009]:
+              - generic [ref=f4e1010]: Total income
+              - generic [ref=f4e1011]: f-84 · D-02 p.16
+            - generic [ref=f4e1012]: ₹2,325 Cr
+            - generic [ref=f4e1013]: Q3 FY2024
+            - generic [ref=f4e1014]: —
+            - generic [ref=f4e1015]: "0.70"
+          - generic [ref=f4e1016] [cursor=pointer]:
+            - generic [ref=f4e1017]:
+              - generic [ref=f4e1018]: Total income
+              - generic [ref=f4e1019]: f-85 · D-02 p.16
+            - generic [ref=f4e1020]: ₹2,195 Cr
+            - generic [ref=f4e1021]: Q4 FY2024
+            - generic [ref=f4e1022]: —
+            - generic [ref=f4e1023]: "0.70"
+          - generic [ref=f4e1024] [cursor=pointer]:
+            - generic [ref=f4e1025]:
+              - generic [ref=f4e1026]: Total income
+              - generic [ref=f4e1027]: f-86 · D-02 p.16
+            - generic [ref=f4e1028]: ₹7,530 Cr
+            - generic [ref=f4e1029]: FY2023
+            - generic [ref=f4e1030]: —
+            - generic [ref=f4e1031]: "0.70"
+          - generic [ref=f4e1032] [cursor=pointer]:
+            - generic [ref=f4e1033]:
+              - generic [ref=f4e1034]: Total income
+              - generic [ref=f4e1035]: f-87 · D-02 p.16
+            - generic [ref=f4e1036]: ₹8,594 Cr
+            - generic [ref=f4e1037]: FY2024
+            - generic [ref=f4e1038]: —
+            - generic [ref=f4e1039]: "0.70"
+          - generic [ref=f4e1040] [cursor=pointer]:
+            - generic [ref=f4e1041]:
+              - generic [ref=f4e1042]: Freight, Handling and Servicing Costs
+              - generic [ref=f4e1043]: f-88 · D-02 p.16
+            - generic [ref=f4e1044]: ₹1,372 Cr
+            - generic [ref=f4e1045]: Q4 FY2023
+            - generic [ref=f4e1046]: —
+            - generic [ref=f4e1047]: "0.70"
+          - generic [ref=f4e1048] [cursor=pointer]:
+            - generic [ref=f4e1049]:
+              - generic [ref=f4e1050]: Freight, Handling and Servicing Costs
+              - generic [ref=f4e1051]: f-89 · D-02 p.16
+            - generic [ref=f4e1052]: ₹1,572 Cr
+            - generic [ref=f4e1053]: Q3 FY2024
+            - generic [ref=f4e1054]: —
+            - generic [ref=f4e1055]: "0.70"
+          - generic [ref=f4e1056] [cursor=pointer]:
+            - generic [ref=f4e1057]:
+              - generic [ref=f4e1058]: Freight, Handling and Servicing Costs
+              - generic [ref=f4e1059]: f-90 · D-02 p.16
+            - generic [ref=f4e1060]: ₹1,519 Cr
+            - generic [ref=f4e1061]: Q4 FY2024
+            - generic [ref=f4e1062]: —
+            - generic [ref=f4e1063]: "0.70"
+          - generic [ref=f4e1064] [cursor=pointer]:
+            - generic [ref=f4e1065]:
+              - generic [ref=f4e1066]: Freight, Handling and Servicing Costs
+              - generic [ref=f4e1067]: f-91 · D-02 p.16
+            - generic [ref=f4e1068]: ₹5,669 Cr
+            - generic [ref=f4e1069]: FY2023
+            - generic [ref=f4e1070]: —
+            - generic [ref=f4e1071]: "0.70"
+          - generic [ref=f4e1072] [cursor=pointer]:
+            - generic [ref=f4e1073]:
+              - generic [ref=f4e1074]: Freight, Handling and Servicing Costs
+              - generic [ref=f4e1075]: f-92 · D-02 p.16
+            - generic [ref=f4e1076]: ₹5,971 Cr
+            - generic [ref=f4e1077]: FY2024
+            - generic [ref=f4e1078]: —
+            - generic [ref=f4e1079]: "0.70"
+          - generic [ref=f4e1080] [cursor=pointer]:
+            - generic [ref=f4e1081]:
+              - generic [ref=f4e1082]: Employee benefit expense excl. share based payments
+              - generic [ref=f4e1083]: f-93 · D-02 p.16
+            - generic [ref=f4e1084]: ₹284 Cr
+            - generic [ref=f4e1085]: Q4 FY2023
+            - generic [ref=f4e1086]: —
+            - generic [ref=f4e1087]: "0.70"
+          - generic [ref=f4e1088] [cursor=pointer]:
+            - generic [ref=f4e1089]:
+              - generic [ref=f4e1090]: Employee benefit expense excl. share based payments
+              - generic [ref=f4e1091]: f-94 · D-02 p.16
+            - generic [ref=f4e1092]: ₹306 Cr
+            - generic [ref=f4e1093]: Q3 FY2024
+            - generic [ref=f4e1094]: —
+            - generic [ref=f4e1095]: "0.70"
+          - generic [ref=f4e1096] [cursor=pointer]:
+            - generic [ref=f4e1097]:
+              - generic [ref=f4e1098]: Employee benefit expense excl. share based payments
+              - generic [ref=f4e1099]: f-95 · D-02 p.16
+            - generic [ref=f4e1100]: ₹308 Cr
+            - generic [ref=f4e1101]: Q4 FY2024
+            - generic [ref=f4e1102]: —
+            - generic [ref=f4e1103]: "0.70"
+          - generic [ref=f4e1104] [cursor=pointer]:
+            - generic [ref=f4e1105]:
+              - generic [ref=f4e1106]: Employee benefit expense excl. share based payments
+              - generic [ref=f4e1107]: f-96 · D-02 p.16
+            - generic [ref=f4e1108]: ₹1,111 Cr
+            - generic [ref=f4e1109]: FY2023
+            - generic [ref=f4e1110]: —
+            - generic [ref=f4e1111]: "0.70"
+          - generic [ref=f4e1112] [cursor=pointer]:
+            - generic [ref=f4e1113]:
+              - generic [ref=f4e1114]: Employee benefit expense excl. share based payments
+              - generic [ref=f4e1115]: f-97 · D-02 p.16
+            - generic [ref=f4e1116]: ₹1,211 Cr
+            - generic [ref=f4e1117]: FY2024
+            - generic [ref=f4e1118]: —
+            - generic [ref=f4e1119]: "0.70"
+          - generic [ref=f4e1120] [cursor=pointer]:
+            - generic [ref=f4e1121]:
+              - generic [ref=f4e1122]: "Employee benefit expense: share based payments"
+              - generic [ref=f4e1123]: f-98 · D-02 p.16
+            - generic [ref=f4e1124]: ₹73 Cr
+            - generic [ref=f4e1125]: Q4 FY2023
+            - generic [ref=f4e1126]: —
+            - generic [ref=f4e1127]: "0.70"
+          - generic [ref=f4e1128] [cursor=pointer]:
+            - generic [ref=f4e1129]:
+              - generic [ref=f4e1130]: "Employee benefit expense: share based payments"
+              - generic [ref=f4e1131]: f-99 · D-02 p.16
+            - generic [ref=f4e1132]: ₹54 Cr
+            - generic [ref=f4e1133]: Q3 FY2024
+            - generic [ref=f4e1134]: —
+            - generic [ref=f4e1135]: "0.70"
+          - generic [ref=f4e1136] [cursor=pointer]:
+            - generic [ref=f4e1137]:
+              - generic [ref=f4e1138]: "Employee benefit expense: share based payments"
+              - generic [ref=f4e1139]: f-100 · D-02 p.16
+            - generic [ref=f4e1140]: ₹49 Cr
+            - generic [ref=f4e1141]: Q4 FY2024
+            - generic [ref=f4e1142]: —
+            - generic [ref=f4e1143]: "0.70"
+          - generic [ref=f4e1144] [cursor=pointer]:
+            - generic [ref=f4e1145]:
+              - generic [ref=f4e1146]: "Employee benefit expense: share based payments"
+              - generic [ref=f4e1147]: f-101 · D-02 p.16
+            - generic [ref=f4e1148]: ₹289 Cr
+            - generic [ref=f4e1149]: FY2023
+            - generic [ref=f4e1150]: —
+            - generic [ref=f4e1151]: "0.70"
+          - generic [ref=f4e1152] [cursor=pointer]:
+            - generic [ref=f4e1153]:
+              - generic [ref=f4e1154]: "Employee benefit expense: share based payments"
+              - generic [ref=f4e1155]: f-102 · D-02 p.16
+            - generic [ref=f4e1156]: ₹226 Cr
+            - generic [ref=f4e1157]: FY2024
+            - generic [ref=f4e1158]: —
+            - generic [ref=f4e1159]: "0.70"
+          - generic [ref=f4e1160] [cursor=pointer]:
+            - generic [ref=f4e1161]:
+              - generic [ref=f4e1162]: Other operating expense
+              - generic [ref=f4e1163]: f-103 · D-02 p.16
+            - generic [ref=f4e1164]: ₹117 Cr
+            - generic [ref=f4e1165]: Q4 FY2023
+            - generic [ref=f4e1166]: —
+            - generic [ref=f4e1167]: "0.70"
+          - generic [ref=f4e1168] [cursor=pointer]:
+            - generic [ref=f4e1169]:
+              - generic [ref=f4e1170]: Other operating expense
+              - generic [ref=f4e1171]: f-104 · D-02 p.16
+            - generic [ref=f4e1172]: ₹154 Cr
+            - generic [ref=f4e1173]: Q3 FY2024
+            - generic [ref=f4e1174]: —
+            - generic [ref=f4e1175]: "0.70"
+          - generic [ref=f4e1176] [cursor=pointer]:
+            - generic [ref=f4e1177]:
+              - generic [ref=f4e1178]: Other operating expense
+              - generic [ref=f4e1179]: f-105 · D-02 p.16
+            - generic [ref=f4e1180]: ₹154 Cr
+            - generic [ref=f4e1181]: Q4 FY2024
+            - generic [ref=f4e1182]: —
+            - generic [ref=f4e1183]: "0.70"
+          - generic [ref=f4e1184] [cursor=pointer]:
+            - generic [ref=f4e1185]:
+              - generic [ref=f4e1186]: Other operating expense
+              - generic [ref=f4e1187]: f-106 · D-02 p.16
+            - generic [ref=f4e1188]: ₹606 Cr
+            - generic [ref=f4e1189]: FY2023
+            - generic [ref=f4e1190]: —
+            - generic [ref=f4e1191]: "0.70"
+          - generic [ref=f4e1192] [cursor=pointer]:
+            - generic [ref=f4e1193]:
+              - generic [ref=f4e1194]: Other operating expense
+              - generic [ref=f4e1195]: f-107 · D-02 p.16
+            - generic [ref=f4e1196]: ₹607 Cr
+            - generic [ref=f4e1197]: FY2024
+            - generic [ref=f4e1198]: —
+            - generic [ref=f4e1199]: "0.70"
+          - generic [ref=f4e1200] [cursor=pointer]:
+            - generic [ref=f4e1201]:
+              - generic [ref=f4e1202]: Finance costs
+              - generic [ref=f4e1203]: f-108 · D-02 p.16
+            - generic [ref=f4e1204]: ₹19 Cr
+            - generic [ref=f4e1205]: Q4 FY2023
+            - generic [ref=f4e1206]: —
+            - generic [ref=f4e1207]: "0.70"
+          - generic [ref=f4e1208] [cursor=pointer]:
+            - generic [ref=f4e1209]:
+              - generic [ref=f4e1210]: Finance costs
+              - generic [ref=f4e1211]: f-109 · D-02 p.16
+            - generic [ref=f4e1212]: ₹22 Cr
+            - generic [ref=f4e1213]: Q3 FY2024
+            - generic [ref=f4e1214]: —
+            - generic [ref=f4e1215]: "0.70"
+          - generic [ref=f4e1216] [cursor=pointer]:
+            - generic [ref=f4e1217]:
+              - generic [ref=f4e1218]: Finance costs
+              - generic [ref=f4e1219]: f-110 · D-02 p.16
+            - generic [ref=f4e1220]: ₹27 Cr
+            - generic [ref=f4e1221]: Q4 FY2024
+            - generic [ref=f4e1222]: —
+            - generic [ref=f4e1223]: "0.70"
+          - generic [ref=f4e1224] [cursor=pointer]:
+            - generic [ref=f4e1225]:
+              - generic [ref=f4e1226]: Finance costs
+              - generic [ref=f4e1227]: f-111 · D-02 p.16
+            - generic [ref=f4e1228]: ₹89 Cr
+            - generic [ref=f4e1229]: FY2023
+            - generic [ref=f4e1230]: —
+            - generic [ref=f4e1231]: "0.70"
+          - generic [ref=f4e1232] [cursor=pointer]:
+            - generic [ref=f4e1233]:
+              - generic [ref=f4e1234]: Finance costs
+              - generic [ref=f4e1235]: f-112 · D-02 p.16
+            - generic [ref=f4e1236]: ₹89 Cr
+            - generic [ref=f4e1237]: FY2024
+            - generic [ref=f4e1238]: —
+            - generic [ref=f4e1239]: "0.70"
+          - generic [ref=f4e1240] [cursor=pointer]:
+            - generic [ref=f4e1241]:
+              - generic [ref=f4e1242]: Depreciation and amortisation expense
+              - generic [ref=f4e1243]: f-113 · D-02 p.16
+            - generic [ref=f4e1244]: ₹242 Cr
+            - generic [ref=f4e1245]: Q4 FY2023
+            - generic [ref=f4e1246]: —
+            - generic [ref=f4e1247]: "0.70"
+          - generic [ref=f4e1248] [cursor=pointer]:
+            - generic [ref=f4e1249]:
+              - generic [ref=f4e1250]: Depreciation and amortisation expense
+              - generic [ref=f4e1251]: f-114 · D-02 p.16
+            - generic [ref=f4e1252]: ₹183 Cr
+            - generic [ref=f4e1253]: Q3 FY2024
+            - generic [ref=f4e1254]: —
+            - generic [ref=f4e1255]: "0.70"
+          - generic [ref=f4e1256] [cursor=pointer]:
+            - generic [ref=f4e1257]:
+              - generic [ref=f4e1258]: Depreciation and amortisation expense
+              - generic [ref=f4e1259]: f-115 · D-02 p.16
+            - generic [ref=f4e1260]: ₹200 Cr
+            - generic [ref=f4e1261]: Q4 FY2024
+            - generic [ref=f4e1262]: —
+            - generic [ref=f4e1263]: "0.70"
+          - generic [ref=f4e1264] [cursor=pointer]:
+            - generic [ref=f4e1265]:
+              - generic [ref=f4e1266]: Depreciation and amortisation expense
+              - generic [ref=f4e1267]: f-116 · D-02 p.16
+            - generic [ref=f4e1268]: ₹831 Cr
+            - generic [ref=f4e1269]: FY2023
+            - generic [ref=f4e1270]: —
+            - generic [ref=f4e1271]: "0.70"
+          - generic [ref=f4e1272] [cursor=pointer]:
+            - generic [ref=f4e1273]:
+              - generic [ref=f4e1274]: Depreciation and amortisation expense
+              - generic [ref=f4e1275]: f-117 · D-02 p.16
+            - generic [ref=f4e1276]: ₹722 Cr
+            - generic [ref=f4e1277]: FY2024
+            - generic [ref=f4e1278]: —
+            - generic [ref=f4e1279]: "0.70"
+          - generic [ref=f4e1280] [cursor=pointer]:
+            - generic [ref=f4e1281]:
+              - generic [ref=f4e1282]: Total expenses
+              - generic [ref=f4e1283]: f-118 · D-02 p.16
+            - generic [ref=f4e1284]: ₹2,108 Cr
+            - generic [ref=f4e1285]: Q4 FY2023
+            - generic [ref=f4e1286]: —
+            - generic [ref=f4e1287]: "0.70"
+          - generic [ref=f4e1288] [cursor=pointer]:
+            - generic [ref=f4e1289]:
+              - generic [ref=f4e1290]: Total expenses
+              - generic [ref=f4e1291]: f-119 · D-02 p.16
+            - generic [ref=f4e1292]: ₹2,290 Cr
+            - generic [ref=f4e1293]: Q3 FY2024
+            - generic [ref=f4e1294]: —
+            - generic [ref=f4e1295]: "0.70"
+          - generic [ref=f4e1296] [cursor=pointer]:
+            - generic [ref=f4e1297]:
+              - generic [ref=f4e1298]: Total expenses
+              - generic [ref=f4e1299]: f-120 · D-02 p.16
+            - generic [ref=f4e1300]: ₹2,257 Cr
+            - generic [ref=f4e1301]: Q4 FY2024
+            - generic [ref=f4e1302]: —
+            - generic [ref=f4e1303]: "0.70"
+          - generic [ref=f4e1304] [cursor=pointer]:
+            - generic [ref=f4e1305]:
+              - generic [ref=f4e1306]: Total expenses
+              - generic [ref=f4e1307]: f-121 · D-02 p.16
+            - generic [ref=f4e1308]: ₹8,597 Cr
+            - generic [ref=f4e1309]: FY2023
+            - generic [ref=f4e1310]: —
+            - generic [ref=f4e1311]: "0.70"
+          - generic [ref=f4e1312] [cursor=pointer]:
+            - generic [ref=f4e1313]:
+              - generic [ref=f4e1314]: Total expenses
+              - generic [ref=f4e1315]: f-122 · D-02 p.16
+            - generic [ref=f4e1316]: ₹8,825 Cr
+            - generic [ref=f4e1317]: FY2024
+            - generic [ref=f4e1318]: —
+            - generic [ref=f4e1319]: "0.70"
+          - generic [ref=f4e1320] [cursor=pointer]:
+            - generic [ref=f4e1321]:
+              - generic [ref=f4e1322]: Share of profit/(loss) of associate (net)
+              - generic [ref=f4e1323]: f-123 · D-02 p.16
+            - generic [ref=f4e1324]: ₹1 Cr
+            - generic [ref=f4e1325]: Q4 FY2023
+            - generic [ref=f4e1326]: —
+            - generic [ref=f4e1327]: "0.70"
+          - generic [ref=f4e1328] [cursor=pointer]:
+            - generic [ref=f4e1329]:
+              - generic [ref=f4e1330]: Share of profit/(loss) of associate (net)
+              - generic [ref=f4e1331]: f-124 · D-02 p.16
+            - generic [ref=f4e1332]: ₹-4 Cr
+            - generic [ref=f4e1333]: Q3 FY2024
+            - generic [ref=f4e1334]: —
+            - generic [ref=f4e1335]: "0.70"
+          - generic [ref=f4e1336] [cursor=pointer]:
+            - generic [ref=f4e1337]:
+              - generic [ref=f4e1338]: Share of profit/(loss) of associate (net)
+              - generic [ref=f4e1339]: f-125 · D-02 p.16
+            - generic [ref=f4e1340]: ₹6 Cr
+            - generic [ref=f4e1341]: Q4 FY2024
+            - generic [ref=f4e1342]: —
+            - generic [ref=f4e1343]: "0.70"
+          - generic [ref=f4e1344] [cursor=pointer]:
+            - generic [ref=f4e1345]:
+              - generic [ref=f4e1346]: Profit / (Loss) before exceptional items and tax
+              - generic [ref=f4e1347]: f-126 · D-02 p.16
+            - generic [ref=f4e1348]: ₹-173 Cr
+            - generic [ref=f4e1349]: Q4 FY2023
+            - generic [ref=f4e1350]: —
+            - generic [ref=f4e1351]: "0.70"
+          - generic [ref=f4e1352] [cursor=pointer]:
+            - generic [ref=f4e1353]:
+              - generic [ref=f4e1354]: Profit / (Loss) before exceptional items and tax
+              - generic [ref=f4e1355]: f-127 · D-02 p.16
+            - generic [ref=f4e1356]: ₹31 Cr
+            - generic [ref=f4e1357]: Q3 FY2024
+            - generic [ref=f4e1358]: —
+            - generic [ref=f4e1359]: "0.70"
+          - generic [ref=f4e1360] [cursor=pointer]:
+            - generic [ref=f4e1361]:
+              - generic [ref=f4e1362]: Profit / (Loss) before exceptional items and tax
+              - generic [ref=f4e1363]: f-128 · D-02 p.16
+            - generic [ref=f4e1364]: ₹-56 Cr
+            - generic [ref=f4e1365]: Q4 FY2024
+            - generic [ref=f4e1366]: —
+            - generic [ref=f4e1367]: "0.70"
+          - generic [ref=f4e1368] [cursor=pointer]:
+            - generic [ref=f4e1369]:
+              - generic [ref=f4e1370]: Exceptional items
+              - generic [ref=f4e1371]: f-129 · D-02 p.16
+            - generic [ref=f4e1372]: ₹-8 Cr
+            - generic [ref=f4e1373]: Q3 FY2024
+            - generic [ref=f4e1374]: —
+            - generic [ref=f4e1375]: "0.70"
+          - generic [ref=f4e1376] [cursor=pointer]:
+            - generic [ref=f4e1377]:
+              - generic [ref=f4e1378]: Exceptional items
+              - generic [ref=f4e1379]: f-130 · D-02 p.16
+            - generic [ref=f4e1380]: ₹-15 Cr
+            - generic [ref=f4e1381]: Q4 FY2024
+            - generic [ref=f4e1382]: —
+            - generic [ref=f4e1383]: "0.70"
+          - generic [ref=f4e1384] [cursor=pointer]:
+            - generic [ref=f4e1385]:
+              - generic [ref=f4e1386]: Tax expense
+              - generic [ref=f4e1387]: f-131 · D-02 p.16
+            - generic [ref=f4e1388]: ₹-14 Cr
+            - generic [ref=f4e1389]: Q4 FY2023
+            - generic [ref=f4e1390]: —
+            - generic [ref=f4e1391]: "0.70"
+          - generic [ref=f4e1392] [cursor=pointer]:
+            - generic [ref=f4e1393]:
+              - generic [ref=f4e1394]: Tax expense
+              - generic [ref=f4e1395]: f-132 · D-02 p.16
+            - generic [ref=f4e1396]: ₹12 Cr
+            - generic [ref=f4e1397]: Q3 FY2024
+            - generic [ref=f4e1398]: —
+            - generic [ref=f4e1399]: "0.70"
+          - generic [ref=f4e1400] [cursor=pointer]:
+            - generic [ref=f4e1401]:
+              - generic [ref=f4e1402]: Tax expense
+              - generic [ref=f4e1403]: f-133 · D-02 p.16
+            - generic [ref=f4e1404]: ₹-2 Cr
+            - generic [ref=f4e1405]: Q4 FY2024
+            - generic [ref=f4e1406]: —
+            - generic [ref=f4e1407]: "0.70"
+          - generic [ref=f4e1408] [cursor=pointer]:
+            - generic [ref=f4e1409]:
+              - generic [ref=f4e1410]: Profit / (Loss) after tax
+              - generic [ref=f4e1411]: f-134 · D-02 p.16
+            - generic [ref=f4e1412]: ₹-159 Cr
+            - generic [ref=f4e1413]: Q4 FY2023
+            - generic [ref=f4e1414]: —
+            - generic [ref=f4e1415]: "0.70"
+          - generic [ref=f4e1416] [cursor=pointer]:
+            - generic [ref=f4e1417]:
+              - generic [ref=f4e1418]: Profit / (Loss) after tax
+              - generic [ref=f4e1419]: f-135 · D-02 p.16
+            - generic [ref=f4e1420]: ₹12 Cr
+            - generic [ref=f4e1421]: Q3 FY2024
+            - generic [ref=f4e1422]: —
+            - generic [ref=f4e1423]: "0.70"
+          - generic [ref=f4e1424] [cursor=pointer]:
+            - generic [ref=f4e1425]:
+              - generic [ref=f4e1426]: Profit / (Loss) after tax
+              - generic [ref=f4e1427]: f-136 · D-02 p.16
+            - generic [ref=f4e1428]: ₹-69 Cr
+            - generic [ref=f4e1429]: Q4 FY2024
+            - generic [ref=f4e1430]: —
+            - generic [ref=f4e1431]: "0.70"
+          - generic [ref=f4e1432] [cursor=pointer]:
+            - generic [ref=f4e1433]:
+              - generic [ref=f4e1434]: EBITDA
+              - generic [ref=f4e1435]: f-137 · D-02 p.16
+            - generic [ref=f4e1436]: ₹13 Cr
+            - generic [ref=f4e1437]: Q4 FY2023
+            - generic [ref=f4e1438]: —
+            - generic [ref=f4e1439]: "0.70"
+          - generic [ref=f4e1440] [cursor=pointer]:
+            - generic [ref=f4e1441]:
+              - generic [ref=f4e1442]: EBITDA
+              - generic [ref=f4e1443]: f-138 · D-02 p.16
+            - generic [ref=f4e1444]: ₹109 Cr
+            - generic [ref=f4e1445]: Q3 FY2024
+            - generic [ref=f4e1446]: —
+            - generic [ref=f4e1447]: "0.70"
+          - generic [ref=f4e1448] [cursor=pointer]:
+            - generic [ref=f4e1449]:
+              - generic [ref=f4e1450]: EBITDA
+              - generic [ref=f4e1451]: f-139 · D-02 p.16
+            - generic [ref=f4e1452]: ₹46 Cr
+            - generic [ref=f4e1453]: Q4 FY2024
+            - generic [ref=f4e1454]: —
+            - generic [ref=f4e1455]: "0.70"
+          - generic [ref=f4e1456] [cursor=pointer]:
+            - generic [ref=f4e1457]:
+              - generic [ref=f4e1458]: EBITDA
+              - generic [ref=f4e1459]: f-140 · D-02 p.16
+            - generic [ref=f4e1460]: ₹-452 Cr
+            - generic [ref=f4e1461]: FY2023
+            - generic [ref=f4e1462]: —
+            - generic [ref=f4e1463]: "0.70"
+          - generic [ref=f4e1464] [cursor=pointer]:
+            - generic [ref=f4e1465]:
+              - generic [ref=f4e1466]: EBITDA
+              - generic [ref=f4e1467]: f-141 · D-02 p.16
+            - generic [ref=f4e1468]: ₹127 Cr
+            - generic [ref=f4e1469]: FY2024
+            - generic [ref=f4e1470]: —
+            - generic [ref=f4e1471]: "0.70"
+          - generic [ref=f4e1472] [cursor=pointer]:
+            - generic [ref=f4e1473]:
+              - generic [ref=f4e1474]: EBITDA margin
+              - generic [ref=f4e1475]: f-142 · D-02 p.16
+            - generic [ref=f4e1476]: 0.7%
+            - generic [ref=f4e1477]: Q4 FY2023
+            - generic [ref=f4e1478]: —
+            - generic [ref=f4e1479]: "0.70"
+          - generic [ref=f4e1480] [cursor=pointer]:
+            - generic [ref=f4e1481]:
+              - generic [ref=f4e1482]: EBITDA margin
+              - generic [ref=f4e1483]: f-143 · D-02 p.16
+            - generic [ref=f4e1484]: 5%
+            - generic [ref=f4e1485]: Q3 FY2024
+            - generic [ref=f4e1486]: —
+            - generic [ref=f4e1487]: "0.70"
+          - generic [ref=f4e1488] [cursor=pointer]:
+            - generic [ref=f4e1489]:
+              - generic [ref=f4e1490]: EBITDA margin
+              - generic [ref=f4e1491]: f-144 · D-02 p.16
+            - generic [ref=f4e1492]: 2.2%
+            - generic [ref=f4e1493]: Q4 FY2024
+            - generic [ref=f4e1494]: —
+            - generic [ref=f4e1495]: "0.70"
+          - generic [ref=f4e1496] [cursor=pointer]:
+            - generic [ref=f4e1497]:
+              - generic [ref=f4e1498]: EBITDA margin
+              - generic [ref=f4e1499]: f-145 · D-02 p.16
+            - generic [ref=f4e1500]: "-6.3%"
+            - generic [ref=f4e1501]: FY2023
+            - generic [ref=f4e1502]: —
+            - generic [ref=f4e1503]: "0.70"
+          - generic [ref=f4e1504] [cursor=pointer]:
+            - generic [ref=f4e1505]:
+              - generic [ref=f4e1506]: EBITDA margin
+              - generic [ref=f4e1507]: f-146 · D-02 p.16
+            - generic [ref=f4e1508]: 1.6%
+            - generic [ref=f4e1509]: FY2024
+            - generic [ref=f4e1510]: —
+            - generic [ref=f4e1511]: "0.70"
+          - generic [ref=f4e1512] [cursor=pointer]:
+            - generic [ref=f4e1513]:
+              - generic [ref=f4e1514]: FY24 revenue from services
+              - generic [ref=f4e1515]: f-147 · D-02 p.5
+            - generic [ref=f4e1516]: ₹8,142 Cr
+            - generic [ref=f4e1517]: FY2024
+            - generic [ref=f4e1518]: —
+            - generic [ref=f4e1519]: "0.70"
+          - generic [ref=f4e1520] [cursor=pointer]:
+            - generic [ref=f4e1521]:
+              - generic [ref=f4e1522]: EBITDA
+              - generic [ref=f4e1523]: f-148 · D-02 p.5
+            - generic [ref=f4e1524]: ₹127 Cr
+            - generic [ref=f4e1525]: FY2024
+            - generic [ref=f4e1526]: —
+            - generic [ref=f4e1527]: "0.70"
+          - generic [ref=f4e1528] [cursor=pointer]:
+            - generic [ref=f4e1529]:
+              - generic [ref=f4e1530]: Adj. EBITDA
+              - generic [ref=f4e1531]: f-150 · D-02 p.5
+            - generic [ref=f4e1532]: ₹76 Cr
+            - generic [ref=f4e1533]: FY2024
+            - generic [ref=f4e1534]: —
+            - generic [ref=f4e1535]: "0.70"
+          - generic [ref=f4e1536] [cursor=pointer]:
+            - generic [ref=f4e1537]:
+              - generic [ref=f4e1538]: FY24 revenue from services
+              - generic [ref=f4e1539]: f-152 · D-02 p.5
+            - generic [ref=f4e1540]: ₹-452 Cr
+            - generic [ref=f4e1541]: FY2023
+            - generic [ref=f4e1542]: —
+            - generic [ref=f4e1543]: "0.70"
+          - generic [ref=f4e1544] [cursor=pointer]:
+            - generic [ref=f4e1545]:
+              - generic [ref=f4e1546]: FY23 EBITDA
+              - generic [ref=f4e1547]: f-153 · D-02 p.5
+            - generic [ref=f4e1548]: ₹-404 Cr
+            - generic [ref=f4e1549]: FY2023
+            - generic [ref=f4e1550]: —
+            - generic [ref=f4e1551]: "0.70"
+          - generic [ref=f4e1552] [cursor=pointer]:
+            - generic [ref=f4e1553]:
+              - generic [ref=f4e1554]: EBITDA margin
+              - generic [ref=f4e1555]: f-154 · D-02 p.5
+            - generic [ref=f4e1556]: "-5.6%"
+            - generic [ref=f4e1557]: FY2023
+            - generic [ref=f4e1558]: —
+            - generic [ref=f4e1559]: "0.70"
+          - generic [ref=f4e1560] [cursor=pointer]:
+            - generic [ref=f4e1561]:
+              - generic [ref=f4e1562]: FY23 revenue from services margin
+              - generic [ref=f4e1563]: f-155 · D-02 p.5
+            - generic [ref=f4e1564]: "-6.3%"
+            - generic [ref=f4e1565]: FY2023
+            - generic [ref=f4e1566]: —
+            - generic [ref=f4e1567]: "0.70"
+          - generic [ref=f4e1568] [cursor=pointer]:
+            - generic [ref=f4e1569]:
+              - generic [ref=f4e1570]: PTL freight tonnage since inception
+              - generic [ref=f4e1571]: f-160 · D-02 p.5
+            - generic [ref=f4e1572]: 48,00,000 mass tonnes
+            - generic [ref=f4e1573]: —
+            - generic [ref=f4e1574]: —
+            - generic [ref=f4e1575]: "0.00"
+          - generic [ref=f4e1576] [cursor=pointer]:
+            - generic [ref=f4e1577]:
+              - generic [ref=f4e1578]: Share of profit/(loss) of associate (net)
+              - generic [ref=f4e1579]: f-221 · D-02 p.16
+            - generic [ref=f4e1580]: ₹14 Cr
+            - generic [ref=f4e1581]: FY2023
+            - generic [ref=f4e1582]: —
+            - generic [ref=f4e1583]: "0.70"
+          - generic [ref=f4e1584] [cursor=pointer]:
+            - generic [ref=f4e1585]:
+              - generic [ref=f4e1586]: Share of profit/(loss) of associate (net)
+              - generic [ref=f4e1587]: f-222 · D-02 p.16
+            - generic [ref=f4e1588]: ₹9 Cr
+            - generic [ref=f4e1589]: FY2024
+            - generic [ref=f4e1590]: —
+            - generic [ref=f4e1591]: "0.70"
+          - generic [ref=f4e1592] [cursor=pointer]:
+            - generic [ref=f4e1593]:
+              - generic [ref=f4e1594]: EBITDA margin
+              - generic [ref=f4e1595]: f-242 · D-02 p.16
+            - generic [ref=f4e1596]: "-6.3%"
+            - generic [ref=f4e1597]: FY2023
+            - generic [ref=f4e1598]: —
+            - generic [ref=f4e1599]: "0.70"
+          - generic [ref=f4e1600] [cursor=pointer]:
+            - generic [ref=f4e1601]:
+              - generic [ref=f4e1602]: YoY growth rate of revenue from services
+              - generic [ref=f4e1603]: f-253 · D-02 p.5
+            - generic [ref=f4e1604]: 12.7%
+            - generic [ref=f4e1605]: FY2024
+            - generic [ref=f4e1606]: —
+            - generic [ref=f4e1607]: "0.90"
+          - generic [ref=f4e1608] [cursor=pointer]:
+            - generic [ref=f4e1609]:
+              - generic [ref=f4e1610]: Revenue from contracts with customers
+              - generic [ref=f4e1611]: f-254 · D-01 p.21
+            - generic [ref=f4e1612]: ₹74,540.82M
+            - generic [ref=f4e1613]: FY2024
+            - generic [ref=f4e1614]: standalone
+            - generic [ref=f4e1615]: "0.70"
+          - generic [ref=f4e1616] [cursor=pointer]:
+            - generic [ref=f4e1617]:
+              - generic [ref=f4e1618]: Revenue from contracts with customers
+              - generic [ref=f4e1619]: f-255 · D-01 p.21
+            - generic [ref=f4e1620]: ₹81,415.38M
+            - generic [ref=f4e1621]: FY2024
+            - generic [ref=f4e1622]: consolidated
+            - generic [ref=f4e1623]: "0.70"
+          - generic [ref=f4e1624] [cursor=pointer]:
+            - generic [ref=f4e1625]:
+              - generic [ref=f4e1626]: Other income
+              - generic [ref=f4e1627]: f-256 · D-01 p.21
+            - generic [ref=f4e1628]: ₹4,753.49M
+            - generic [ref=f4e1629]: FY2024
+            - generic [ref=f4e1630]: standalone
+            - generic [ref=f4e1631]: "0.70"
+          - generic [ref=f4e1632] [cursor=pointer]:
+            - generic [ref=f4e1633]:
+              - generic [ref=f4e1634]: Other income
+              - generic [ref=f4e1635]: f-257 · D-01 p.21
+            - generic [ref=f4e1636]: ₹4,526.96M
+            - generic [ref=f4e1637]: FY2024
+            - generic [ref=f4e1638]: consolidated
+            - generic [ref=f4e1639]: "0.70"
+          - generic [ref=f4e1640] [cursor=pointer]:
+            - generic [ref=f4e1641]:
+              - generic [ref=f4e1642]: Total income
+              - generic [ref=f4e1643]: f-258 · D-01 p.21
+            - generic [ref=f4e1644]: ₹79,294.31M
+            - generic [ref=f4e1645]: FY2024
+            - generic [ref=f4e1646]: standalone
+            - generic [ref=f4e1647]: "0.70"
+          - generic [ref=f4e1648] [cursor=pointer]:
+            - generic [ref=f4e1649]:
+              - generic [ref=f4e1650]: Total income
+              - generic [ref=f4e1651]: f-259 · D-01 p.21
+            - generic [ref=f4e1652]: ₹85,942.34M
+            - generic [ref=f4e1653]: FY2024
+            - generic [ref=f4e1654]: consolidated
+            - generic [ref=f4e1655]: "0.70"
+          - generic [ref=f4e1656] [cursor=pointer]:
+            - generic [ref=f4e1657]:
+              - generic [ref=f4e1658]: Total expenses
+              - generic [ref=f4e1659]: f-260 · D-01 p.21
+            - generic [ref=f4e1660]: ₹80,235M
+            - generic [ref=f4e1661]: FY2024
+            - generic [ref=f4e1662]: standalone
+            - generic [ref=f4e1663]: "0.70"
+          - generic [ref=f4e1664] [cursor=pointer]:
+            - generic [ref=f4e1665]:
+              - generic [ref=f4e1666]: Total expenses
+              - generic [ref=f4e1667]: f-261 · D-01 p.21
+            - generic [ref=f4e1668]: ₹88,249.67M
+            - generic [ref=f4e1669]: FY2024
+            - generic [ref=f4e1670]: consolidated
+            - generic [ref=f4e1671]: "0.70"
+          - generic [ref=f4e1672] [cursor=pointer]:
+            - generic [ref=f4e1673]:
+              - generic [ref=f4e1674]: Loss before exceptional items, share of profit of an associate and tax
+              - generic [ref=f4e1675]: f-262 · D-01 p.21
+            - generic [ref=f4e1676]: ₹-940.69M
+            - generic [ref=f4e1677]: FY2024
+            - generic [ref=f4e1678]: standalone
+            - generic [ref=f4e1679]: "0.70"
+          - generic [ref=f4e1680] [cursor=pointer]:
+            - generic [ref=f4e1681]:
+              - generic [ref=f4e1682]: Loss before exceptional items, share of profit of an associate and tax
+              - generic [ref=f4e1683]: f-263 · D-01 p.21
+            - generic [ref=f4e1684]: ₹-2,307.33M
+            - generic [ref=f4e1685]: FY2024
+            - generic [ref=f4e1686]: consolidated
+            - generic [ref=f4e1687]: "0.70"
+          - generic [ref=f4e1688] [cursor=pointer]:
+            - generic [ref=f4e1689]:
+              - generic [ref=f4e1690]: Exceptional items
+              - generic [ref=f4e1691]: f-264 · D-01 p.21
+            - generic [ref=f4e1692]: ₹738.99M
+            - generic [ref=f4e1693]: FY2024
+            - generic [ref=f4e1694]: standalone
+            - generic [ref=f4e1695]: "0.70"
+          - generic [ref=f4e1696] [cursor=pointer]:
+            - generic [ref=f4e1697]:
+              - generic [ref=f4e1698]: Exceptional items
+              - generic [ref=f4e1699]: f-265 · D-01 p.21
+            - generic [ref=f4e1700]: ₹224.1M
+            - generic [ref=f4e1701]: FY2024
+            - generic [ref=f4e1702]: consolidated
+            - generic [ref=f4e1703]: "0.70"
+          - generic [ref=f4e1704] [cursor=pointer]:
+            - generic [ref=f4e1705]:
+              - generic [ref=f4e1706]: Loss before tax and share of profit of associate
+              - generic [ref=f4e1707]: f-266 · D-01 p.21
+            - generic [ref=f4e1708]: ₹-1,679.68M
+            - generic [ref=f4e1709]: FY2024
+            - generic [ref=f4e1710]: standalone
+            - generic [ref=f4e1711]: "0.70"
+          - generic [ref=f4e1712] [cursor=pointer]:
+            - generic [ref=f4e1713]:
+              - generic [ref=f4e1714]: Loss before tax and share of profit of associate
+              - generic [ref=f4e1715]: f-267 · D-01 p.21
+            - generic [ref=f4e1716]: ₹-2,531.43M
+            - generic [ref=f4e1717]: FY2024
+            - generic [ref=f4e1718]: consolidated
+            - generic [ref=f4e1719]: "0.70"
+          - generic [ref=f4e1720] [cursor=pointer]:
+            - generic [ref=f4e1721]:
+              - generic [ref=f4e1722]: Tax expense
+              - generic [ref=f4e1723]: f-268 · D-01 p.21
+            - generic [ref=f4e1724]: ₹0M
+            - generic [ref=f4e1725]: FY2024
+            - generic [ref=f4e1726]: standalone
+            - generic [ref=f4e1727]: "0.70"
+          - generic [ref=f4e1728] [cursor=pointer]:
+            - generic [ref=f4e1729]:
+              - generic [ref=f4e1730]: Tax expense
+              - generic [ref=f4e1731]: f-269 · D-01 p.21
+            - generic [ref=f4e1732]: ₹47.38M
+            - generic [ref=f4e1733]: FY2024
+            - generic [ref=f4e1734]: consolidated
+            - generic [ref=f4e1735]: "0.70"
+          - generic [ref=f4e1736] [cursor=pointer]:
+            - generic [ref=f4e1737]:
+              - generic [ref=f4e1738]: Loss after tax before share of profit of associate
+              - generic [ref=f4e1739]: f-270 · D-01 p.21
+            - generic [ref=f4e1740]: ₹-1,679.68M
+            - generic [ref=f4e1741]: FY2024
+            - generic [ref=f4e1742]: standalone
+            - generic [ref=f4e1743]: "0.70"
+          - generic [ref=f4e1744] [cursor=pointer]:
+            - generic [ref=f4e1745]:
+              - generic [ref=f4e1746]: Loss after tax before share of profit of associate
+              - generic [ref=f4e1747]: f-271 · D-01 p.21
+            - generic [ref=f4e1748]: ₹-2,578.81M
+            - generic [ref=f4e1749]: FY2024
+            - generic [ref=f4e1750]: consolidated
+            - generic [ref=f4e1751]: "0.70"
+          - generic [ref=f4e1752] [cursor=pointer]:
+            - generic [ref=f4e1753]:
+              - generic [ref=f4e1754]: Share of profit/(loss) of associate (net)
+              - generic [ref=f4e1755]: f-272 · D-01 p.21
+            - generic [ref=f4e1756]: ₹86.95M
+            - generic [ref=f4e1757]: FY2024
+            - generic [ref=f4e1758]: consolidated
+            - generic [ref=f4e1759]: "0.70"
+          - generic [ref=f4e1760] [cursor=pointer]:
+            - generic [ref=f4e1761]:
+              - generic [ref=f4e1762]: Profit/(loss) for the period/year
+              - generic [ref=f4e1763]: f-273 · D-01 p.21
+            - generic [ref=f4e1764]: ₹-1,679.68M
+            - generic [ref=f4e1765]: FY2024
+            - generic [ref=f4e1766]: standalone
+            - generic [ref=f4e1767]: "0.70"
+          - generic [ref=f4e1768] [cursor=pointer]:
+            - generic [ref=f4e1769]:
+              - generic [ref=f4e1770]: Profit/(loss) for the period/year
+              - generic [ref=f4e1771]: f-274 · D-01 p.21
+            - generic [ref=f4e1772]: ₹-2,491.86M
+            - generic [ref=f4e1773]: FY2024
+            - generic [ref=f4e1774]: consolidated
+            - generic [ref=f4e1775]: "0.70"
+          - generic [ref=f4e1776] [cursor=pointer]:
+            - generic [ref=f4e1777]:
+              - generic [ref=f4e1778]: Other Comprehensive (loss)/Income
+              - generic [ref=f4e1779]: f-275 · D-01 p.21
+            - generic [ref=f4e1780]: ₹46.29M
+            - generic [ref=f4e1781]: FY2024
+            - generic [ref=f4e1782]: standalone
+            - generic [ref=f4e1783]: "0.70"
+          - generic [ref=f4e1784] [cursor=pointer]:
+            - generic [ref=f4e1785]:
+              - generic [ref=f4e1786]: Other Comprehensive (loss)/Income
+              - generic [ref=f4e1787]: f-276 · D-01 p.21
+            - generic [ref=f4e1788]: ₹41.84M
+            - generic [ref=f4e1789]: FY2024
+            - generic [ref=f4e1790]: consolidated
+            - generic [ref=f4e1791]: "0.70"
+          - generic [ref=f4e1792] [cursor=pointer]:
+            - generic [ref=f4e1793]:
+              - generic [ref=f4e1794]: Total Comprehensive Loss for the year
+              - generic [ref=f4e1795]: f-277 · D-01 p.21
+            - generic [ref=f4e1796]: ₹-1,633.39M
+            - generic [ref=f4e1797]: FY2024
+            - generic [ref=f4e1798]: standalone
+            - generic [ref=f4e1799]: "0.70"
+          - generic [ref=f4e1800] [cursor=pointer]:
+            - generic [ref=f4e1801]:
+              - generic [ref=f4e1802]: Total Comprehensive Loss for the year
+              - generic [ref=f4e1803]: f-278 · D-01 p.21
+            - generic [ref=f4e1804]: ₹-2,450.02M
+            - generic [ref=f4e1805]: FY2024
+            - generic [ref=f4e1806]: consolidated
+            - generic [ref=f4e1807]: "0.70"
+          - generic [ref=f4e1808] [cursor=pointer]:
+            - generic [ref=f4e1809]:
+              - generic [ref=f4e1810]: stake in the equity share capital of Vinculum
+              - generic [ref=f4e1811]: f-279 · D-01 p.21
+            - generic [ref=f4e1812]: 10.94%
+            - generic [ref=f4e1813]: "2023"
+            - generic [ref=f4e1814]: —
+            - generic [ref=f4e1815]: "0.70"
+          - generic [ref=f4e1816] [cursor=pointer]:
+            - generic [ref=f4e1817]:
+              - generic [ref=f4e1818]: consideration for stake in Vinculum
+              - generic [ref=f4e1819]: f-280 · D-01 p.21
+            - generic [ref=f4e1820]: ₹250M
+            - generic [ref=f4e1821]: "2023"
+            - generic [ref=f4e1822]: —
+            - generic [ref=f4e1823]: "0.70"
+          - generic [ref=f4e1824] [cursor=pointer]:
+            - generic [ref=f4e1825]:
+              - generic [ref=f4e1826]: stake in Falcon Autotech Private Limited
+              - generic [ref=f4e1827]: f-281 · D-01 p.21
+            - generic [ref=f4e1828]: 39.34%
+            - generic [ref=f4e1829]: FY2024
+            - generic [ref=f4e1830]: —
+            - generic [ref=f4e1831]: "0.70"
+          - generic [ref=f4e1832] [cursor=pointer]:
+            - generic [ref=f4e1833]:
+              - generic [ref=f4e1834]: investment in Falcon Autotech Private Limited
+              - generic [ref=f4e1835]: f-282 · D-01 p.21
+            - generic [ref=f4e1836]: ₹500.4M
+            - generic [ref=f4e1837]: FY2024
+            - generic [ref=f4e1838]: —
+            - generic [ref=f4e1839]: "0.70"
+          - generic [ref=f4e1840] [cursor=pointer]:
+            - generic [ref=f4e1841]:
+              - generic [ref=f4e1842]: Rated Automated Sort Capacity
+              - generic [ref=f4e1843]: f-283 · D-01 p.21
+            - generic [ref=f4e1844]: 7.1 days
+            - generic [ref=f4e1845]: 2024-03-31
+            - generic [ref=f4e1846]: —
+            - generic [ref=f4e1847]: "0.70"
+          - generic [ref=f4e1848] [cursor=pointer]:
+            - generic [ref=f4e1849]:
+              - generic [ref=f4e1850]: number of fully and semi automated sortation centres
+              - generic [ref=f4e1851]: f-284 · D-01 p.21
+            - generic [ref=f4e1852]: 29 count
+            - generic [ref=f4e1853]: 2024-03-31
+            - generic [ref=f4e1854]: —
+            - generic [ref=f4e1855]: "0.70"
+          - generic [ref=f4e1856] [cursor=pointer]:
+            - generic [ref=f4e1857]:
+              - generic [ref=f4e1858]: number of gateways
+              - generic [ref=f4e1859]: f-285 · D-01 p.21
+            - generic [ref=f4e1860]: 111 count
+            - generic [ref=f4e1861]: 2024-03-31
+            - generic [ref=f4e1862]: —
+            - generic [ref=f4e1863]: "0.70"
+          - generic [ref=f4e1864] [cursor=pointer]:
+            - generic [ref=f4e1865]:
+              - generic [ref=f4e1866]: gateway infrastructure area in Bhiwandi
+              - generic [ref=f4e1867]: f-286 · D-01 p.21
+            - generic [ref=f4e1868]: 7,50,000 (unit not stated)
+            - generic [ref=f4e1869]: 2024-03-31
+            - generic [ref=f4e1870]: —
+            - generic [ref=f4e1871]: "0.00"
+          - generic [ref=f4e1872] [cursor=pointer]:
+            - generic [ref=f4e1873]:
+              - generic [ref=f4e1874]: planned gateway infrastructure area in Bengaluru
+              - generic [ref=f4e1875]: f-287 · D-01 p.21
+            - generic [ref=f4e1876]: 10,00,000 (unit not stated)
+            - generic [ref=f4e1877]: 2024-03-31
+            - generic [ref=f4e1878]: —
+            - generic [ref=f4e1879]: "0.00"
+          - generic [ref=f4e1880] [cursor=pointer]:
+            - generic [ref=f4e1881]:
+              - generic [ref=f4e1882]: number of postal index number (PIN) codes served
+              - generic [ref=f4e1883]: f-288 · D-01 p.21
+            - generic [ref=f4e1884]: 18,793 count
+            - generic [ref=f4e1885]: 2024-03-31
+            - generic [ref=f4e1886]: —
+            - generic [ref=f4e1887]: "0.70"
+          - generic [ref=f4e1888] [cursor=pointer]:
+            - generic [ref=f4e1889]:
+              - generic [ref=f4e1890]: stake in the equity share capital of Vinculum
+              - generic [ref=f4e1891]: f-289 · D-01 p.21
+            - generic [ref=f4e1892]: 0 tenure
+            - generic [ref=f4e1893]: —
+            - generic [ref=f4e1894]: —
+            - generic [ref=f4e1895]: "0.70"
+          - generic [ref=f4e1896] [cursor=pointer]:
+            - generic [ref=f4e1897]:
+              - generic [ref=f4e1898]: stake in Falcon Autotech Private Limited
+              - generic [ref=f4e1899]: f-290 · D-01 p.21
+            - generic [ref=f4e1900]: 0 tenure
+            - generic [ref=f4e1901]: —
+            - generic [ref=f4e1902]: —
+            - generic [ref=f4e1903]: "0.70"
+          - generic [ref=f4e1904] [cursor=pointer]:
+            - generic [ref=f4e1905]:
+              - generic [ref=f4e1906]: real gross domestic product (GDP) growth
+              - generic [ref=f4e1907]: f-309 · D-05 p.9
+            - generic [ref=f4e1908]: 6.5%
+            - generic [ref=f4e1909]: FY2025
+            - generic [ref=f4e1910]: —
+            - generic [ref=f4e1911]: "0.70"
+          - generic [ref=f4e1912] [cursor=pointer]:
+            - generic [ref=f4e1913]:
+              - generic [ref=f4e1914]: Private consumption growth
+              - generic [ref=f4e1915]: f-310 · D-05 p.9
+            - generic [ref=f4e1916]: 7.2%
+            - generic [ref=f4e1917]: FY2025
+            - generic [ref=f4e1918]: —
+            - generic [ref=f4e1919]: "0.70"
+          - generic [ref=f4e1920] [cursor=pointer]:
+            - generic [ref=f4e1921]:
+              - generic [ref=f4e1922]: Investment growth
+              - generic [ref=f4e1923]: f-311 · D-05 p.9
+            - generic [ref=f4e1924]: 7.1%
+            - generic [ref=f4e1925]: FY2025
+            - generic [ref=f4e1926]: —
+            - generic [ref=f4e1927]: "0.70"
+          - generic [ref=f4e1928] [cursor=pointer]:
+            - generic [ref=f4e1929]:
+              - generic [ref=f4e1930]: real gross domestic product (GDP) growth
+              - generic [ref=f4e1931]: f-312 · D-05 p.9
+            - generic [ref=f4e1932]: 7.8%
+            - generic [ref=f4e1933]: —
+            - generic [ref=f4e1934]: —
+            - generic [ref=f4e1935]: "0.00"
+          - generic [ref=f4e1936] [cursor=pointer]:
+            - generic [ref=f4e1937]:
+              - generic [ref=f4e1938]: Nominal GDP growth
+              - generic [ref=f4e1939]: f-313 · D-05 p.9
+            - generic [ref=f4e1940]: 8.8%
+            - generic [ref=f4e1941]: —
+            - generic [ref=f4e1942]: —
+            - generic [ref=f4e1943]: "0.00"
+          - generic [ref=f4e1944] [cursor=pointer]:
+            - generic [ref=f4e1945]:
+              - generic [ref=f4e1946]: Nominal GDP growth
+              - generic [ref=f4e1947]: f-314 · D-05 p.9
+            - generic [ref=f4e1948]: 9.8%
+            - generic [ref=f4e1949]: FY2025
+            - generic [ref=f4e1950]: —
+            - generic [ref=f4e1951]: "0.70"
+          - generic [ref=f4e1952] [cursor=pointer]:
+            - generic [ref=f4e1953]:
+              - generic [ref=f4e1954]: headline inflation
+              - generic [ref=f4e1955]: f-315 · D-05 p.9
+            - generic [ref=f4e1956]: 1.5%
+            - generic [ref=f4e1957]: "2025"
+            - generic [ref=f4e1958]: —
+            - generic [ref=f4e1959]: "0.70"
+          - generic [ref=f4e1960] [cursor=pointer]:
+            - generic [ref=f4e1961]:
+              - generic [ref=f4e1962]: Core inflation
+              - generic [ref=f4e1963]: f-316 · D-05 p.9
+            - generic [ref=f4e1964]: 4.6%
+            - generic [ref=f4e1965]: FY2025
+            - generic [ref=f4e1966]: —
+            - generic [ref=f4e1967]: "0.70"
+          - generic [ref=f4e1968] [cursor=pointer]:
+            - generic [ref=f4e1969]:
+              - generic [ref=f4e1970]: Core inflation
+              - generic [ref=f4e1971]: f-317 · D-05 p.9
+            - generic [ref=f4e1972]: 3.5%
+            - generic [ref=f4e1973]: FY2025
+            - generic [ref=f4e1974]: —
+            - generic [ref=f4e1975]: "0.70"
+          - generic [ref=f4e1976] [cursor=pointer]:
+            - generic [ref=f4e1977]:
+              - generic [ref=f4e1978]: labor force participation rate
+              - generic [ref=f4e1979]: f-318 · D-05 p.9
+            - generic [ref=f4e1980]: 56.2%
+            - generic [ref=f4e1981]: "2024"
+            - generic [ref=f4e1982]: —
+            - generic [ref=f4e1983]: "0.70"
+          - generic [ref=f4e1984] [cursor=pointer]:
+            - generic [ref=f4e1985]:
+              - generic [ref=f4e1986]: employment rate of regular wage earners
+              - generic [ref=f4e1987]: f-319 · D-05 p.9
+            - generic [ref=f4e1988]: 12.3%
+            - generic [ref=f4e1989]: "2023"
+            - generic [ref=f4e1990]: —
+            - generic [ref=f4e1991]: "0.70"
+          - generic [ref=f4e1992] [cursor=pointer]:
+            - generic [ref=f4e1993]:
+              - generic [ref=f4e1994]: employment rate of regular wage earners
+              - generic [ref=f4e1995]: f-320 · D-05 p.9
+            - generic [ref=f4e1996]: 12.7%
+            - generic [ref=f4e1997]: "2024"
+            - generic [ref=f4e1998]: —
+            - generic [ref=f4e1999]: "0.70"
+          - generic [ref=f4e2000] [cursor=pointer]:
+            - generic [ref=f4e2001]:
+              - generic [ref=f4e2002]: formal employment (defined by social security coverage)
+              - generic [ref=f4e2003]: f-321 · D-05 p.9
+            - generic [ref=f4e2004]: 11%
+            - generic [ref=f4e2005]: "2023"
+            - generic [ref=f4e2006]: —
+            - generic [ref=f4e2007]: "0.70"
+          - generic [ref=f4e2008] [cursor=pointer]:
+            - generic [ref=f4e2009]:
+              - generic [ref=f4e2010]: formal employment (defined by social security coverage)
+              - generic [ref=f4e2011]: f-322 · D-05 p.9
+            - generic [ref=f4e2012]: 11.2%
+            - generic [ref=f4e2013]: "2024"
+            - generic [ref=f4e2014]: —
+            - generic [ref=f4e2015]: "0.70"
+          - generic [ref=f4e2016] [cursor=pointer]:
+            - generic [ref=f4e2017]:
+              - generic [ref=f4e2018]: Real hourly wages growth
+              - generic [ref=f4e2019]: f-323 · D-05 p.9
+            - generic [ref=f4e2020]: 16%
+            - generic [ref=f4e2021]: "2018"
+            - generic [ref=f4e2022]: —
+            - generic [ref=f4e2023]: "0.70"
+          - generic [ref=f4e2024] [cursor=pointer]:
+            - generic [ref=f4e2025]:
+              - generic [ref=f4e2026]: Real hourly wages growth
+              - generic [ref=f4e2027]: f-324 · D-05 p.9
+            - generic [ref=f4e2028]: 26%
+            - generic [ref=f4e2029]: "2018"
+            - generic [ref=f4e2030]: —
+            - generic [ref=f4e2031]: "0.70"
+          - generic [ref=f4e2032] [cursor=pointer]:
+            - generic [ref=f4e2033]:
+              - generic [ref=f4e2034]: Unemployment rate
+              - generic [ref=f4e2035]: f-325 · D-05 p.9
+            - generic [ref=f4e2036]: 5.2%
+            - generic [ref=f4e2037]: "2025"
+            - generic [ref=f4e2038]: —
+            - generic [ref=f4e2039]: "0.70"
+          - generic [ref=f4e2040] [cursor=pointer]:
+            - generic [ref=f4e2041]:
+              - generic [ref=f4e2042]: general government deficit
+              - generic [ref=f4e2043]: f-326 · D-05 p.9
+            - generic [ref=f4e2044]: 7.9%
+            - generic [ref=f4e2045]: FY2025
+            - generic [ref=f4e2046]: —
+            - generic [ref=f4e2047]: "0.70"
+          - generic [ref=f4e2048] [cursor=pointer]:
+            - generic [ref=f4e2049]:
+              - generic [ref=f4e2050]: general government deficit
+              - generic [ref=f4e2051]: f-327 · D-05 p.9
+            - generic [ref=f4e2052]: 8.1%
+            - generic [ref=f4e2053]: FY2024
+            - generic [ref=f4e2054]: —
+            - generic [ref=f4e2055]: "0.70"
+          - generic [ref=f4e2056] [cursor=pointer]:
+            - generic [ref=f4e2057]:
+              - generic [ref=f4e2058]: central government deficit
+              - generic [ref=f4e2059]: f-328 · D-05 p.9
+            - generic [ref=f4e2060]: 4.9%
+            - generic [ref=f4e2061]: FY2025
+            - generic [ref=f4e2062]: —
+            - generic [ref=f4e2063]: "0.70"
+          - generic [ref=f4e2064] [cursor=pointer]:
+            - generic [ref=f4e2065]:
+              - generic [ref=f4e2066]: real gross domestic product (GDP) growth
+              - generic [ref=f4e2067]: f-329 · D-05 p.12
+            - generic [ref=f4e2068]: 6.6%
+            - generic [ref=f4e2069]: FY2026
+            - generic [ref=f4e2070]: —
+            - generic [ref=f4e2071]: "0.70"
+          - generic [ref=f4e2072] [cursor=pointer]:
+            - generic [ref=f4e2073]:
+              - generic [ref=f4e2074]: real gross domestic product (GDP) growth
+              - generic [ref=f4e2075]: f-330 · D-05 p.12
+            - generic [ref=f4e2076]: 6.2%
+            - generic [ref=f4e2077]: FY2027
+            - generic [ref=f4e2078]: —
+            - generic [ref=f4e2079]: "0.70"
+          - generic [ref=f4e2080] [cursor=pointer]:
+            - generic [ref=f4e2081]:
+              - generic [ref=f4e2082]: headline inflation
+              - generic [ref=f4e2083]: f-331 · D-05 p.12
+            - generic [ref=f4e2084]: 2.8%
+            - generic [ref=f4e2085]: FY2026
+            - generic [ref=f4e2086]: —
+            - generic [ref=f4e2087]: "0.70"
+          - generic [ref=f4e2088] [cursor=pointer]:
+            - generic [ref=f4e2089]:
+              - generic [ref=f4e2090]: Core inflation
+              - generic [ref=f4e2091]: f-332 · D-05 p.12
+            - generic [ref=f4e2092]: 3.5%
+            - generic [ref=f4e2093]: FY2026
+            - generic [ref=f4e2094]: —
+            - generic [ref=f4e2095]: "0.70"
+          - generic [ref=f4e2096] [cursor=pointer]:
+            - generic [ref=f4e2097]:
+              - generic [ref=f4e2098]: headline inflation
+              - generic [ref=f4e2099]: f-333 · D-05 p.12
+            - generic [ref=f4e2100]: 4%
+            - generic [ref=f4e2101]: FY2027
+            - generic [ref=f4e2102]: —
+            - generic [ref=f4e2103]: "0.70"
+          - generic [ref=f4e2104] [cursor=pointer]:
+            - generic [ref=f4e2105]:
+              - generic [ref=f4e2106]: real gross domestic product (GDP) growth
+              - generic [ref=f4e2107]: f-334 · D-05 p.12
+            - generic [ref=f4e2108]: 6.4%
+            - generic [ref=f4e2109]: FY2026
+            - generic [ref=f4e2110]: —
+            - generic [ref=f4e2111]: "0.70"
+          - generic [ref=f4e2112] [cursor=pointer]:
+            - generic [ref=f4e2113]:
+              - generic [ref=f4e2114]: real gross domestic product (GDP) growth
+              - generic [ref=f4e2115]: f-335 · D-05 p.12
+            - generic [ref=f4e2116]: 6.4%
+            - generic [ref=f4e2117]: FY2027
+            - generic [ref=f4e2118]: —
+            - generic [ref=f4e2119]: "0.70"
+          - generic [ref=f4e2120] [cursor=pointer]:
+            - generic [ref=f4e2121]:
+              - generic [ref=f4e2122]: real gross domestic product (GDP) growth
+              - generic [ref=f4e2123]: f-336 · D-05 p.12
+            - generic [ref=f4e2124]: 6.6%
+            - generic [ref=f4e2125]: FY2026
+            - generic [ref=f4e2126]: —
+            - generic [ref=f4e2127]: "0.70"
+          - generic [ref=f4e2128] [cursor=pointer]:
+            - generic [ref=f4e2129]:
+              - generic [ref=f4e2130]: real gross domestic product (GDP) growth
+              - generic [ref=f4e2131]: f-337 · D-05 p.12
+            - generic [ref=f4e2132]: 6.2%
+            - generic [ref=f4e2133]: FY2027
+            - generic [ref=f4e2134]: —
+            - generic [ref=f4e2135]: "0.70"
+          - generic [ref=f4e2136] [cursor=pointer]:
+            - generic [ref=f4e2137]:
+              - generic [ref=f4e2138]: real GDP growth revision
+              - generic [ref=f4e2139]: f-338 · D-05 p.12
+            - generic [ref=f4e2140]: 0.2%
+            - generic [ref=f4e2141]: FY2026
+            - generic [ref=f4e2142]: —
+            - generic [ref=f4e2143]: "0.70"
+          - generic [ref=f4e2144] [cursor=pointer]:
+            - generic [ref=f4e2145]:
+              - generic [ref=f4e2146]: real GDP growth revision
+              - generic [ref=f4e2147]: f-339 · D-05 p.12
+            - generic [ref=f4e2148]: "-0.2%"
+            - generic [ref=f4e2149]: FY2027
+            - generic [ref=f4e2150]: —
+            - generic [ref=f4e2151]: "0.70"
+          - generic [ref=f4e2152] [cursor=pointer]:
+            - generic [ref=f4e2153]:
+              - generic [ref=f4e2154]: real gross domestic product (GDP) growth
+              - generic [ref=f4e2155]: f-340 · D-03 p.13
+            - generic [ref=f4e2156]: 6.4%
+            - generic [ref=f4e2157]: FY2025
+            - generic [ref=f4e2158]: —
+            - generic [ref=f4e2159]: "0.95"
+          - generic [ref=f4e2160] [cursor=pointer]:
+            - generic [ref=f4e2161]:
+              - generic [ref=f4e2162]: private final consumption expenditure (PFCE) as a share of GDP
+              - generic [ref=f4e2163]: f-341 · D-03 p.13
+            - generic [ref=f4e2164]: 61.8%
+            - generic [ref=f4e2165]: FY2025
+            - generic [ref=f4e2166]: —
+            - generic [ref=f4e2167]: "0.95"
+          - generic [ref=f4e2168] [cursor=pointer]:
+            - generic [ref=f4e2169]:
+              - generic [ref=f4e2170]: private final consumption expenditure (PFCE) as a share of GDP
+              - generic [ref=f4e2171]: f-342 · D-03 p.13
+            - generic [ref=f4e2172]: 60.3%
+            - generic [ref=f4e2173]: FY2024
+            - generic [ref=f4e2174]: —
+            - generic [ref=f4e2175]: "0.95"
+          - generic [ref=f4e2176] [cursor=pointer]:
+            - generic [ref=f4e2177]:
+              - generic [ref=f4e2178]: real gross value added (GVA) growth
+              - generic [ref=f4e2179]: f-343 · D-03 p.13
+            - generic [ref=f4e2180]: 6.4%
+            - generic [ref=f4e2181]: FY2025
+            - generic [ref=f4e2182]: —
+            - generic [ref=f4e2183]: "0.95"
+          - generic [ref=f4e2184] [cursor=pointer]:
+            - generic [ref=f4e2185]:
+              - generic [ref=f4e2186]: agriculture sector growth
+              - generic [ref=f4e2187]: f-344 · D-03 p.13
+            - generic [ref=f4e2188]: 3.8%
+            - generic [ref=f4e2189]: FY2025
+            - generic [ref=f4e2190]: —
+            - generic [ref=f4e2191]: "0.95"
+          - generic [ref=f4e2192] [cursor=pointer]:
+            - generic [ref=f4e2193]:
+              - generic [ref=f4e2194]: industrial sector growth
+              - generic [ref=f4e2195]: f-345 · D-03 p.13
+            - generic [ref=f4e2196]: 6.2%
+            - generic [ref=f4e2197]: FY2025
+            - generic [ref=f4e2198]: —
+            - generic [ref=f4e2199]: "1.00"
+          - generic [ref=f4e2200] [cursor=pointer]:
+            - generic [ref=f4e2201]:
+              - generic [ref=f4e2202]: gross fixed capital formation (GFCF) growth
+              - generic [ref=f4e2203]: f-346 · D-03 p.13
+            - generic [ref=f4e2204]: 6.4%
+            - generic [ref=f4e2205]: FY2025
+            - generic [ref=f4e2206]: —
+            - generic [ref=f4e2207]: "0.95"
+          - generic [ref=f4e2208] [cursor=pointer]:
+            - generic [ref=f4e2209]:
+              - generic [ref=f4e2210]: real gross domestic product (GDP) growth
+              - generic [ref=f4e2211]: f-347 · D-04 p.7
+            - generic [ref=f4e2212]: 6.5%
+            - generic [ref=f4e2213]: FY2025
+            - generic [ref=f4e2214]: —
+            - generic [ref=f4e2215]: "0.70"
+          - generic [ref=f4e2216] [cursor=pointer]:
+            - generic [ref=f4e2217]:
+              - generic [ref=f4e2218]: Growth in gross value added (GVA)
+              - generic [ref=f4e2219]: f-348 · D-04 p.7
+            - generic [ref=f4e2220]: 4.6%
+            - generic [ref=f4e2221]: FY2025
+            - generic [ref=f4e2222]: —
+            - generic [ref=f4e2223]: "0.70"
+          - generic [ref=f4e2224] [cursor=pointer]:
+            - generic [ref=f4e2225]:
+              - generic [ref=f4e2226]: industrial sector growth
+              - generic [ref=f4e2227]: f-349 · D-04 p.7
+            - generic [ref=f4e2228]: 4.3%
+            - generic [ref=f4e2229]: FY2025
+            - generic [ref=f4e2230]: —
+            - generic [ref=f4e2231]: "0.70"
+          - generic [ref=f4e2232] [cursor=pointer]:
+            - generic [ref=f4e2233]:
+              - generic [ref=f4e2234]: headline inflation
+              - generic [ref=f4e2235]: f-350 · D-04 p.16
+            - generic [ref=f4e2236]: 4.6%
+            - generic [ref=f4e2237]: FY2025
+            - generic [ref=f4e2238]: —
+            - generic [ref=f4e2239]: "0.90"
+          - generic [ref=f4e2240] [cursor=pointer]:
+            - generic [ref=f4e2241]:
+              - generic [ref=f4e2242]: CPI inflation for 2025-26
+              - generic [ref=f4e2243]: f-351 · D-04 p.16
+            - generic [ref=f4e2244]: 4%
+            - generic [ref=f4e2245]: FY2026
+            - generic [ref=f4e2246]: —
+            - generic [ref=f4e2247]: "0.90"
+          - generic [ref=f4e2248] [cursor=pointer]:
+            - generic [ref=f4e2249]:
+              - generic [ref=f4e2250]: policy repo rate
+              - generic [ref=f4e2251]: f-352 · D-04 p.16
+            - generic [ref=f4e2252]: 6%
+            - generic [ref=f4e2253]: "2025"
+            - generic [ref=f4e2254]: —
+            - generic [ref=f4e2255]: "0.70"
+          - generic [ref=f4e2256] [cursor=pointer]:
+            - generic [ref=f4e2257]:
+              - generic [ref=f4e2258]: budgetary provision for 2025-26
+              - generic [ref=f4e2259]: f-353 · D-04 p.16
+            - generic [ref=f4e2260]: 0 tenure
+            - generic [ref=f4e2261]: —
+            - generic [ref=f4e2262]: —
+            - generic [ref=f4e2263]: "0.90"
+          - generic [ref=f4e2264] [cursor=pointer]:
+            - generic [ref=f4e2265]:
+              - generic [ref=f4e2266]: Current
+              - generic [ref=f4e2267]: f-354 · D-01 p.90
+            - generic [ref=f4e2268]: ₹2,001.02M
+            - generic [ref=f4e2269]: FY2024
+            - generic [ref=f4e2270]: consolidated
+            - generic [ref=f4e2271]: "0.75"
+          - generic [ref=f4e2272] [cursor=pointer]:
+            - generic [ref=f4e2273]:
+              - generic [ref=f4e2274]: Non-current
+              - generic [ref=f4e2275]: f-355 · D-01 p.90
+            - generic [ref=f4e2276]: ₹8,436.4M
+            - generic [ref=f4e2277]: FY2024
+            - generic [ref=f4e2278]: consolidated
+            - generic [ref=f4e2279]: "0.75"
+          - generic [ref=f4e2280] [cursor=pointer]:
+            - generic [ref=f4e2281]:
+              - generic [ref=f4e2282]: Depreciation expense of right-of-use assets (refer note 27)
+              - generic [ref=f4e2283]: f-356 · D-01 p.90
+            - generic [ref=f4e2284]: ₹2,330.41M
+            - generic [ref=f4e2285]: FY2024
+            - generic [ref=f4e2286]: consolidated
+            - generic [ref=f4e2287]: "0.75"
+          - generic [ref=f4e2288] [cursor=pointer]:
+            - generic [ref=f4e2289]:
+              - generic [ref=f4e2290]: Interest expense on lease liabilities (refer note 28)
+              - generic [ref=f4e2291]: f-357 · D-01 p.90
+            - generic [ref=f4e2292]: ₹745.67M
+            - generic [ref=f4e2293]: FY2024
+            - generic [ref=f4e2294]: consolidated
+            - generic [ref=f4e2295]: "0.75"
+          - generic [ref=f4e2296] [cursor=pointer]:
+            - generic [ref=f4e2297]:
+              - generic [ref=f4e2298]: Expense relating to short-term leases (refer note 23)
+              - generic [ref=f4e2299]: f-358 · D-01 p.90
+            - generic [ref=f4e2300]: ₹2,816.88M
+            - generic [ref=f4e2301]: FY2024
+            - generic [ref=f4e2302]: consolidated
+            - generic [ref=f4e2303]: "0.75"
+          - generic [ref=f4e2304] [cursor=pointer]:
+            - generic [ref=f4e2305]:
+              - generic [ref=f4e2306]: Gain on modification / termination of lease contracts (refer note 22.2)
+              - generic [ref=f4e2307]: f-359 · D-01 p.90
+            - generic [ref=f4e2308]: ₹-88.26M
+            - generic [ref=f4e2309]: FY2024
+            - generic [ref=f4e2310]: consolidated
+            - generic [ref=f4e2311]: "0.75"
+          - generic [ref=f4e2312] [cursor=pointer]:
+            - generic [ref=f4e2313]:
+              - generic [ref=f4e2314]: Total amount recognised in Consolidated Statement of Profit or Loss
+              - generic [ref=f4e2315]: f-360 · D-01 p.90
+            - generic [ref=f4e2316]: ₹5,804.7M
+            - generic [ref=f4e2317]: FY2024
+            - generic [ref=f4e2318]: consolidated
+            - generic [ref=f4e2319]: "0.75"
+          - generic [ref=f4e2320] [cursor=pointer]:
+            - generic [ref=f4e2321]:
+              - generic [ref=f4e2322]: Less than one year
+              - generic [ref=f4e2323]: f-361 · D-01 p.90
+            - generic [ref=f4e2324]: ₹2,872.51M
+            - generic [ref=f4e2325]: FY2024
+            - generic [ref=f4e2326]: consolidated
+            - generic [ref=f4e2327]: "0.75"
+          - generic [ref=f4e2328] [cursor=pointer]:
+            - generic [ref=f4e2329]:
+              - generic [ref=f4e2330]: One to four years
+              - generic [ref=f4e2331]: f-362 · D-01 p.90
+            - generic [ref=f4e2332]: ₹6,350.57M
+            - generic [ref=f4e2333]: FY2024
+            - generic [ref=f4e2334]: consolidated
+            - generic [ref=f4e2335]: "0.75"
+          - generic [ref=f4e2336] [cursor=pointer]:
+            - generic [ref=f4e2337]:
+              - generic [ref=f4e2338]: More than four years
+              - generic [ref=f4e2339]: f-363 · D-01 p.90
+            - generic [ref=f4e2340]: ₹4,597M
+            - generic [ref=f4e2341]: FY2024
+            - generic [ref=f4e2342]: consolidated
+            - generic [ref=f4e2343]: "0.75"
+          - generic [ref=f4e2344] [cursor=pointer]:
+            - generic [ref=f4e2345]:
+              - generic [ref=f4e2346]: Closing balance
+              - generic [ref=f4e2347]: f-364 · D-01 p.90
+            - generic [ref=f4e2348]: ₹13,820.08M
+            - generic [ref=f4e2349]: FY2024
+            - generic [ref=f4e2350]: consolidated
+            - generic [ref=f4e2351]: "0.75"
+          - generic [ref=f4e2352] [cursor=pointer]:
+            - generic [ref=f4e2353]:
+              - generic [ref=f4e2354]: Associate
+              - generic [ref=f4e2355]: f-365 · D-01 p.90
+            - generic [ref=f4e2356]: 0 tenure
+            - generic [ref=f4e2357]: —
+            - generic [ref=f4e2358]: —
+            - generic [ref=f4e2359]: "0.75"
+          - generic [ref=f4e2360] [cursor=pointer]:
+            - generic [ref=f4e2361]:
+              - generic [ref=f4e2362]: Managing Director and Chief Executive Officer
+              - generic [ref=f4e2363]: f-366 · D-01 p.90
+            - generic [ref=f4e2364]: 0 tenure
+            - generic [ref=f4e2365]: —
+            - generic [ref=f4e2366]: —
+            - generic [ref=f4e2367]: "0.75"
+          - generic [ref=f4e2368] [cursor=pointer]:
+            - generic [ref=f4e2369]:
+              - generic [ref=f4e2370]: Chief Financial Officer
+              - generic [ref=f4e2371]: f-367 · D-01 p.90
+            - generic [ref=f4e2372]: 0 tenure
+            - generic [ref=f4e2373]: —
+            - generic [ref=f4e2374]: —
+            - generic [ref=f4e2375]: "0.75"
+          - generic [ref=f4e2376] [cursor=pointer]:
+            - generic [ref=f4e2377]:
+              - generic [ref=f4e2378]: Chief Operating Officer
+              - generic [ref=f4e2379]: f-368 · D-01 p.90
+            - generic [ref=f4e2380]: 0 tenure
+            - generic [ref=f4e2381]: —
+            - generic [ref=f4e2382]: —
+            - generic [ref=f4e2383]: "0.75"
+          - generic [ref=f4e2384] [cursor=pointer]:
+            - generic [ref=f4e2385]:
+              - generic [ref=f4e2386]: Whole-Time-Director and Chief Business Officer
+              - generic [ref=f4e2387]: f-369 · D-01 p.90
+            - generic [ref=f4e2388]: 0 tenure
+            - generic [ref=f4e2389]: —
+            - generic [ref=f4e2390]: —
+            - generic [ref=f4e2391]: "0.75"
+          - generic [ref=f4e2392] [cursor=pointer]:
+            - generic [ref=f4e2393]:
+              - generic [ref=f4e2394]: Whole- Time Director and Chief Technology Officer
+              - generic [ref=f4e2395]: f-370 · D-01 p.90
+            - generic [ref=f4e2396]: 0 tenure
+            - generic [ref=f4e2397]: —
+            - generic [ref=f4e2398]: —
+            - generic [ref=f4e2399]: "0.75"
+          - generic [ref=f4e2400] [cursor=pointer]:
+            - generic [ref=f4e2401]:
+              - generic [ref=f4e2402]: Chief People Officer
+              - generic [ref=f4e2403]: f-371 · D-01 p.90
+            - generic [ref=f4e2404]: Mrs. Pooja Gupta
+            - generic [ref=f4e2405]: "? → 2024-01-15"
+            - generic [ref=f4e2406]: —
+            - generic [ref=f4e2407]: "0.75"
+          - generic [ref=f4e2408] [cursor=pointer]:
+            - generic [ref=f4e2409]:
+              - generic [ref=f4e2410]: Head - New Ventures
+              - generic [ref=f4e2411]: f-372 · D-01 p.90
+            - generic [ref=f4e2412]: Mr. Suraj Saharan
+            - generic [ref=f4e2413]: 2021-08-02 → present
+            - generic [ref=f4e2414]: —
+            - generic [ref=f4e2415]: "0.75"
+          - generic [ref=f4e2416] [cursor=pointer]:
+            - generic [ref=f4e2417]:
+              - generic [ref=f4e2418]: Chief People Officer
+              - generic [ref=f4e2419]: f-373 · D-01 p.90
+            - generic [ref=f4e2420]: Mr. Suraj Saharan
+            - generic [ref=f4e2421]: 2024-01-15 → present
+            - generic [ref=f4e2422]: —
+            - generic [ref=f4e2423]: "0.75"
+          - generic [ref=f4e2424] [cursor=pointer]:
+            - generic [ref=f4e2425]:
+              - generic [ref=f4e2426]: Chief Customer Experience Officer (Delhivery Limited) and Managing Director and Chief Executive Officer of Material Subsidiary
+              - generic [ref=f4e2427]: f-374 · D-01 p.90
+            - generic [ref=f4e2428]: Mr. Abhik Kumar Mitra
+            - generic [ref=f4e2429]: "? → 2023-04-24"
+            - generic [ref=f4e2430]: —
+            - generic [ref=f4e2431]: "0.75"
+          - generic [ref=f4e2432] [cursor=pointer]:
+            - generic [ref=f4e2433]:
+              - generic [ref=f4e2434]: Managing Director and Chief Executive Officer
+              - generic [ref=f4e2435]: f-375 · D-01 p.90
+            - generic [ref=f4e2436]: Mr. Abhik Kumar Mitra
+            - generic [ref=f4e2437]: "? → 2023-04-24"
+            - generic [ref=f4e2438]: —
+            - generic [ref=f4e2439]: "0.75"
+          - generic [ref=f4e2440] [cursor=pointer]:
+            - generic [ref=f4e2441]:
+              - generic [ref=f4e2442]: Company Secretary and Compliance Officer
+              - generic [ref=f4e2443]: f-376 · D-01 p.90
+            - generic [ref=f4e2444]: Mr. Sunil Kumar Bansal
+            - generic [ref=f4e2445]: "? → 2023-05-31"
+            - generic [ref=f4e2446]: —
+            - generic [ref=f4e2447]: "0.75"
+          - generic [ref=f4e2448] [cursor=pointer]:
+            - generic [ref=f4e2449]:
+              - generic [ref=f4e2450]: Company Secretary and Compliance Officer
+              - generic [ref=f4e2451]: f-377 · D-01 p.90
+            - generic [ref=f4e2452]: Mr. Vivek Kumar
+            - generic [ref=f4e2453]: 2023-06-01 → 2024-03-27
+            - generic [ref=f4e2454]: —
+            - generic [ref=f4e2455]: "0.75"
+          - generic [ref=f4e2456] [cursor=pointer]:
+            - generic [ref=f4e2457]:
+              - generic [ref=f4e2458]: Company Secretary and Compliance Officer
+              - generic [ref=f4e2459]: f-378 · D-01 p.90
+            - generic [ref=f4e2460]: Mrs. Madhulika Rawat
+            - generic [ref=f4e2461]: 2024-05-17 → present
+            - generic [ref=f4e2462]: —
+            - generic [ref=f4e2463]: "0.75"
+          - generic [ref=f4e2464] [cursor=pointer]:
+            - generic [ref=f4e2465]:
+              - generic [ref=f4e2466]: Non-Executive Director
+              - generic [ref=f4e2467]: f-379 · D-01 p.90
+            - generic [ref=f4e2468]: Mr. Suvir Suren Sujan
+            - generic [ref=f4e2469]: 2022-05-24 → 2023-08-24
+            - generic [ref=f4e2470]: —
+            - generic [ref=f4e2471]: "0.75"
+          - generic [ref=f4e2472] [cursor=pointer]:
+            - generic [ref=f4e2473]:
+              - generic [ref=f4e2474]: Non-Executive - Independent Director
+              - generic [ref=f4e2475]: f-380 · D-01 p.90
+            - generic [ref=f4e2476]: 0 tenure
+            - generic [ref=f4e2477]: —
+            - generic [ref=f4e2478]: —
+            - generic [ref=f4e2479]: "0.75"
+          - generic [ref=f4e2480] [cursor=pointer]:
+            - generic [ref=f4e2481]:
+              - generic [ref=f4e2482]: Chairman and Non-Executive - Independent Director
+              - generic [ref=f4e2483]: f-381 · D-01 p.90
+            - generic [ref=f4e2484]: 0 tenure
+            - generic [ref=f4e2485]: —
+            - generic [ref=f4e2486]: —
+            - generic [ref=f4e2487]: "0.75"
+          - generic [ref=f4e2488] [cursor=pointer]:
+            - generic [ref=f4e2489]:
+              - generic [ref=f4e2490]: Nominee Director
+              - generic [ref=f4e2491]: f-382 · D-01 p.90
+            - generic [ref=f4e2492]: Mr. Munish Ravinder Varma
+            - generic [ref=f4e2493]: "? → 2022-06-29"
+            - generic [ref=f4e2494]: —
+            - generic [ref=f4e2495]: "0.75"
+          - generic [ref=f4e2496] [cursor=pointer]:
+            - generic [ref=f4e2497]:
+              - generic [ref=f4e2498]: Nominee Director
+              - generic [ref=f4e2499]: f-383 · D-01 p.90
+            - generic [ref=f4e2500]: Mr. Agus Tandiono
+            - generic [ref=f4e2501]: "? → 2022-04-08"
+            - generic [ref=f4e2502]: —
+            - generic [ref=f4e2503]: "0.75"
+          - generic [ref=f4e2504] [cursor=pointer]:
+            - generic [ref=f4e2505]:
+              - generic [ref=f4e2506]: Non-Executive - Independent Director
+              - generic [ref=f4e2507]: f-384 · D-01 p.90
+            - generic [ref=f4e2508]: 0 tenure
+            - generic [ref=f4e2509]: —
+            - generic [ref=f4e2510]: —
+            - generic [ref=f4e2511]: "0.75"
+          - generic [ref=f4e2512] [cursor=pointer]:
+            - generic [ref=f4e2513]:
+              - generic [ref=f4e2514]: Non-Executive - Independent Director
+              - generic [ref=f4e2515]: f-385 · D-01 p.90
+            - generic [ref=f4e2516]: Mr. Anindya Ghose
+            - generic [ref=f4e2517]: 2023-08-04 → present
+            - generic [ref=f4e2518]: —
+            - generic [ref=f4e2519]: "0.75"
+          - generic [ref=f4e2520] [cursor=pointer]:
+            - generic [ref=f4e2521]:
+              - generic [ref=f4e2522]: Non-Executive - Independent Director
+              - generic [ref=f4e2523]: f-386 · D-01 p.90
+            - generic [ref=f4e2524]: Ms. Kalpana Jaisingh Morparia
+            - generic [ref=f4e2525]: "? → 2023-02-11"
+            - generic [ref=f4e2526]: —
+            - generic [ref=f4e2527]: "0.75"
+          - generic [ref=f4e2528] [cursor=pointer]:
+            - generic [ref=f4e2529]:
+              - generic [ref=f4e2530]: Non-Executive - Independent Director
+              - generic [ref=f4e2531]: f-387 · D-01 p.90
+            - generic [ref=f4e2532]: Ms. Aruna Sundararajan
+            - generic [ref=f4e2533]: 2022-07-08 → present
+            - generic [ref=f4e2534]: —
+            - generic [ref=f4e2535]: "0.75"
+          - generic [ref=f4e2536] [cursor=pointer]:
+            - generic [ref=f4e2537]:
+              - generic [ref=f4e2538]: Non-Executive Director
+              - generic [ref=f4e2539]: f-388 · D-01 p.90
+            - generic [ref=f4e2540]: Mr. Donald Francis Colleran
+            - generic [ref=f4e2541]: "? → 2022-05-23"
+            - generic [ref=f4e2542]: —
+            - generic [ref=f4e2543]: "0.75"
+          - generic [ref=f4e2544] [cursor=pointer]:
+            - generic [ref=f4e2545]:
+              - generic [ref=f4e2546]: Non-Executive Director
+              - generic [ref=f4e2547]: f-389 · D-01 p.90
+            - generic [ref=f4e2548]: Mr. Donald Francis Colleran
+            - generic [ref=f4e2549]: 2022-05-24 → 2023-09-27
+            - generic [ref=f4e2550]: —
+            - generic [ref=f4e2551]: "0.75"
+          - generic [ref=f4e2552]: 276 of 276 facts
+        - generic [ref=f4e2553]:
+          - generic [ref=f4e2554]:
+            - generic [ref=f4e2555]: FACT PASSPORT
+            - generic [ref=f4e2556]: f-1
+          - generic [ref=f4e2557]:
+            - generic [ref=f4e2558]: ₹81,415.38M
+            - generic [ref=f4e2559]: Revenue from contracts with customers
+            - generic [ref=f4e2560]:
+              - generic [ref=f4e2561]: Entity
+              - generic [ref=f4e2562]: Delhivery Limited
+              - generic [ref=f4e2563]: Metric
+              - generic [ref=f4e2564]: Revenue from contracts with customers
+              - generic [ref=f4e2565]: Value
+              - generic [ref=f4e2566]: ₹81,415.38M
+              - generic [ref=f4e2567]: Unit
+              - generic [ref=f4e2568]: INR_M
+              - generic [ref=f4e2569]: Period
+              - generic [ref=f4e2570]: FY2024
+              - generic [ref=f4e2571]: Scope
+              - generic [ref=f4e2572]: consolidated
+              - generic [ref=f4e2573]: Basis
+              - generic [ref=f4e2574]: actual
+              - generic [ref=f4e2575]: Source
+              - generic [ref=f4e2576]: Delhivery Annual Report Fy24 Excerpt
+              - generic [ref=f4e2577]: Page
+              - generic [ref=f4e2578]: "35"
+              - generic [ref=f4e2579]: Confidence
+              - generic [ref=f4e2580]: "0.60"
+            - generic [ref=f4e2581]:
+              - generic [ref=f4e2582]: EVIDENCE SPAN
+              - generic [ref=f4e2583]: Revenue from contracts with customers | 81,415.38 | 72,253.01
+            - generic [ref=f4e2585]:
+              - generic [ref=f4e2586] [cursor=pointer]: SOURCE PAGE →
+              - generic [ref=f4e2587] [cursor=pointer]: COMPARE

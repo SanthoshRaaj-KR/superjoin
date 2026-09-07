@@ -1,0 +1,452 @@
+- generic [ref=f3e4]:
+  - generic [ref=f3e5]:
+    - generic [ref=f3e6]:
+      - generic [ref=f3e7]: Collation
+      - generic [ref=f3e11]: EVIDENCE-GROUNDEDFACT RECONCILIATION
+    - generic [ref=f3e12]:
+      - generic [ref=f3e13] [cursor=pointer]: Overview
+      - generic [ref=f3e17] [cursor=pointer]:
+        - generic [ref=f3e18]: Documents
+        - generic [ref=f3e21]: "5"
+      - generic [ref=f3e22] [cursor=pointer]:
+        - generic [ref=f3e23]: Facts
+        - generic [ref=f3e26]: "276"
+      - generic [ref=f3e27] [cursor=pointer]:
+        - generic [ref=f3e28]: Compare
+        - generic [ref=f3e31]: "60"
+      - generic [ref=f3e32] [cursor=pointer]:
+        - generic [ref=f3e33]: Timeline
+        - generic [ref=f3e36]: "3"
+      - generic [ref=f3e37] [cursor=pointer]:
+        - generic [ref=f3e38]: Corpus quality
+        - generic [ref=f3e41]: "10"
+    - generic [ref=f3e42]:
+      - generic [ref=f3e43]: CORPUS Delhivery Limited
+      - generic [ref=f3e44]: ENGINE v0.9.3 · axis-aware
+  - generic [ref=f3e45]:
+    - generic [ref=f3e46]:
+      - generic [ref=f3e47]:
+        - generic [ref=f3e48]: Compare
+        - generic [ref=f3e49]: Two facts, their context axes and the verdict the engine returns for the pair.
+      - generic [ref=f3e50]:
+        - generic [ref=f3e51]: 276 CLAIMS · 276 GROUNDED
+        - generic [ref=f3e52]: 10 QUARANTINED · 447 PAIRS
+    - generic [ref=f3e54]:
+      - generic [ref=f3e55]:
+        - generic [ref=f3e56]: CANDIDATE PAIRS
+        - generic [ref=f3e98] [cursor=pointer]:
+          - generic [ref=f3e99]: Core inflation FY2025 · D-05 p.9 vs p.9
+          - generic [ref=f3e100]:
+            - generic [ref=f3e101]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e102]: r-435
+        - generic [ref=f3e103] [cursor=pointer]:
+          - generic [ref=f3e104]: Exceptional items FY2024 · D-01 p.35 vs p.21
+          - generic [ref=f3e105]:
+            - generic [ref=f3e106]: CONTEXTUAL
+            - generic [ref=f3e107]: r-177
+        - generic [ref=f3e108] [cursor=pointer]:
+          - generic [ref=f3e109]: Real hourly wages growth 2018 · D-05 p.9 vs p.9
+          - generic [ref=f3e110]:
+            - generic [ref=f3e111]: CONTEXTUAL
+            - generic [ref=f3e112]: r-440
+        - generic [ref=f3e113] [cursor=pointer]:
+          - generic [ref=f3e114]: EBITDA margin FY2023 · D-02 p.5 vs p.5
+          - generic [ref=f3e115]:
+            - generic [ref=f3e116]: CONTEXTUAL
+            - generic [ref=f3e117]: r-284
+        - generic [ref=f3e118] [cursor=pointer]:
+          - generic [ref=f3e119]: real gross domestic product (GDP) growth FY2027 · D-05 p.12 vs p.12
+          - generic [ref=f3e120]:
+            - generic [ref=f3e121]: CONTEXTUAL
+            - generic [ref=f3e122]: r-423
+        - generic [ref=f3e123] [cursor=pointer]:
+          - generic [ref=f3e124]: real gross domestic product (GDP) growth FY2026 · D-05 p.12 vs p.12
+          - generic [ref=f3e125]:
+            - generic [ref=f3e126]: CONTEXTUAL
+            - generic [ref=f3e127]: r-419
+        - generic [ref=f3e128] [cursor=pointer]:
+          - generic [ref=f3e129]: EBITDA margin FY2023 · D-02 p.16 vs p.5
+          - generic [ref=f3e130]:
+            - generic [ref=f3e131]: CONTRADICTS
+            - generic [ref=f3e132]: r-302
+        - generic [ref=f3e133] [cursor=pointer]:
+          - generic [ref=f3e134]: EBITDA margin FY2023 · D-02 p.5 vs p.16
+          - generic [ref=f3e135]:
+            - generic [ref=f3e136]: CONTRADICTS
+            - generic [ref=f3e137]: r-306
+        - generic [ref=f3e138] [cursor=pointer]:
+          - generic [ref=f3e139]: Exceptional items Q4 FY2024 · D-02 vs D-01
+          - generic [ref=f3e140]:
+            - generic [ref=f3e141]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e142]: r-182
+        - generic [ref=f3e143] [cursor=pointer]:
+          - generic [ref=f3e144]: Share of profit/(loss) of associate (net) FY2024 · D-01 vs D-02
+          - generic [ref=f3e145]:
+            - generic [ref=f3e146]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e147]: r-148
+        - generic [ref=f3e148] [cursor=pointer]:
+          - generic [ref=f3e149]: Share of profit/(loss) of associate (net) Q3 FY2024 · D-02 vs D-01
+          - generic [ref=f3e150]:
+            - generic [ref=f3e151]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e152]: r-167
+        - generic [ref=f3e153] [cursor=pointer]:
+          - generic [ref=f3e154]: Tax expense FY2024 · D-01 vs D-02
+          - generic [ref=f3e155]:
+            - generic [ref=f3e156]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e157]: r-188
+        - generic [ref=f3e158] [cursor=pointer]:
+          - generic [ref=f3e159]: Tax expense Q4 FY2024 · D-02 vs D-01
+          - generic [ref=f3e160]:
+            - generic [ref=f3e161]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e162]: r-204
+        - generic [ref=f3e163] [cursor=pointer]:
+          - generic [ref=f3e164]: Exceptional items Q3 FY2024 · D-02 vs D-01
+          - generic [ref=f3e165]:
+            - generic [ref=f3e166]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e167]: r-180
+        - generic [ref=f3e168] [cursor=pointer]:
+          - generic [ref=f3e169]: Tax expense FY2024 · D-01 vs D-02
+          - generic [ref=f3e170]:
+            - generic [ref=f3e171]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e172]: r-186
+        - generic [ref=f3e173] [cursor=pointer]:
+          - generic [ref=f3e174]: Share of profit/(loss) of associate (net) FY2023 · D-01 vs D-02
+          - generic [ref=f3e175]:
+            - generic [ref=f3e176]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e177]: r-154
+        - generic [ref=f3e178] [cursor=pointer]:
+          - generic [ref=f3e179]: EBITDA FY2023 · D-01 vs D-02
+          - generic [ref=f3e180]:
+            - generic [ref=f3e181]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e182]: r-220
+        - generic [ref=f3e183] [cursor=pointer]:
+          - generic [ref=f3e184]: EBITDA FY2023 · D-01 vs D-02
+          - generic [ref=f3e185]:
+            - generic [ref=f3e186]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e187]: r-225
+        - generic [ref=f3e188] [cursor=pointer]:
+          - generic [ref=f3e189]: EBITDA FY2023 · D-01 vs D-02
+          - generic [ref=f3e190]:
+            - generic [ref=f3e191]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e192]: r-226
+        - generic [ref=f3e193] [cursor=pointer]:
+          - generic [ref=f3e194]: Revenues from sale of traded goods FY2024 · D-01 vs D-02
+          - generic [ref=f3e195]:
+            - generic [ref=f3e196]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e197]: r-257
+        - generic [ref=f3e198] [cursor=pointer]:
+          - generic [ref=f3e199]: Revenues from sale of traded goods FY2023 · D-01 vs D-02
+          - generic [ref=f3e200]:
+            - generic [ref=f3e201]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e202]: r-258
+        - generic [ref=f3e203] [cursor=pointer]:
+          - generic [ref=f3e204]: Other income Q4 FY2023 · D-02 vs D-01
+          - generic [ref=f3e205]:
+            - generic [ref=f3e206]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e207]: r-26
+        - generic [ref=f3e208] [cursor=pointer]:
+          - generic [ref=f3e209]: Other income FY2024 · D-01 vs D-02
+          - generic [ref=f3e210]:
+            - generic [ref=f3e211]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e212]: r-8
+        - generic [ref=f3e213] [cursor=pointer]:
+          - generic [ref=f3e214]: Other income Q4 FY2023 · D-02 vs D-01
+          - generic [ref=f3e215]:
+            - generic [ref=f3e216]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e217]: r-27
+        - generic [ref=f3e218] [cursor=pointer]:
+          - generic [ref=f3e219]: Finance costs FY2023 · D-01 vs D-02
+          - generic [ref=f3e220]:
+            - generic [ref=f3e221]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e222]: r-130
+        - generic [ref=f3e223] [cursor=pointer]:
+          - generic [ref=f3e224]: Finance costs FY2024 · D-01 vs D-02
+          - generic [ref=f3e225]:
+            - generic [ref=f3e226]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e227]: r-125
+        - generic [ref=f3e228] [cursor=pointer]:
+          - generic [ref=f3e229]: Depreciation and amortisation expense FY2023 · D-01 vs D-02
+          - generic [ref=f3e230]:
+            - generic [ref=f3e231]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e232]: r-110
+        - generic [ref=f3e233] [cursor=pointer]:
+          - generic [ref=f3e234]: Total income FY2024 · D-01 vs D-02
+          - generic [ref=f3e235]:
+            - generic [ref=f3e236]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e237]: r-44
+        - generic [ref=f3e238] [cursor=pointer]:
+          - generic [ref=f3e239]: Total income Q4 FY2023 · D-02 vs D-01
+          - generic [ref=f3e240]:
+            - generic [ref=f3e241]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e242]: r-63
+        - generic [ref=f3e243] [cursor=pointer]:
+          - generic [ref=f3e244]: Freight, Handling and Servicing Costs FY2024 · D-01 vs D-02
+          - generic [ref=f3e245]:
+            - generic [ref=f3e246]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e247]: r-80
+        - generic [ref=f3e248] [cursor=pointer]:
+          - generic [ref=f3e249]: Total expenses Q4 FY2023 · D-02 vs D-01
+          - generic [ref=f3e250]:
+            - generic [ref=f3e251]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e252]: r-365
+        - generic [ref=f3e253] [cursor=pointer]:
+          - generic [ref=f3e254]: Depreciation and amortisation expense FY2023 · D-01 vs D-02
+          - generic [ref=f3e255]:
+            - generic [ref=f3e256]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e257]: r-111
+        - generic [ref=f3e258] [cursor=pointer]:
+          - generic [ref=f3e259]: Freight, Handling and Servicing Costs FY2023 · D-01 vs D-02
+          - generic [ref=f3e260]:
+            - generic [ref=f3e261]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e262]: r-85
+        - generic [ref=f3e263] [cursor=pointer]:
+          - generic [ref=f3e264]: Total income Q4 FY2023 · D-02 vs D-01
+          - generic [ref=f3e265]:
+            - generic [ref=f3e266]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e267]: r-62
+        - generic [ref=f3e268] [cursor=pointer]:
+          - generic [ref=f3e269]: Finance costs FY2023 · D-01 vs D-02
+          - generic [ref=f3e270]:
+            - generic [ref=f3e271]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e272]: r-131
+        - generic [ref=f3e273] [cursor=pointer]:
+          - generic [ref=f3e274]: Depreciation and amortisation expense FY2024 · D-01 vs D-02
+          - generic [ref=f3e275]:
+            - generic [ref=f3e276]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e277]: r-105
+        - generic [ref=f3e278] [cursor=pointer]:
+          - generic [ref=f3e279]: Freight, Handling and Servicing Costs FY2024 · D-01 vs D-02
+          - generic [ref=f3e280]:
+            - generic [ref=f3e281]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e282]: r-82
+        - generic [ref=f3e283] [cursor=pointer]:
+          - generic [ref=f3e284]: Total expenses Q4 FY2024 · D-02 vs D-01
+          - generic [ref=f3e285]:
+            - generic [ref=f3e286]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e287]: r-374
+        - generic [ref=f3e288] [cursor=pointer]:
+          - generic [ref=f3e289]: Total expenses Q3 FY2024 · D-02 vs D-01
+          - generic [ref=f3e290]:
+            - generic [ref=f3e291]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e292]: r-370
+        - generic [ref=f3e293] [cursor=pointer]:
+          - generic [ref=f3e294]: real gross domestic product (GDP) growth — · D-05 vs D-03
+          - generic [ref=f3e295]:
+            - generic [ref=f3e296]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e297]: r-406
+        - generic [ref=f3e298] [cursor=pointer]:
+          - generic [ref=f3e299]: Revenues from sale of traded goods FY2023 · D-01 vs D-02
+          - generic [ref=f3e300]:
+            - generic [ref=f3e301]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e302]: r-259
+        - generic [ref=f3e303] [cursor=pointer]:
+          - generic [ref=f3e304]: Express parcel shipment volumes FY2023 · D-01 vs D-02
+          - generic [ref=f3e305]:
+            - generic [ref=f3e306]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e307]: r-263
+        - generic [ref=f3e308] [cursor=pointer]:
+          - generic [ref=f3e309]: Express parcel shipment volumes FY2024 · D-01 vs D-02
+          - generic [ref=f3e310]:
+            - generic [ref=f3e311]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e312]: r-262
+        - generic [ref=f3e313] [cursor=pointer]:
+          - generic [ref=f3e314]: Nominal GDP growth — · D-05 p.9 vs p.9
+          - generic [ref=f3e315]:
+            - generic [ref=f3e316]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e317]: r-428
+        - generic [ref=f3e318] [cursor=pointer]:
+          - generic [ref=f3e319]: PTL freight tonnage since inception FY2024 · D-02 p.5 vs p.5
+          - generic [ref=f3e320]:
+            - generic [ref=f3e321]: INSUFFICIENT_EVIDENCE
+            - generic [ref=f3e322]: r-309
+        - generic [ref=f3e323] [cursor=pointer]:
+          - generic [ref=f3e324]: headline inflation 2025 · D-05 vs D-04
+          - generic [ref=f3e325]:
+            - generic [ref=f3e326]: CONTEXTUAL
+            - generic [ref=f3e327]: r-431
+        - generic [ref=f3e328] [cursor=pointer]:
+          - generic [ref=f3e329]: Other operating expense Q4 FY2023 · D-02 p.16 vs p.16
+          - generic [ref=f3e330]:
+            - generic [ref=f3e331]: CONTEXTUAL
+            - generic [ref=f3e332]: r-352
+        - generic [ref=f3e333] [cursor=pointer]:
+          - generic [ref=f3e334]: "Employee benefit expense: share based payments Q4 FY2024 · D-02 p.16 vs p.16"
+          - generic [ref=f3e335]:
+            - generic [ref=f3e336]: CONTEXTUAL
+            - generic [ref=f3e337]: r-348
+        - generic [ref=f3e338] [cursor=pointer]:
+          - generic [ref=f3e339]: "Employee benefit expense: share based payments Q3 FY2024 · D-02 p.16 vs p.16"
+          - generic [ref=f3e340]:
+            - generic [ref=f3e341]: CONTEXTUAL
+            - generic [ref=f3e342]: r-346
+        - generic [ref=f3e343] [cursor=pointer]:
+          - generic [ref=f3e344]: "Employee benefit expense: share based payments Q4 FY2023 · D-02 p.16 vs p.16"
+          - generic [ref=f3e345]:
+            - generic [ref=f3e346]: CONTEXTUAL
+            - generic [ref=f3e347]: r-342
+        - generic [ref=f3e348] [cursor=pointer]:
+          - generic [ref=f3e349]: Employee benefit expense excl. share based payments Q3 FY2024 · D-02 p.16 vs p.16
+          - generic [ref=f3e350]:
+            - generic [ref=f3e351]: CONTEXTUAL
+            - generic [ref=f3e352]: r-336
+        - generic [ref=f3e353] [cursor=pointer]:
+          - generic [ref=f3e354]: Other operating expense Q3 FY2024 · D-02 p.16 vs p.16
+          - generic [ref=f3e355]:
+            - generic [ref=f3e356]: CONTEXTUAL
+            - generic [ref=f3e357]: r-356
+        - generic [ref=f3e358] [cursor=pointer]:
+          - generic [ref=f3e359]: Other operating expense Q4 FY2024 · D-02 p.16 vs p.16
+          - generic [ref=f3e360]:
+            - generic [ref=f3e361]: CONTEXTUAL
+            - generic [ref=f3e362]: r-358
+        - generic [ref=f3e363] [cursor=pointer]:
+          - generic [ref=f3e364]: Employee benefit expense excl. share based payments Q4 FY2024 · D-02 p.16 vs p.16
+          - generic [ref=f3e365]:
+            - generic [ref=f3e366]: CONTEXTUAL
+            - generic [ref=f3e367]: r-338
+        - generic [ref=f3e368] [cursor=pointer]:
+          - generic [ref=f3e369]: Revenue for services (A) Q4 FY2024 · D-02 p.16 vs p.16
+          - generic [ref=f3e370]:
+            - generic [ref=f3e371]: CONTEXTUAL
+            - generic [ref=f3e372]: r-318
+        - generic [ref=f3e373] [cursor=pointer]:
+          - generic [ref=f3e374]: Revenue from customers (A+B) Q4 FY2024 · D-02 p.16 vs p.16
+          - generic [ref=f3e375]:
+            - generic [ref=f3e376]: CONTEXTUAL
+            - generic [ref=f3e377]: r-328
+        - generic [ref=f3e378] [cursor=pointer]:
+          - generic [ref=f3e379]: Employee benefit expense excl. share based payments Q4 FY2023 · D-02 p.16 vs p.16
+          - generic [ref=f3e380]:
+            - generic [ref=f3e381]: CONTEXTUAL
+            - generic [ref=f3e382]: r-332
+        - generic [ref=f3e383] [cursor=pointer]:
+          - generic [ref=f3e384]: Revenue from customers (A+B) Q4 FY2023 · D-02 p.16 vs p.16
+          - generic [ref=f3e385]:
+            - generic [ref=f3e386]: CONTEXTUAL
+            - generic [ref=f3e387]: r-322
+        - generic [ref=f3e388] [cursor=pointer]:
+          - generic [ref=f3e389]: Revenue for services (A) Q4 FY2023 · D-02 p.16 vs p.16
+          - generic [ref=f3e390]:
+            - generic [ref=f3e391]: CONTEXTUAL
+            - generic [ref=f3e392]: r-312
+        - generic [ref=f3e393] [cursor=pointer]:
+          - generic [ref=f3e394]: Revenue for services (A) Q3 FY2024 · D-02 p.16 vs p.16
+          - generic [ref=f3e395]:
+            - generic [ref=f3e396]: CONTEXTUAL
+            - generic [ref=f3e397]: r-316
+      - generic [ref=f3e57]:
+        - generic [ref=f3e58]:
+          - generic [ref=f3e59]:
+            - generic [ref=f3e60]:
+              - generic [ref=f3e61]: FACT A
+              - generic [ref=f3e398]: f-316
+            - generic [ref=f3e62]: 4.6%
+            - generic [ref=f3e63]:
+              - generic [ref=f3e399]: FY2025
+              - generic [ref=f3e400]: —
+              - generic [ref=f3e401]: actual
+            - generic [ref=f3e64]:
+              - generic [ref=f3e65]: Entity
+              - generic [ref=f3e66]: India
+              - generic [ref=f3e67]: Metric
+              - generic [ref=f3e68]: Core inflation
+              - generic [ref=f3e69]: Source
+              - generic [ref=f3e70]: D-05 p.9
+              - generic [ref=f3e71]: Confidence
+              - generic [ref=f3e72]: "0.70"
+          - generic [ref=f3e73]:
+            - generic [ref=f3e74]:
+              - generic [ref=f3e75]: FACT B
+              - generic [ref=f3e402]: f-317
+            - generic [ref=f3e76]: 3.5%
+            - generic [ref=f3e77]:
+              - generic [ref=f3e403]: FY2025
+              - generic [ref=f3e404]: —
+              - generic [ref=f3e405]: actual
+            - generic [ref=f3e78]:
+              - generic [ref=f3e79]: Entity
+              - generic [ref=f3e80]: India
+              - generic [ref=f3e81]: Metric
+              - generic [ref=f3e82]: Core inflation
+              - generic [ref=f3e83]: Source
+              - generic [ref=f3e84]: D-05 p.9
+              - generic [ref=f3e85]: Confidence
+              - generic [ref=f3e86]: "0.70"
+        - generic [ref=f3e87]:
+          - generic [ref=f3e88]:
+            - generic [ref=f3e89]: ↓
+            - generic [ref=f3e90]:
+              - generic [ref=f3e91]: CONTRADICTS
+              - generic [ref=f3e406]: CONFLICT
+            - generic [ref=f3e407]: same Core inflation for India in FY2025, comparable on every stated axis, and the values are 23.91% apart, more than rounding at the stated precision can explain (at most 0.1)
+            - generic [ref=f3e408]:
+              - generic [ref=f3e409]: NORMALIZED A 4.6 percent
+              - generic [ref=f3e410]: NORMALIZED B 3.5 percent
+            - generic [ref=f3e92]:
+              - generic [ref=f3e93]:
+                - generic [ref=f3e94]: COUNTERFACTUAL · HOLD AN AXIS OUT OF REASONING
+                - generic [ref=f3e95]: POST /compare
+              - generic [ref=f3e411]:
+                - generic [ref=f3e412] [cursor=pointer]: ◻ Mask Period
+                - generic [ref=f3e413] [cursor=pointer]: ◻ Mask Unit
+                - generic [ref=f3e414] [cursor=pointer]: ◻ Mask Scope
+                - generic [ref=f3e415] [cursor=pointer]: ◻ Mask Basis
+                - generic [ref=f3e416] [cursor=pointer]: ◼ Mask Time reference
+              - generic [ref=f3e417]:
+                - generic [ref=f3e418]: INSUFFICIENT_EVIDENCE
+                - generic [ref=f3e419]: ↓
+                - generic [ref=f3e420]: Mask Time_reference
+                - generic [ref=f3e421]: ↓
+                - generic [ref=f3e422]: CONTRADICTS
+          - generic [ref=f3e96]:
+            - generic [ref=f3e97]: AXIS COMPARISON
+            - generic [ref=f3e423]:
+              - generic [ref=f3e424]:
+                - generic [ref=f3e425]: Entity
+                - generic [ref=f3e426]: India
+              - generic [ref=f3e427]: ✓
+            - generic [ref=f3e428]:
+              - generic [ref=f3e429]:
+                - generic [ref=f3e430]: Metric
+                - generic [ref=f3e431]: Core inflation
+              - generic [ref=f3e432]: ✓
+            - generic [ref=f3e433]:
+              - generic [ref=f3e434]:
+                - generic [ref=f3e435]: Period
+                - generic [ref=f3e436]: FY2025
+              - generic [ref=f3e437]: ✓
+            - generic [ref=f3e438]:
+              - generic [ref=f3e439]:
+                - generic [ref=f3e440]: Unit
+                - generic [ref=f3e441]: PCT
+              - generic [ref=f3e442]: ✓
+            - generic [ref=f3e443]:
+              - generic [ref=f3e444]:
+                - generic [ref=f3e445]: Consolidation scope
+                - generic [ref=f3e446]: not stated
+              - generic [ref=f3e447]: ✓
+            - generic [ref=f3e448]:
+              - generic [ref=f3e449]:
+                - generic [ref=f3e450]: Reporting basis
+                - generic [ref=f3e451]: actual
+              - generic [ref=f3e452]: ✓
+            - generic [ref=f3e453]:
+              - generic [ref=f3e454]:
+                - generic [ref=f3e455]: Time reference
+                - generic [ref=f3e456]: not stated → 3.5 percent FY2024/25 average
+              - generic [ref=f3e457]: masked
+        - generic [ref=f3e458]:
+          - generic [ref=f3e459]:
+            - generic [ref=f3e460]:
+              - generic [ref=f3e461]: EVIDENCE · FACT A
+              - generic [ref=f3e462]: D-05 · p.9
+            - generic [ref=f3e463]: Core inflation increased to 4.6 percent (from 3.5 percent FY2024/25 average), in part due to rising gold and silver prices.
+            - generic [ref=f3e465]: Imf India 2025 Article Iv Excerpt · RECENT DEVELOPMENTS
+            - generic [ref=f3e466] [cursor=pointer]: OPEN SOURCE PAGE →
+          - generic [ref=f3e467]:
+            - generic [ref=f3e468]:
+              - generic [ref=f3e469]: EVIDENCE · FACT B
+              - generic [ref=f3e470]: D-05 · p.9
+            - generic [ref=f3e471]: Core inflation increased to 4.6 percent (from 3.5 percent FY2024/25 average), in part due to rising gold and silver prices.
+            - generic [ref=f3e473]: Imf India 2025 Article Iv Excerpt · RECENT DEVELOPMENTS
+            - generic [ref=f3e474] [cursor=pointer]: OPEN SOURCE PAGE →
