@@ -190,3 +190,88 @@ def _describe_disagreement(difference: float, relative: float, threshold: float)
         f"{relative:.2%} apart, more than rounding at the stated precision can "
         f"explain (at most {_num(threshold)})"
     )
+
+
+# --- comparing text values --------------------------------------------------
+#
+# The non-numeric corroboration case. The prospectus and the annual report give
+# the same registered office two years apart:
+#
+#   ...Opposite Gate 6 Cargo Terminal, Indira Gandhi International Airport,
+#      New Delhi 110037
+#   ...Opposite Gate 6 Cargo Terminal, IGI Airport, New Delhi 110037
+#
+# One address. No numeric tolerance reaches it, and neither does string
+# similarity at any threshold that would not also merge two different addresses
+# on the same street.
+
+_WORD = re.compile(r"[a-z0-9]+")
+
+
+def normalize_text_value(value: str | None) -> list[str]:
+    """A text value as comparable tokens: lowercase, punctuation dropped."""
+    return _WORD.findall((value or "").lower())
+
+
+def _is_acronym_of(token: str, words: list[str]) -> bool:
+    """Whether ``token`` spells the initials of ``words``.
+
+    A general rule rather than a dictionary of known abbreviations. "IGI" is the
+    initials of "Indira Gandhi International" the same way "RBI" is of "Reserve
+    Bank of India", and encoding the pattern generalises where a lookup table
+    would need this corpus written into it.
+    """
+    if len(token) < 2 or not token.isalpha() or len(words) != len(token):
+        return False
+    return all(word[:1] == letter for letter, word in zip(token, words))
+
+
+def compare_text_values(a: str | None, b: str | None) -> ValueComparison:
+    """Whether two text values say the same thing.
+
+    Digits are decisive and are compared first: a postcode, a house number or a
+    registration number differing means a different address or a different
+    entity, whatever the words around it do. Only then are the words aligned,
+    allowing an acronym on one side to stand for the run of words it abbreviates
+    on the other.
+    """
+    left, right = normalize_text_value(a), normalize_text_value(b)
+    if not left or not right:
+        return ValueComparison("unknown", "one or both values are missing")
+    if left == right:
+        return ValueComparison("agree", "identical values", 0.0, 0.0)
+
+    left_digits = [t for t in left if any(c.isdigit() for c in t)]
+    right_digits = [t for t in right if any(c.isdigit() for c in t)]
+    if left_digits != right_digits:
+        return ValueComparison(
+            "disagree",
+            f"the numbers in the two values differ ({' '.join(left_digits) or 'none'} "
+            f"against {' '.join(right_digits) or 'none'})",
+        )
+
+    if _aligns(left, right) or _aligns(right, left):
+        return ValueComparison(
+            "agree",
+            "the same value, with an abbreviation expanded on one side",
+            0.0,
+            0.0,
+        )
+    return ValueComparison("disagree", f"{a!r} against {b!r}")
+
+
+def _aligns(short: list[str], long: list[str]) -> bool:
+    """Whether ``short`` matches ``long`` token for token, acronyms expanded."""
+    i = j = 0
+    while i < len(short) and j < len(long):
+        if short[i] == long[j]:
+            i += 1
+            j += 1
+            continue
+        span = len(short[i])
+        if _is_acronym_of(short[i], long[j : j + span]):
+            i += 1
+            j += span
+            continue
+        return False
+    return i == len(short) and j == len(long)

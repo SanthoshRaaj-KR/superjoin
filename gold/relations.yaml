@@ -23,19 +23,32 @@ relations:
   - id: rel-cross-document-revenue
     a: deck-p5-revenue-fy24
     b: ar-p35-revenue-consolidated
-    verdict: CORROBORATES
-    axis: null
+    verdict: INSUFFICIENT_EVIDENCE
+    axis: consolidation
+    verdict_if_axis_supplied: CORROBORATES
     why: >
-      The same FY24 revenue in two documents and two scales — ₹8,142 Cr and
-      ₹81,415.38 Mn. 0.006% apart, which is the deck rounding to the nearest
-      crore. This pair is the reason the unit layer exists.
+      The values agree: ₹8,142 Cr and ₹81,415.38 Mn are 0.006% apart, which is
+      the deck rounding to the nearest crore. The comparison is still refused,
+      because the deck never states whether it is reporting standalone or
+      consolidated, and the annual report's two bases for this very figure
+      differ by 9.2%.
+
+      An analyst infers the deck is consolidated *from* the match, which is
+      circular, so the system must not. This is the thesis in its sharpest
+      form: absent is not equal, and naming the missing axis is more useful
+      than a confident guess. Supply consolidation=consolidated and the same
+      claims corroborate — which is what `verdict_if_axis_supplied` records,
+      and what the counterfactual toggle demonstrates.
 
   - id: rel-cross-document-total-income
     a: deck-p16-total-income-fy24
     b: ar-p35-total-income-fy24
-    verdict: CORROBORATES
-    axis: null
-    why: 8,594 Cr against 85,942.34 Mn — 0.003% apart.
+    verdict: INSUFFICIENT_EVIDENCE
+    axis: consolidation
+    verdict_if_axis_supplied: CORROBORATES
+    why: >
+      8,594 Cr against 85,942.34 Mn — 0.003% apart, and blocked for the same
+      reason as rel-cross-document-revenue: the deck declares no basis.
 
   - id: rel-same-fact-two-pages
     a: ar-p21-revenue-consolidated
@@ -187,10 +200,12 @@ relations:
   - id: rel-traded-goods-rounding
     a: ar-p35-traded-goods-fy23
     b: deck-p16-traded-goods-fy23
-    verdict: CORROBORATES
-    axis: null
+    verdict: INSUFFICIENT_EVIDENCE
+    axis: consolidation
+    verdict_if_axis_supplied: CORROBORATES
     why: >
       16.54 Mn against 2 Cr — 21% apart by any relative measure, and the same
-      fact. One crore is the deck's entire precision at this magnitude, so
-      tolerance has to come from the coarser unit's rounding granularity rather
-      than from a fixed percentage. This pair is why.
+      fact: one crore is the deck's entire precision at this magnitude, so
+      tolerance has to come from the coarser unit's granularity rather than a
+      fixed percentage. The value comparison agrees; the verdict is still
+      blocked on the deck's undeclared basis.

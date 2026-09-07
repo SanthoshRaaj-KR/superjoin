@@ -168,3 +168,150 @@ def summarize(gold: GoldSet) -> str:
         lines.append(f"    {count:>2}  {verdict}")
     lines.append("  resolving axes: " + ", ".join(axes))
     return "\n".join(lines)
+
+
+# --- scoring the gate against the labels ------------------------------------
+#
+# The gate is scored against the gold *claims* directly rather than against
+# extracted ones. That is deliberate: it measures the comparability gate, not
+# the extractor, and the two fail for entirely different reasons. End-to-end
+# scoring — did extraction find these claims at all — is a separate question
+# with a separate number.
+
+# What belongs to the interval engine rather than to the gate: the verdicts only
+# it can produce, and `valid_time`, which is its axis. A relation resolved by
+# valid_time needs valid_from and valid_to reasoning, not a period label — the
+# CIN changing at listing is a difference in *when*, and the gate has no way to
+# see that.
+#
+# These are reported as deferred rather than as failures, and counted
+# separately, so the headline number says what it actually measured instead of
+# quietly excluding what it cannot do.
+TEMPORAL_VERDICTS = {"CLOSES_INTERVAL", "SUCCESSION", "SUCCESSION_WITH_VACANCY"}
+TEMPORAL_AXES = {"valid_time"}
+
+
+def is_temporal(relation: dict) -> bool:
+    return (
+        relation["verdict"] in TEMPORAL_VERDICTS
+        or relation.get("axis") in TEMPORAL_AXES
+    )
+
+
+def to_comparable(claim: dict):
+    """Turn a labelled gold claim into the gate's input shape."""
+    from .compare import Comparable
+    from .periods import parse_period
+    from .units import UNKNOWN, Unit
+    from .values import written_precision
+
+    spec = claim.get("unit") or {}
+    if spec:
+        unit = Unit(
+            dimension=spec.get("dimension", "unknown"),
+            scale=_scale_factor(spec.get("scale")),
+            currency=spec.get("currency"),
+            scale_name=spec.get("scale"),
+            raw=str(spec),
+            confidence=1.0,
+        )
+    else:
+        unit = UNKNOWN
+
+    period = parse_period(claim.get("period")) if claim.get("period") else parse_period(None)
+    value_raw = claim.get("value_raw")
+
+    return Comparable(
+        ref=claim["id"],
+        entity=str(claim["subject"]).strip().lower(),
+        metric=str(claim["metric"]).strip().lower(),
+        unit=unit,
+        period=period,
+        value_canonical=claim.get("canonical"),
+        precision=written_precision(value_raw, unit.scale) if value_raw else None,
+        value_text=claim.get("value_text"),
+        qualifiers=claim.get("qualifiers") or {},
+        unknown_qualifiers=claim.get("unknown_qualifiers") or [],
+        modality=claim.get("modality", "actual"),
+        claim_type=claim.get("claim_type", "measurement"),
+        document=claim.get("doc"),
+        page_no=claim.get("page"),
+    )
+
+
+def _scale_factor(name: str | None) -> float:
+    from .units import SCALES
+
+    return SCALES.get(str(name).lower(), 1.0) if name else 1.0
+
+
+@dataclass
+class ScoredRelation:
+    id: str
+    expected: str
+    actual: str
+    expected_axis: str | None
+    actual_axis: str | None
+    explanation: str
+    deferred: bool = False
+
+    @property
+    def verdict_ok(self) -> bool:
+        return self.expected == self.actual
+
+    @property
+    def axis_ok(self) -> bool:
+        # An axis is only required where the label names one.
+        return self.expected_axis is None or self.expected_axis == self.actual_axis
+
+    @property
+    def ok(self) -> bool:
+        return self.verdict_ok and self.axis_ok
+
+
+@dataclass
+class Score:
+    results: list[ScoredRelation] = field(default_factory=list)
+
+    @property
+    def scored(self) -> list[ScoredRelation]:
+        return [r for r in self.results if not r.deferred]
+
+    @property
+    def deferred(self) -> list[ScoredRelation]:
+        return [r for r in self.results if r.deferred]
+
+    @property
+    def correct(self) -> int:
+        return sum(1 for r in self.scored if r.ok)
+
+    @property
+    def accuracy(self) -> float:
+        return self.correct / len(self.scored) if self.scored else 0.0
+
+
+def score(gold: GoldSet | None = None) -> Score:
+    """Run the gate over every labelled pair and compare with the label."""
+    from .compare import compare
+
+    gold = gold or load()
+    by_id = gold.by_id
+    result = Score()
+
+    for relation in gold.relations:
+        expected = relation["verdict"]
+        a = to_comparable(by_id[relation["a"]])
+        b = to_comparable(by_id[relation["b"]])
+        verdict = compare(a, b)
+        result.results.append(
+            ScoredRelation(
+                id=relation["id"],
+                expected=expected,
+                actual=verdict.verdict,
+                expected_axis=relation.get("axis"),
+                actual_axis=verdict.axis,
+                explanation=verdict.explanation,
+                deferred=is_temporal(relation),
+            )
+        )
+    return result

@@ -102,7 +102,20 @@ def test_the_rounding_case_defeats_a_fixed_relative_tolerance(gold):
     b = by_id["deck-p16-traded-goods-fy23"]["canonical"]
     assert abs(a - b) / max(a, b) > 0.15
 
+    # The verdict itself is INSUFFICIENT_EVIDENCE, because the deck never
+    # declares its consolidation basis. What this pair pins is that the *value*
+    # comparison agrees across a 21% gap — recorded as the verdict the pair
+    # would receive once that axis is supplied.
     relation = next(
         r for r in gold.relations if r["id"] == "rel-traded-goods-rounding"
     )
-    assert relation["verdict"] == "CORROBORATES"
+    assert relation["verdict"] == "INSUFFICIENT_EVIDENCE"
+    assert relation["verdict_if_axis_supplied"] == "CORROBORATES"
+
+    from fkl.values import compare_values, written_precision
+
+    assert compare_values(
+        a, b,
+        a_precision=written_precision("16.54", 1e6),
+        b_precision=written_precision("2", 1e7),
+    ).agree

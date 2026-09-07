@@ -49,11 +49,16 @@ claims:
     canonical: 81420000000
     unit: {dimension: currency, currency: INR, scale: crore}
     period: FY2024
-    qualifiers: {consolidation: consolidated}
+    unknown_qualifiers: [consolidation]
     quote_contains: "₹8,142 Cr"
     note: >
-      Same fact as ar-p35-revenue-consolidated, in crore rather than million.
-      0.006% apart, which is the deck rounding to the nearest crore.
+      Same *value* as ar-p35-revenue-consolidated, in crore rather than
+      million, 0.006% apart. But the deck never states its consolidation basis:
+      its cover letter announces results "on Audited Standalone and
+      Consolidated Financial Results" and no page says which it is showing.
+      Labelled unknown rather than consolidated, which is what the page
+      supports. The first draft of this file assumed consolidated, which was a
+      guess dressed as ground truth.
 
   - id: ar-p35-total-income-fy24
     doc: ar
@@ -76,7 +81,7 @@ claims:
     canonical: 85940000000
     unit: {dimension: currency, currency: INR, scale: crore}
     period: FY2024
-    qualifiers: {consolidation: consolidated}
+    unknown_qualifiers: [consolidation]
     quote_contains: "8,594"
 
   # --- case 3a: reconciled by consolidation basis ---------------------------
@@ -396,6 +401,7 @@ claims:
     canonical: 20000000
     unit: {dimension: currency, currency: INR, scale: crore}
     period: FY2023
+    unknown_qualifiers: [consolidation]
     quote_contains: "Revenue from traded goods"
 
   # --- case 4: the extraction failure, kept as a case -----------------------

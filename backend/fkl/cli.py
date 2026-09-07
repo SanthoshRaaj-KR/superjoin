@@ -96,8 +96,34 @@ def cmd_gold(args) -> int:
 
     gold = load()
     print(summarize(gold))
-    if not args.verify:
+    if not (args.verify or args.score):
         return 0
+
+    if args.score:
+        from .gold import score as score_gold
+
+        scored = score_gold(gold)
+        print()
+        print(f"comparability gate, scored on {len(scored.scored)} of "
+              f"{len(scored.results)} labelled relations")
+        for row in scored.scored:
+            mark = "  ok  " if row.ok else "  FAIL"
+            print(f"{mark}  {row.id:<34} {row.actual}"
+                  + (f" [{row.actual_axis}]" if row.actual_axis else ""))
+            if not row.ok:
+                print(f"          expected {row.expected}"
+                      + (f" [{row.expected_axis}]" if row.expected_axis else ""))
+                print(f"          {row.explanation}")
+        print(f"  accuracy {scored.correct}/{len(scored.scored)} "
+              f"= {scored.accuracy:.0%}")
+        if scored.deferred:
+            print()
+            print(f"  {len(scored.deferred)} relation(s) need the interval "
+                  "engine and are not scored here:")
+            for row in scored.deferred:
+                print(f"      {row.id:<34} expects {row.expected}")
+        if not args.verify:
+            return 0 if scored.correct == len(scored.scored) else 1
 
     result = verify(gold)
     print()
@@ -262,6 +288,11 @@ def main(argv: list[str] | None = None) -> int:
         "--verify",
         action="store_true",
         help="re-read the PDFs and check every labelled quote is where it claims",
+    )
+    p_gold.add_argument(
+        "--score",
+        action="store_true",
+        help="run the comparability gate over every labelled pair",
     )
     p_gold.set_defaults(func=cmd_gold)
 
