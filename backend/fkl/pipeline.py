@@ -44,6 +44,7 @@ class ExtractionRun:
     document_id: int
     pages_attempted: int = 0
     pages_skipped: int = 0
+    claims_replaced: int = 0
     pages_failed: int = 0
     measurements: int = 0
     states: int = 0
@@ -209,13 +210,30 @@ def extract_document_claims(
         skipped = [p for p in page_rows if p.page_no in already]
         page_rows = [p for p in page_rows if p.page_no not in already]
     else:
+        # `--force` replaces rather than appends. Append-only is about never
+        # silently overwriting what a document said as later documents arrive;
+        # it was never meant to make a re-extraction after a prompt change
+        # produce two generations of the same claim side by side. Without this,
+        # forcing a re-run leaves the old readings in place and every count
+        # downstream doubles — the same failure the idempotence guard was added
+        # to prevent, arriving through the flag that bypasses it.
         skipped = []
+        page_numbers = [p.page_no for p in page_rows]
+        replaced = session.query(Claim).filter(
+            Claim.document_id == document_id, Claim.page_no.in_(page_numbers)
+        ).delete(synchronize_session=False)
+        session.query(Quarantine).filter(
+            Quarantine.document_id == document_id,
+            Quarantine.page_no.in_(page_numbers),
+        ).delete(synchronize_session=False)
+        run_replaced = replaced
 
     profile = document.profile_json
     run = ExtractionRun(
         document_id=document_id,
         pages_attempted=len(page_rows),
         pages_skipped=len(skipped),
+        claims_replaced=locals().get("run_replaced", 0),
     )
     text_claims: dict[int, PageExtraction] = {}
 

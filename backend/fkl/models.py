@@ -387,3 +387,49 @@ class Embedding(Base):
     dim: Mapped[int] = mapped_column(Integer)
     vector: Mapped[bytes] = mapped_column(LargeBinary)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+
+class Relation(Base):
+    """A verdict about one pair of claims.
+
+    Derived rather than asserted: nothing here is information the documents
+    contain, only what the gate concluded from two claims that do. It is stored
+    because recomputing every pair on every request is wasteful, and because the
+    corpus-level number — how many apparent disagreements a named axis dissolved
+    — is a query over this table.
+
+    Append-only like everything else. Re-running the gate after a change writes
+    a new generation rather than editing the old one, so a verdict that moved
+    can be seen to have moved.
+    """
+
+    __tablename__ = "relations"
+    __table_args__ = (
+        Index("ix_relations_pair", "claim_a_id", "claim_b_id"),
+        # Named for both columns: `verdict` alone collides with the index
+        # SQLAlchemy generates for the column's own index=True.
+        Index("ix_relations_verdict_axis", "verdict", "axis"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    claim_a_id: Mapped[int] = mapped_column(ForeignKey("claims.id"), index=True)
+    claim_b_id: Mapped[int] = mapped_column(ForeignKey("claims.id"), index=True)
+
+    verdict: Mapped[str] = mapped_column(String(32), index=True)
+    # The field responsible for the verdict. A CONTEXTUAL verdict without one
+    # is a shrug rather than an explanation.
+    axis: Mapped[str | None] = mapped_column(String(32), index=True)
+    explanation: Mapped[str] = mapped_column(Text)
+    differing_axes: Mapped[list] = mapped_column(JSON, default=list)
+    missing_axes: Mapped[list] = mapped_column(JSON, default=list)
+
+    # Kept so the corpus reduction can be reported over *raw value* differences:
+    # how many pairs looked like disagreements before context was consulted.
+    values_differ: Mapped[bool | None] = mapped_column(Boolean)
+    value_difference: Mapped[float | None] = mapped_column(Float)
+    value_relative: Mapped[float | None] = mapped_column(Float)
+    period_relation: Mapped[str | None] = mapped_column(String(24))
+
+    cross_document: Mapped[bool] = mapped_column(Boolean, default=False)
+    generation: Mapped[int] = mapped_column(Integer, default=1, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)

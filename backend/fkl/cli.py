@@ -84,6 +84,28 @@ def cmd_page(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_relate(args) -> int:
+    """Run the comparability gate over every stored pair and report the
+    reduction: how many apparent disagreements a named axis dissolved."""
+    from .relate import conflicts, format_run, relate_corpus
+
+    init_db()
+    with session_scope() as session:
+        run = relate_corpus(
+            session,
+            document_ids=[int(d) for d in args.documents] if args.documents else None,
+        )
+        print(format_run(run))
+        surviving = conflicts(session, limit=args.show)
+        if surviving:
+            print()
+            print(f"  the {len(surviving)} widest surviving disagreement(s):")
+            for relation in surviving:
+                print(f"    claims {relation.claim_a_id} vs {relation.claim_b_id}: "
+                      f"{relation.explanation}")
+    return 0
+
+
 def cmd_gold(args) -> int:
     """Show the gold set, and optionally check it against the source PDFs.
 
@@ -167,6 +189,8 @@ def cmd_extract(args: argparse.Namespace) -> int:
             f"{run.pages_failed} failed"
             + (f", {run.pages_skipped} already extracted (--force to redo)"
                if run.pages_skipped else "")
+            + (f", replaced {run.claims_replaced} earlier claim(s)"
+               if run.claims_replaced else "")
         )
         print(
             f"  proposed {run.proposed} -> kept {run.claims} "
@@ -282,6 +306,14 @@ def main(argv: list[str] | None = None) -> int:
         help="also read chart pages as images (opt-in; see fkl/llm/figures.py)",
     )
     p_extract.set_defaults(func=cmd_extract)
+
+    p_relate = sub.add_parser(
+        "relate", help="compare every comparable pair of stored claims")
+    p_relate.add_argument("documents", nargs="*",
+                          help="document ids (default: the whole corpus)")
+    p_relate.add_argument("--show", type=int, default=10,
+                          help="how many surviving disagreements to print")
+    p_relate.set_defaults(func=cmd_relate)
 
     p_gold = sub.add_parser("gold", help="show the hand-labelled gold set")
     p_gold.add_argument(

@@ -32,8 +32,15 @@ Modality = Literal["actual", "estimate", "projection", "target", "restated"]
 class ClaimBase(BaseModel):
     subject: str = Field(
         description=(
-            "Who or what the claim is about, as printed: a company, a country, a "
-            "person. Use the fullest form available on the page."
+            "The ENTITY the claim is about — a named company, country, "
+            "institution or person, and nothing else. Use the fullest form "
+            "available on the page. It must be a name you could look up: "
+            "'India', 'Delhivery Limited', 'Suvir Suren Sujan'. "
+            "NEVER put the measurement here. 'real GDP growth for 2025-26' is "
+            "not a subject, it is the predicate and the period; the subject of "
+            "that sentence is 'India'. If the entity is named only in the "
+            "document title or a section heading rather than in the sentence "
+            "itself, use that name."
         )
     )
     predicate: str = Field(

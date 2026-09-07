@@ -30,7 +30,7 @@ Under construction, phase by phase. This README is filled in as each layer lands
 | 1b | Figure pass: charts read as images, values still grounded | done, opt-in |
 | 2 | Units, periods, metric and entity registries | done |
 | 2.5 | Hand-labelled gold set | done |
-| 3 | Comparability gate | |
+| 3 | Comparability gate | done |
 | 4 | Temporal engine, cross-document | |
 | 5 | React UI | |
 | 6 | Macro corpus, zero code changes | |
@@ -65,6 +65,33 @@ python -m fkl.cli export 1 -o ../out/ar-fy24.json
 
 Extraction is idempotent by page — re-running skips pages that already have
 claims, so a repeat costs nothing and cannot duplicate. `--force` redoes them.
+
+### The headline number
+
+```bash
+python -m fkl.cli relate
+```
+
+Runs the gate over every comparable pair of stored claims and reports the
+reduction. On the annual report plus the earnings deck (195 claims, 391 pairs):
+
+```
+  346 pairs whose raw values disagree
+    234 explained by a named context axis     (period 216 · consolidation 18)
+    108 blocked — a material axis was undetermined
+      4 genuinely unresolved
+  reduction: 68% of apparent disagreements dissolved by context
+```
+
+The denominator is deliberately what a *context-blind* system would flag: same
+entity, same metric, values differ. That is the baseline being argued against.
+
+The four survivors are the interesting part, and none is a real disagreement —
+two documents from one company mostly should not contradict each other. One is a
+sign convention (`Less: Exceptional Items 224.10` against `(224.10)`, the same
+figure with the sign carried by a row label); three trace to a single extraction
+error where two chart series shared a predicate. A small residual set is useful
+precisely because each survivor is traceable.
 
 ### The gold set
 

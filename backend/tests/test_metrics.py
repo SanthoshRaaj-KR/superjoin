@@ -26,6 +26,8 @@ SIMILARITY = {
     frozenset({"Revenue from contracts with customers", "Revenue from services"}): 0.687,
     frozenset({"Revenue from operations", "Revenue from services"}): 0.747,
     frozenset({"Express Parcel revenue", "Express parcel service revenue"}): 0.944,
+    frozenset({"Revenues from part truckload services",
+               "Revenues from truckload services"}): 0.965,
     frozenset({"Express Parcel revenue", "PTL freight revenue"}): 0.621,
     frozenset({"Adjusted EBITDA", "EBITDA"}): 0.846,
     frozenset({"Express Parcel revenue", "Express Parcel shipments"}): 0.801,
@@ -92,18 +94,45 @@ def test_a_dimension_difference_blocks_a_match_without_a_model_call(
     assert shipments.method == "new"
 
 
-def test_a_near_identical_restatement_links_without_adjudication(session, monkeypatch):
-    """0.944 is above the auto-link line, which exists only for cases like this
-    — the same words rearranged."""
-    monkeypatch.setattr(
-        metrics_module, "_adjudicate", lambda *a: pytest.fail("should not adjudicate")
-    )
+def test_even_a_near_identical_restatement_is_adjudicated(session, monkeypatch):
+    """There is no auto-link band, and the corpus is why.
+
+    A first calibration on fifteen pairs put the worst false positive at 0.846
+    and allowed anything above 0.92 to link unasked. Real extracted claims then
+    produced `Revenues from part truckload services` against `Revenues from
+    truckload services` at 0.965 — two business segments, merged silently, which
+    went on to report a 62% contradiction between PTL and TL revenue.
+
+    `part` is one token in seven and the embedding barely registers it, while it
+    decides which segment the number describes. So similarity only ever
+    proposes.
+    """
+    calls = []
+
+    def counting(a, b, dim):
+        calls.append((a, b))
+        return MetricJudgement(same_metric=True, confidence=0.95, reason="restatement")
+
+    monkeypatch.setattr(metrics_module, "_adjudicate", counting)
     first = resolve_metric(session, "Express Parcel revenue", dimension="currency")
     second = resolve_metric(
         session, "Express parcel service revenue", dimension="currency"
     )
     assert second.metric_id == first.metric_id
-    assert second.method == "embedding"
+    assert second.method == "adjudicated"
+    assert len(calls) == 1
+
+
+def test_one_token_apart_and_a_different_segment_stays_separate(session, monkeypatch):
+    """The pair that removed the auto-link threshold, at its measured 0.965."""
+    monkeypatch.setattr(
+        metrics_module, "_adjudicate", judge(False, "different business segments")
+    )
+    ptl = resolve_metric(session, "Revenues from part truckload services",
+                         dimension="currency")
+    tl = resolve_metric(session, "Revenues from truckload services",
+                        dimension="currency")
+    assert ptl.metric_id != tl.metric_id
 
 
 def test_genuine_synonyms_are_linked_by_the_adjudicator(session, monkeypatch):

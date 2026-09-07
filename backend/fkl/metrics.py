@@ -23,6 +23,14 @@ distinction worth several billion rupees, since the adjustment is the whole
 point of the line. So similarity retrieves candidates and something else
 decides.
 
+Nor is there a safe threshold at the top end, which took a second measurement to
+accept. Running the gate over extracted claims surfaced "Revenues from part
+truckload services" and "Revenues from truckload services" at **0.965** — two
+different business segments, merged silently, which then reported a 62%
+contradiction between them. One token in a seven-token name decides which
+segment a number describes, and the embedding barely registers it. Every
+candidate is adjudicated now.
+
 **What decides, in order of cost:**
 
 1. An alias already on file. Free, and the reason a registry is worth keeping.
@@ -59,12 +67,25 @@ log = logging.getLogger(__name__)
 # a silently unmade comparison and the call is cheap.
 CANDIDATE_FLOOR = 0.60
 
-# Above this, link without adjudicating. Deliberately above the highest observed
-# false positive (0.846, `Adjusted EBITDA` :: `EBITDA`) rather than below the
-# lowest true match, and calibrated on fifteen pairs — a thin sample, which is
-# why the adjudicator remains the real decider and this only skips restatements
-# that are obviously the same words rearranged.
-AUTO_LINK = 0.92
+# There is no auto-link threshold, and this is the second time the corpus has
+# said so. The first calibration put the highest false positive at 0.846 and set
+# a cutoff at 0.92 for "obviously the same words rearranged". Running the gate
+# over real extracted claims then surfaced two merges no threshold would have
+# caught:
+#
+#   0.965  Revenues from part truckload services :: Revenues from truckload
+#          services                                              DIFFERENT
+#   0.911  FY23 EBITDA margin :: FY23 Adjusted EBITDA margin      DIFFERENT
+#
+# `part` is one token in a seven-token name and the embedding barely registers
+# it, yet it decides which business segment the number describes. The first of
+# those merged silently and then reported a 62% contradiction between PTL and TL
+# revenue — a fabricated conflict traceable entirely to this constant.
+#
+# So every candidate above the floor is adjudicated. The adjudicator answers
+# both pairs correctly, and the cost is bounded by vocabulary rather than by
+# page count, so there was never much to save.
+AUTO_LINK = None
 
 # How many candidates to put in front of the adjudicator.
 TOP_K = 5
@@ -176,7 +197,7 @@ def resolve_metric(
 
         if candidates:
             best_score, best = candidates[0]
-            if best_score >= AUTO_LINK:
+            if AUTO_LINK is not None and best_score >= AUTO_LINK:
                 _learn(session, best, predicate, key, dimension, "embedding",
                        best_score)
                 return MetricResolution(
