@@ -1,0 +1,74 @@
+"""Engine and session handling for the append-only store."""
+
+from __future__ import annotations
+
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Iterator
+
+from sqlalchemy import create_engine, event
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session, sessionmaker
+
+from .config import SETTINGS
+from .models import Base
+
+_engine: Engine | None = None
+_Session: sessionmaker | None = None
+
+
+def _ensure_parent_dir(db_url: str) -> None:
+    if db_url.startswith("sqlite:///"):
+        Path(db_url[len("sqlite:///") :]).parent.mkdir(parents=True, exist_ok=True)
+
+
+def get_engine(db_url: str | None = None) -> Engine:
+    """Return the process-wide engine, creating it on first use."""
+    global _engine, _Session
+    if _engine is None:
+        url = db_url or SETTINGS.db_url
+        _ensure_parent_dir(url)
+        _engine = create_engine(url, future=True)
+
+        if url.startswith("sqlite"):
+
+            @event.listens_for(_engine, "connect")
+            def _sqlite_pragmas(dbapi_conn, _record):
+                cur = dbapi_conn.cursor()
+                cur.execute("PRAGMA foreign_keys=ON")
+                cur.execute("PRAGMA journal_mode=WAL")
+                cur.close()
+
+        _Session = sessionmaker(bind=_engine, future=True, expire_on_commit=False)
+    return _engine
+
+
+def reset_engine() -> None:
+    """Drop the cached engine. Used by tests that point at a different DB."""
+    global _engine, _Session
+    if _engine is not None:
+        _engine.dispose()
+    _engine = None
+    _Session = None
+
+
+def init_db(db_url: str | None = None) -> Engine:
+    """Create any missing tables. Safe to call repeatedly."""
+    engine = get_engine(db_url)
+    Base.metadata.create_all(engine)
+    return engine
+
+
+@contextmanager
+def session_scope() -> Iterator[Session]:
+    get_engine()
+    assert _Session is not None
+    session = _Session()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()

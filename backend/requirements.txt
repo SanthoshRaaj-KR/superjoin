@@ -1,0 +1,21 @@
+# PDF text + layout extraction
+pymupdf==1.27.1
+
+# Structured LLM output
+openai==2.16.0
+instructor==1.14.4
+pydantic==2.12.5
+
+# Append-only store
+SQLAlchemy==2.0.52
+
+# API
+fastapi==0.133.1
+uvicorn[standard]==0.41.0
+python-multipart==0.0.20
+
+# Similarity over stored embeddings (Phase 2)
+numpy==2.4.2
+
+# Config
+python-dotenv==1.1.1
