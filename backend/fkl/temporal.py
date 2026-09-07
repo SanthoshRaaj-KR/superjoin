@@ -45,6 +45,9 @@ from datetime import date
 CLOSES_INTERVAL = "CLOSES_INTERVAL"
 SUCCESSION = "SUCCESSION"
 SUCCESSION_WITH_VACANCY = "SUCCESSION_WITH_VACANCY"
+# One person, two consecutive spells in one seat. A redesignation reads as
+# this: the title changed, the holder did not.
+CONTINUES = "CONTINUES"
 CONCURRENT = "CONCURRENT"  # cardinality-N, both valid; emitted for visibility
 CORROBORATES = "CORROBORATES"
 CONTRADICTS = "CONTRADICTS"
@@ -277,10 +280,38 @@ def _same_filler(a: Holding, b: Holding, notes: list[str]) -> TemporalVerdict:
             f"{a.valid_from} to {a.valid_to}",
             a.ref, b.ref, notes=notes,
         )
+
+    # Two spells that do not overlap are not two accounts of one spell. The
+    # same person held the seat twice — and in this corpus that is a
+    # redesignation: Donald Colleran is "Non Executive - Nominee Director (till
+    # May 23, 2022)" and "Non-Executive Director (w.e.f. May 24, 2022)", one day
+    # apart, on one page of one document. Reading that as a conflict about when
+    # he served requires ignoring that the two intervals fit together perfectly.
+    if not a.overlaps(b):
+        first, second = (a, b) if _starts_before(a, b) else (b, a)
+        gap = (
+            (second.valid_from - first.valid_to).days
+            if first.valid_to and second.valid_from else None
+        )
+        contiguous = gap is not None and gap <= CONTIGUOUS_DAYS
+        return TemporalVerdict(
+            CONTINUES, "valid_time",
+            f"{a.filler} holds {a.predicate} of {a.scope} over two consecutive "
+            f"spells, {first.valid_from}-{first.valid_to} then "
+            f"{second.valid_from}-{second.valid_to}"
+            + (" — contiguous, so a redesignation or reappointment rather than "
+               "a break in service" if contiguous
+               else f" — with {gap} days between them" if gap is not None
+               else ""),
+            first.ref, second.ref, gap_days=gap, notes=notes,
+        )
+
+    # Overlapping but unequal: two accounts of one spell that disagree about
+    # when it ran. This is the case the fallback is actually for.
     return TemporalVerdict(
         CONTRADICTS, "valid_time",
-        f"two documents give different intervals for {a.filler} as "
-        f"{a.predicate}: {a.valid_from}-{a.valid_to} against "
+        f"two assertions give different, overlapping intervals for {a.filler} "
+        f"as {a.predicate}: {a.valid_from}-{a.valid_to} against "
         f"{b.valid_from}-{b.valid_to}",
         a.ref, b.ref, notes=notes,
     )

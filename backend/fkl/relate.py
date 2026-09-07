@@ -43,7 +43,8 @@ from .compare import (
     Comparable,
     compare,
 )
-from .models import Claim, Entity, Metric, Relation
+from .models import Claim, Entity, Metric, Page, Relation
+from .reconcile import reconcile
 from .periods import UNKNOWN as UNKNOWN_PERIOD
 from .periods import Period
 from .units import UNKNOWN as UNKNOWN_UNIT
@@ -104,6 +105,7 @@ def to_comparable(
         if claim.value_raw
         else None,
         value_text=claim.value_text,
+        value_raw=claim.value_raw,
         qualifiers=claim.qualifiers or {},
         unknown_qualifiers=claim.unknown_qualifiers or [],
         modality=claim.modality or "actual",
@@ -139,6 +141,14 @@ class RelateRun:
     unresolved: int = 0
     blocked: int = 0
     cross_document: int = 0
+    # The second look. `investigated` is how many contradictions were sent back
+    # to the page; `withdrawn` is how many did not survive it. Reported apart
+    # from the rest of the reduction on purpose — a contradiction the system
+    # raised and then withdrew is a claim about its own first pass, and folding
+    # it into the headline would hide that.
+    investigated: int = 0
+    withdrawn: int = 0
+    recovered_axes: dict[str, int] = field(default_factory=dict)
 
     @property
     def reduction(self) -> float:
@@ -153,8 +163,20 @@ def relate_corpus(
     *,
     document_ids: list[int] | None = None,
     generation: int | None = None,
+    investigator=None,
+    reconcile_signs: bool = True,
 ) -> RelateRun:
-    """Compare every comparable pair of claims and store the verdicts."""
+    """Compare every comparable pair of claims and store the verdicts.
+
+    ``investigator`` turns on the second look: every pair the gate calls a
+    contradiction is sent back to its pages to see whether the distinction was
+    printed there and missed. Off by default, because it costs one model call
+    per surviving contradiction and because the gate has to remain runnable —
+    and testable — with no credentials at all.
+
+    ``reconcile_signs`` runs only the deterministic sign-convention scout, which
+    needs no model and no key. It is on by default for that reason.
+    """
     stmt = select(Claim)
     if document_ids:
         stmt = stmt.where(Claim.document_id.in_(document_ids))
@@ -182,6 +204,7 @@ def relate_corpus(
         blocks[(claim.entity_id, claim.metric_id)].append(claim)
 
     run = RelateRun(claims=len(claims), generation=generation)
+    pages: dict = {}
 
     for (entity_id, metric_id), members in blocks.items():
         if len(members) < 2:
@@ -201,6 +224,27 @@ def relate_corpus(
         for left, right in itertools.combinations(members, 2):
             verdict = compare(comparables[left.id], comparables[right.id])
             run.pairs += 1
+
+            # A contradiction is a hypothesis, not a conclusion. Before it is
+            # recorded, go back to the two pages and look for the distinction
+            # the extraction may have dropped. The gate is what re-decides;
+            # this only supplies it with context it did not have.
+            recovery = None
+            original = verdict.verdict
+            if verdict.verdict == CONTRADICTS and (investigator or reconcile_signs):
+                run.investigated += 1
+                result = reconcile(
+                    comparables[left.id], comparables[right.id],
+                    a_page=_page_text(session, pages, left),
+                    b_page=_page_text(session, pages, right),
+                    investigator=investigator,
+                )
+                if result.changed:
+                    verdict, recovery = result.verdict, result.recovery
+                    run.withdrawn += 1
+                    run.recovered_axes[recovery.axis] = (
+                        run.recovered_axes.get(recovery.axis, 0) + 1)
+
             run.verdicts[verdict.verdict] = run.verdicts.get(verdict.verdict, 0) + 1
             if verdict.axis:
                 run.axes[verdict.axis] = run.axes.get(verdict.axis, 0) + 1
@@ -259,12 +303,37 @@ def relate_corpus(
                     period_relation=verdict.period_relation,
                     cross_document=cross,
                     generation=generation,
+                    reconsidered=recovery is not None,
+                    original_verdict=original if recovery is not None else None,
+                    recovery_axis=recovery.axis if recovery else None,
+                    recovery_method=recovery.method if recovery else None,
+                    recovery_reason=recovery.reason if recovery else None,
+                    recovery_confidence=recovery.confidence if recovery else None,
                 )
             )
 
     session.flush()
     log.info("compared %s pairs across %s blocks", run.pairs, run.blocks)
     return run
+
+
+def _page_text(session: Session, cache: dict, claim: Claim) -> str:
+    """The laid-out reading of a claim's page, loaded once and reused.
+
+    ``rendered_text`` rather than ``text``, because the distinctions this is
+    searched for live in table structure: a scenario table's row label is only
+    beside its figures once reading order has been restored. Raw text is
+    appended so that a span found only in the original still grounds.
+    """
+    key = (claim.document_id, claim.page_no)
+    if key not in cache:
+        page = session.scalar(
+            select(Page).where(Page.document_id == claim.document_id,
+                               Page.page_no == claim.page_no)
+        )
+        cache[key] = "\n".join(
+            filter(None, [page.rendered_text, page.text])) if page else ""
+    return cache[key]
 
 
 def format_run(run: RelateRun) -> str:
@@ -278,6 +347,16 @@ def format_run(run: RelateRun) -> str:
         f"    {run.blocked} blocked — a material axis was undetermined",
         f"    {run.unresolved} genuinely unresolved",
     ]
+    if run.investigated:
+        lines.append("")
+        lines.append(
+            f"  second look: {run.investigated} contradiction(s) sent back to "
+            f"the page, {run.withdrawn} withdrawn"
+        )
+        if run.recovered_axes:
+            lines.append("    context recovered on review: " + " · ".join(
+                f"{k} {v}" for k, v in
+                sorted(run.recovered_axes.items(), key=lambda kv: -kv[1])))
     if run.raw_disagreements:
         lines.append(f"  reduction: {run.reduction:.0%} of apparent disagreements "
                      "dissolved by context")
@@ -305,6 +384,20 @@ def conflicts(session: Session, limit: int = 20, generation: int | None = None):
     if generation is not None:
         stmt = stmt.where(Relation.generation == generation)
     return list(session.scalars(stmt.order_by(Relation.value_relative.desc()).limit(limit)))
+
+
+def withdrawn(session: Session, limit: int = 20, generation: int | None = None):
+    """Contradictions the system raised and then took back.
+
+    Worth listing separately from the rest of the reduction. These are the pairs
+    where the first pass was wrong and the second caught it, and each one names
+    the context the extraction dropped — which is a to-do list for the extractor
+    as much as it is a result.
+    """
+    stmt = select(Relation).where(Relation.reconsidered.is_(True))
+    if generation is not None:
+        stmt = stmt.where(Relation.generation == generation)
+    return list(session.scalars(stmt.limit(limit)))
 
 
 def corroborations(session: Session, limit: int = 20, cross_document_only: bool = True):
@@ -428,7 +521,8 @@ def relate_states(
                 run.raw_disagreements += 1
                 run.unresolved += 1
             elif verdict.verdict in {"CLOSES_INTERVAL", "SUCCESSION",
-                                     "SUCCESSION_WITH_VACANCY", "CONTEXTUAL"}:
+                                     "SUCCESSION_WITH_VACANCY", "CONTINUES",
+                                     "CONTEXTUAL"}:
                 run.raw_disagreements += 1
                 run.explained += 1
                 run.explaining_axes[verdict.axis] = (

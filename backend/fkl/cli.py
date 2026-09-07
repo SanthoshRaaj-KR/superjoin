@@ -108,9 +108,15 @@ def cmd_relate(args) -> int:
 
     init_db()
     with session_scope() as session:
+        investigator = None
+        if args.review:
+            from .reconcile import investigate
+
+            investigator = investigate
         run = relate_corpus(
             session,
             document_ids=[int(d) for d in args.documents] if args.documents else None,
+            investigator=investigator,
         )
         print(format_run(run))
         states = relate_states(
@@ -127,10 +133,22 @@ def cmd_relate(args) -> int:
             print("    " + " · ".join(
                 f"{k} {v}" for k, v in sorted(states.verdicts.items(),
                                               key=lambda kv: -kv[1])))
+        if run.withdrawn:
+            from .relate import withdrawn
+
+            print()
+            print(f"  contradictions withdrawn on review:")
+            for relation in withdrawn(session, generation=run.generation):
+                print(f"    claims {relation.claim_a_id} vs {relation.claim_b_id} "
+                      f"-> {relation.verdict} [{relation.recovery_axis}]")
+                print(f"      {relation.recovery_reason}")
+
         surviving = conflicts(session, limit=args.show, generation=run.generation)
         if surviving:
+            checked = " after review" if run.investigated else ""
             print()
-            print(f"  the {len(surviving)} widest surviving disagreement(s):")
+            print(f"  the {len(surviving)} widest surviving disagreement(s)"
+                  f"{checked}:")
             for relation in surviving:
                 print(f"    claims {relation.claim_a_id} vs {relation.claim_b_id}: "
                       f"{relation.explanation}")
@@ -365,6 +383,13 @@ def main(argv: list[str] | None = None) -> int:
         "relate", help="compare every comparable pair of stored claims")
     p_relate.add_argument("documents", nargs="*",
                           help="document ids (default: the whole corpus)")
+    p_relate.add_argument(
+        "--review",
+        action="store_true",
+        help="send every contradiction back to its pages before reporting it, "
+             "to look for a distinction the extraction missed (one model call "
+             "per surviving contradiction)",
+    )
     p_relate.add_argument("--show", type=int, default=10,
                           help="how many surviving disagreements to print")
     p_relate.set_defaults(func=cmd_relate)

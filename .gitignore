@@ -13,6 +13,8 @@ venv/
 # Local artifacts
 data/*.sqlite
 data/*.sqlite-journal
+data/*.sqlite-wal
+data/*.sqlite-shm
 out/
 *.log
 
@@ -25,5 +27,3 @@ frontend/.vite/
 .DS_Store
 Thumbs.db
 
-# Scratch, not part of the deliverable
-PDF Fact Reconciliation System/

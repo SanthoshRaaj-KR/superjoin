@@ -83,6 +83,10 @@ class Comparable:
     value_canonical: float | None = None
     precision: float | None = None
     value_text: str | None = None
+    # The number exactly as printed. Not used by the gate, which compares
+    # canonical values — but a second look has to find the figure on the page,
+    # and the page prints "(6.3%)", not -6.3.
+    value_raw: str | None = None
     qualifiers: dict[str, str] = field(default_factory=dict)
     unknown_qualifiers: list[str] = field(default_factory=list)
     modality: str = "actual"

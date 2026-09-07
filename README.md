@@ -73,25 +73,100 @@ python -m fkl.cli relate
 ```
 
 Runs the gate over every comparable pair of stored claims and reports the
-reduction. On the annual report plus the earnings deck (195 claims, 391 pairs):
+reduction. Over all five documents (276 claims, 444 pairs):
 
 ```
-  346 pairs whose raw values disagree
-    234 explained by a named context axis     (period 216 · consolidation 18)
-    108 blocked — a material axis was undetermined
-      4 genuinely unresolved
-  reduction: 68% of apparent disagreements dissolved by context
+  391 pairs whose raw values disagree
+    272 explained by a named context axis
+    117 blocked — a material axis was undetermined
+      2 genuinely unresolved
+  reduction: 69% of apparent disagreements dissolved by context
 ```
 
 The denominator is deliberately what a *context-blind* system would flag: same
 entity, same metric, values differ. That is the baseline being argued against.
 
-The four survivors are the interesting part, and none is a real disagreement —
-two documents from one company mostly should not contradict each other. One is a
-sign convention (`Less: Exceptional Items 224.10` against `(224.10)`, the same
-figure with the sign carried by a row label); three trace to a single extraction
-error where two chart series shared a predicate. A small residual set is useful
-precisely because each survivor is traceable.
+### A contradiction has to survive an investigation
+
+The gate is careful and it is still not careful enough, because it can only
+reason about context that reached it. Two claims arriving with the same entity,
+the same metric, the same period and no distinguishing qualifier *must* be
+called a contradiction — the gate is right, given what it was handed. The
+question is whether what it was handed was complete.
+
+It usually is not. Auditing the eight contradictions the gate first produced
+across this corpus, **not one was a real disagreement.** Every single one was a
+qualifier printed on the page that did not survive extraction:
+
+```
+"Real hourly wages have grown by 16 and 26 percent since 2018
+ in rural and urban areas, respectively"     -> one sentence, two facts     [area]
+
+July WEO | 6.4 | 6.4                         -> a scenario table whose row
+Current  | 6.6 | 6.2                            labels are the distinction   [estimate_vintage]
+
+Less: Exceptional Items | 224.10             -> the same figure as (224.10),
+                                                sign carried by a row label  [sign_convention]
+```
+
+So `relate --review` sends every contradiction back to its pages before
+reporting it:
+
+```
+  second look: 8 contradiction(s) sent back to the page, 6 withdrawn
+    context recovered on review: estimate_vintage 2 · sign_convention 1
+                                 measure_basis 1 · time_reference 1 · area 1
+```
+
+Five of the six became CONTEXTUAL with the axis named. The sixth became
+INSUFFICIENT_EVIDENCE, and it is the most interesting of them. Asked what
+separated *"Core inflation increased to 4.6 percent (from 3.5 percent FY2024/25
+average)"*, the investigator answered `time_reference`, labelling one side
+`"3.5 percent FY2024/25 average"` — a real label, printed — and the other
+`"4.6 percent"`, which is the figure wearing a label's clothes. That passes a
+naive "the value must appear on the page" check perfectly, because of course it
+does; it *is* the value. The circular half is dropped, which leaves one real
+label and one absence — an undetermined axis, so the pair is blocked rather
+than explained. Explaining a disagreement by restating one of the two numbers is
+not an explanation.
+
+**The investigator recovers context. It never issues a verdict.** It is asked
+one question — is there a qualifier on this page these two claims differ on? —
+and its answer is a proposed *fact about the document*, grounded against the
+page exactly like any other claim and then fed back through the same
+deterministic `compare()`. The gate decides, twice. Three things constrain it:
+
+- **Every recovered value must be found on the page.** The quoted span has to
+  locate under the grounding validator, and the axis value has to appear inside
+  that span. Two correct proposals were rejected on this rule before the prompt
+  was taught to cite the label rather than the figure — the rule did not move.
+- **It can only ever make claims less comparable.** CONTRADICTS becomes
+  CONTEXTUAL or INSUFFICIENT_EVIDENCE, never CORROBORATES. "Look harder until
+  they match" is the failure mode this layer would otherwise introduce, and the
+  path is closed by assertion rather than by hope.
+- **An axis stated for only one side blocks rather than explains.** If the page
+  labels one figure and says nothing about the other, that is an undetermined
+  material axis, not a resolution — absent is not equal, applied to an axis
+  nobody knew to look for until the second pass found it.
+
+**What is reproducible and what is not.** The gate is a pure function and the
+sign-convention scout is arithmetic plus a lexical check, so both give the same
+answer on every run — `relate` without `--review` is byte-identical run to run.
+The review pass calls a model, and a model at temperature 0 is still not a
+guarantee. Its output is therefore constrained rather than trusted: nothing it
+proposes takes effect unless it grounds, and the verdict is always recomputed by
+the deterministic gate. The residual set can move by a pair between runs; the
+verdicts themselves cannot be written by the model at all.
+
+`sign_convention` is resolved with no model call at all: matching magnitudes,
+opposing signs, and a sign-carrying row label found on the page. `area` was
+never in any list — it was discovered, which is what the axis vocabulary being
+open is for.
+
+Withdrawn contradictions are stored beside their original verdict rather than
+replacing it, so the record shows what the first pass concluded, what the
+second found, and on what evidence. A contradiction the system raised and then
+took back is a more interesting object than one it never raised.
 
 ### Time, and the difference between not knowing and being wrong
 

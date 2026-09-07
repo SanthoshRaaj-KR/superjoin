@@ -316,3 +316,94 @@ def test_both_engines_agree_on_what_one_role_is(session):
     from fkl.temporal import group_slots
 
     assert len(group_slots([ha, hb])) == 1
+
+
+# --- the second look, over stored claims ------------------------------------
+
+
+def test_a_contradiction_withdrawn_on_review_counts_as_explained(session):
+    """The reduction has to move when a contradiction is withdrawn, or the
+    second look is decoration. The pair still had differing raw values — it
+    belongs in the denominator — but it is no longer unresolved."""
+    from fkl.models import Page
+    from fkl.reconcile import Recovery
+
+    page = ("Table 4. Growth under alternative tariff assumptions\n"
+            "July WEO | 6.4 | 6.4\nCurrent | 6.6 | 6.2\n")
+    for doc in (1, 2):
+        session.add(Page(document_id=doc, page_no=0, sha256="x" * 64,
+                         text=page, rendered_text=page, n_chars=len(page)))
+    session.add(Metric(id=3, canonical_name="real GDP growth", dimension="percent"))
+    session.flush()
+
+    common = dict(metric_id=3, unit_dimension="percent", unit_scale=1.0,
+                  unit_currency=None, modality="projection")
+    add(session, value_raw="6.4", value_num=6.4, value_canonical=6.4,
+        evidence_quote="July WEO | 6.4 | 6.4", **common, **fy("FY26"))
+    add(session, document_id=2, value_raw="6.6", value_num=6.6, value_canonical=6.6,
+        evidence_quote="Current | 6.6 | 6.2", **common, **fy("FY26"))
+
+    def investigator(a, b, leads):
+        return Recovery(
+            axis="estimate_vintage", a_value="July WEO", b_value="Current",
+            a_evidence="July WEO | 6.4 | 6.4", b_evidence="Current | 6.6 | 6.2",
+            method="investigated", confidence=0.9,
+            reason="the table's rows are two forecast vintages",
+        )
+
+    run = relate_corpus(session, investigator=investigator)
+    assert run.investigated == 1
+    assert run.withdrawn == 1
+    assert run.raw_disagreements == 1
+    assert run.unresolved == 0
+    assert run.explained == 1
+    assert run.recovered_axes == {"estimate_vintage": 1}
+
+    stored = session.query(Relation).one()
+    assert stored.verdict == "CONTEXTUAL"
+    assert stored.reconsidered is True
+    assert stored.original_verdict == "CONTRADICTS"
+    assert stored.recovery_axis == "estimate_vintage"
+    assert "vintages" in stored.recovery_reason
+
+
+def test_a_contradiction_that_survives_review_is_recorded_as_such(session):
+    """And the run says it was checked. "Unresolved after investigation" is a
+    stronger statement than "unresolved", and only one of them is true here."""
+    from fkl.models import Page
+
+    page = "Real GDP growth is projected at 6.5 per cent for 2025-26."
+    for doc in (1, 2):
+        session.add(Page(document_id=doc, page_no=0, sha256="y" * 64,
+                         text=page, rendered_text=page, n_chars=len(page)))
+    session.add(Metric(id=3, canonical_name="real GDP growth", dimension="percent"))
+    session.flush()
+
+    common = dict(metric_id=3, unit_dimension="percent", unit_scale=1.0,
+                  unit_currency=None, modality="projection", evidence_quote=page)
+    add(session, value_raw="6.5", value_num=6.5, value_canonical=6.5,
+        **common, **fy("FY26"))
+    add(session, document_id=2, value_raw="6.6", value_num=6.6, value_canonical=6.6,
+        **common, **fy("FY26"))
+
+    run = relate_corpus(session, investigator=lambda *a, **k: None)
+    assert run.investigated == 1
+    assert run.withdrawn == 0
+    assert run.unresolved == 1
+    stored = session.query(Relation).one()
+    assert stored.verdict == "CONTRADICTS"
+    assert stored.reconsidered is False
+
+
+def test_the_review_is_off_unless_asked_for(session):
+    """The gate has to stay runnable, and testable, with no credentials. Only
+    the deterministic sign scout runs by default."""
+    add(session, value_raw="6.5", value_num=6.5, unit_dimension="percent",
+        unit_scale=1.0, unit_currency=None, value_canonical=6.5, **fy("FY26"))
+    add(session, document_id=2, value_raw="6.6", value_num=6.6,
+        unit_dimension="percent", unit_scale=1.0, unit_currency=None,
+        value_canonical=6.6, **fy("FY26"))
+
+    run = relate_corpus(session)          # no investigator
+    assert run.unresolved == 1
+    assert run.withdrawn == 0

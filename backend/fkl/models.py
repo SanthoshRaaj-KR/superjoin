@@ -433,3 +433,15 @@ class Relation(Base):
     cross_document: Mapped[bool] = mapped_column(Boolean, default=False)
     generation: Mapped[int] = mapped_column(Integer, default=1, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+    # What a second look at the pages found, for pairs the gate first called a
+    # contradiction. Kept beside the verdict rather than replacing it: a
+    # contradiction that was withdrawn is a different and more interesting
+    # object than one that was never raised, and a reader has to be able to see
+    # which axis withdrew it and on what evidence.
+    reconsidered: Mapped[bool] = mapped_column(Boolean, default=False)
+    original_verdict: Mapped[str | None] = mapped_column(String(32))
+    recovery_axis: Mapped[str | None] = mapped_column(String(48))
+    recovery_method: Mapped[str | None] = mapped_column(String(48))
+    recovery_reason: Mapped[str | None] = mapped_column(Text)
+    recovery_confidence: Mapped[float | None] = mapped_column(Float)

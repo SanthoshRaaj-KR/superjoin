@@ -313,3 +313,45 @@ def test_overlapping_holders_are_compared_however_far_apart_they_sort():
     ]
     pairs = {(a.ref, b.ref) for a, b in succession_pairs(holdings)}
     assert ("a", "c") in pairs  # A's open interval covers C's
+
+
+def test_one_person_holding_a_seat_twice_is_not_a_conflict():
+    """AR p90, and the same pair that the measurement gate used to mislabel.
+
+    Donald Colleran is "Non Executive - Nominee Director (till May 23, 2022)"
+    and then "Non-Executive Director (w.e.f. May 24, 2022)". Once both titles
+    resolve to one canonical role, the two holdings land in one seat with the
+    same holder and unequal intervals — and the fallback for that case assumed
+    two accounts of a single spell that disagree. These are two spells that fit
+    together to the day. Reading them as a conflict requires ignoring that.
+    """
+    from fkl.temporal import CONTINUES, Holding, relate_holdings
+
+    a = Holding(ref="a", scope="Delhivery Limited", predicate="non-executive director",
+                filler="Mr. Donald Francis Colleran", valid_to=date(2022, 5, 23))
+    b = Holding(ref="b", scope="Delhivery Limited", predicate="non-executive director",
+                filler="Mr. Donald Francis Colleran", valid_from=date(2022, 5, 24),
+                valid_to=date(2023, 9, 27))
+
+    verdict = relate_holdings(a, b, cardinality=0)
+    assert verdict.verdict == CONTINUES
+    assert verdict.gap_days == 1
+    assert "redesignation" in verdict.explanation
+
+
+def test_two_accounts_of_one_spell_that_disagree_still_contradict():
+    """The fallback narrowed, not removed. Overlapping-but-unequal intervals
+    for one person are two documents disagreeing about when they served, which
+    is a real conflict and has to keep being reported."""
+    from fkl.temporal import CONTRADICTS, Holding, relate_holdings
+
+    a = Holding(ref="a", scope="Delhivery Limited", predicate="company secretary",
+                filler="Mr. Vivek Kumar", valid_from=date(2023, 6, 1),
+                valid_to=date(2024, 3, 27))
+    b = Holding(ref="b", scope="Delhivery Limited", predicate="company secretary",
+                filler="Mr. Vivek Kumar", valid_from=date(2023, 6, 1),
+                valid_to=date(2024, 9, 30))
+
+    verdict = relate_holdings(a, b)
+    assert verdict.verdict == CONTRADICTS
+    assert "overlapping" in verdict.explanation
