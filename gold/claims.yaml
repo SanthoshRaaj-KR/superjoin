@@ -214,8 +214,10 @@ claims:
     claim_type: state
     subject: Suvir Suren Sujan
     metric: Non-Executive Director
+    org_scope: Delhivery Limited
     value_text: Delhivery Limited
     valid_to_is_open: true
+    asserted: 2022-05-14
     quote_contains: "Suvir"
     note: >
       The 2022 prospectus knows of no end date. That is not a claim that he
@@ -227,9 +229,11 @@ claims:
     claim_type: state
     subject: Suvir Suren Sujan
     metric: Non-Executive Director
+    org_scope: Delhivery Limited
     value_text: Delhivery Limited
     valid_from: 2022-05-24
     valid_to: 2023-08-24
+    asserted: 2024-08-08
     quote_contains: "resigned w.e.f. August 24, 2023"
 
   # --- the Company Secretary succession, cardinality 1 ----------------------
@@ -240,8 +244,10 @@ claims:
     claim_type: state
     subject: Sunil Kumar Bansal
     metric: Company Secretary
+    org_scope: Delhivery Limited
     value_text: Delhivery Limited
     valid_to: 2023-05-31
+    asserted: 2024-08-08
     quote_contains: "Bansal"
 
   - id: ar-p90-vivek-cs
@@ -250,9 +256,11 @@ claims:
     claim_type: state
     subject: Vivek Kumar
     metric: Company Secretary
+    org_scope: Delhivery Limited
     value_text: Delhivery Limited
     valid_from: 2023-06-01
     valid_to: 2024-03-27
+    asserted: 2024-08-08
     quote_contains: "resigned w.e.f. March 27, 2024"
 
   - id: ar-p90-rawat-cs
@@ -261,9 +269,11 @@ claims:
     claim_type: state
     subject: Madhulika Rawat
     metric: Company Secretary
+    org_scope: Delhivery Limited
     value_text: Delhivery Limited
     valid_from: 2024-05-17
     valid_to_is_open: true
+    asserted: 2024-08-08
     quote_contains: "Madhulika Rawat"
 
   # --- case 1b: non-numeric corroboration -----------------------------------
@@ -303,6 +313,7 @@ claims:
     subject: Delhivery Limited
     metric: CIN
     value_text: U63090DL2011PLC221234
+    asserted: 2022-05-14
     quote_contains: "U63090DL2011PLC221234"
 
   - id: ar-p29-cin
@@ -312,6 +323,7 @@ claims:
     subject: Delhivery Limited
     metric: CIN
     value_text: L63090DL2011PLC221234
+    asserted: 2024-08-08
     quote_contains: "L63090DL2011PLC221234"
     note: >
       The prefix flips from unlisted to listed at IPO. The registration number

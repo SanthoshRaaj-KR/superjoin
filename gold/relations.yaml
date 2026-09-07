@@ -145,7 +145,7 @@ relations:
   - id: rel-cs-vivek-to-rawat
     a: ar-p90-vivek-cs
     b: ar-p90-rawat-cs
-    verdict: SUCCESSION
+    verdict: SUCCESSION_WITH_VACANCY
     axis: valid_time
     gap_days: 51
     why: >

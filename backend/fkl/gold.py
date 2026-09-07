@@ -291,27 +291,117 @@ class Score:
 
 
 def score(gold: GoldSet | None = None) -> Score:
-    """Run the gate over every labelled pair and compare with the label."""
+    """Run the right engine over every labelled pair and compare with the label.
+
+    Two engines, routed by what the claims carry rather than by what the label
+    expects — scoring against the answer would make the number meaningless. A
+    pair of state claims with any interval or assertion date goes to the
+    interval engine; everything else goes to the comparability gate.
+    """
     from .compare import compare
+    from .temporal import infer_cardinality, observe_cardinality, relate_holdings
 
     gold = gold or load()
     by_id = gold.by_id
     result = Score()
 
+    # Cardinality is a property of a slot, inferred from the predicate and then
+    # corrected by what the documents show, so it is resolved once over the
+    # whole set rather than per pair.
+    slots: dict[tuple[str, str], list] = {}
+    for claim in gold.claims:
+        if is_temporal_claim(claim):
+            holding = to_holding(claim)
+            slots.setdefault(
+                (holding.scope.lower(), holding.predicate.lower()), []
+            ).append(holding)
+
     for relation in gold.relations:
-        expected = relation["verdict"]
-        a = to_comparable(by_id[relation["a"]])
-        b = to_comparable(by_id[relation["b"]])
-        verdict = compare(a, b)
+        claim_a, claim_b = by_id[relation["a"]], by_id[relation["b"]]
+
+        if is_temporal_claim(claim_a) and is_temporal_claim(claim_b):
+            a, b = to_holding(claim_a), to_holding(claim_b)
+            key = (a.scope.lower(), a.predicate.lower())
+            seeded = infer_cardinality(a.predicate)
+            cardinality, note = observe_cardinality(slots.get(key, []), seeded)
+            temporal = relate_holdings(a, b, cardinality, note)
+            actual = temporal.verdict if temporal else "NO_RELATION"
+            actual_axis = temporal.axis if temporal else None
+            explanation = temporal.explanation if temporal else (
+                "cardinality allows both to hold at once; no relation emitted")
+        else:
+            verdict = compare(to_comparable(claim_a), to_comparable(claim_b))
+            actual, actual_axis = verdict.verdict, verdict.axis
+            explanation = verdict.explanation
+
         result.results.append(
             ScoredRelation(
                 id=relation["id"],
-                expected=expected,
-                actual=verdict.verdict,
+                expected=relation["verdict"],
+                actual=actual,
                 expected_axis=relation.get("axis"),
-                actual_axis=verdict.axis,
-                explanation=verdict.explanation,
-                deferred=is_temporal(relation),
+                actual_axis=actual_axis,
+                explanation=explanation,
             )
         )
     return result
+
+
+# --- routing to the interval engine -----------------------------------------
+
+
+def _as_date(value):
+    from datetime import date, datetime
+
+    if value is None or isinstance(value, date):
+        return value
+    return datetime.strptime(str(value), "%Y-%m-%d").date()
+
+
+def to_holding(claim: dict):
+    """A state claim as an interval assertion.
+
+    Two shapes reach here and the discriminator is ``org_scope``:
+
+    - A *role*: subject is the person, org_scope is the company. The slot only
+      one person can occupy is the company's, so scope is the company and the
+      person is the filler.
+    - An *attribute*: subject is the company and value_text is the value. The
+      company's CIN is the slot; the identifier is what fills it.
+
+    Getting this backwards blocks a succession into per-person groups, where
+    each holder is only ever compared with themselves and nothing is found.
+    """
+    from .temporal import Holding
+
+    org = claim.get("org_scope")
+    if org:
+        scope, filler = org, claim["subject"]
+    else:
+        scope, filler = claim["subject"], claim.get("value_text") or ""
+
+    return Holding(
+        ref=claim["id"],
+        scope=scope,
+        predicate=claim["metric"],
+        filler=filler,
+        valid_from=_as_date(claim.get("valid_from")),
+        valid_to=_as_date(claim.get("valid_to")),
+        valid_to_is_open=bool(claim.get("valid_to_is_open")),
+        asserted=_as_date(claim.get("asserted")),
+        document=claim.get("doc"),
+        page_no=claim.get("page"),
+    )
+
+
+def is_temporal_claim(claim: dict) -> bool:
+    """Whether a claim carries anything the interval engine can use.
+
+    A registered office asserted with no dates has no temporal content and
+    belongs to the ordinary gate, which compares its text. A CIN with an
+    assertion date does — assertion time alone is enough to order two values.
+    """
+    return claim.get("claim_type") == "state" and any(
+        claim.get(field)
+        for field in ("valid_from", "valid_to", "valid_to_is_open", "asserted")
+    )

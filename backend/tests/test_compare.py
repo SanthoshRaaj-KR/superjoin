@@ -38,9 +38,8 @@ from fkl.values import written_precision  # noqa: E402
 def test_the_gate_matches_every_label_it_is_responsible_for():
     """The headline number, and the reason the gold set was written first.
 
-    Relations resolved by valid_time belong to the interval engine and are
-    reported as deferred rather than quietly dropped — the score has to say what
-    it measured.
+    Covers both engines. The comparability gate answers the measurement
+    relations; the interval engine answers the ones resolved by valid_time.
     """
     result = score()
     failures = [
@@ -53,20 +52,30 @@ def test_the_gate_matches_every_label_it_is_responsible_for():
     assert len(result.scored) >= 12
 
 
-def test_the_deferred_relations_are_declared_not_hidden():
+def test_the_interval_relations_are_no_longer_deferred():
+    """They were, until the interval engine existed. All sixteen labelled
+    relations are now answered by one engine or the other, routed by what the
+    claims carry rather than by what the label expects — routing on the answer
+    would make the score meaningless."""
     result = score()
-    assert len(result.deferred) == 4
-    assert {r.expected for r in result.deferred} >= {"CLOSES_INTERVAL", "SUCCESSION"}
+    assert result.deferred == []
+    assert len(result.scored) == 16
+    assert {r.actual for r in result.scored} >= {
+        "CLOSES_INTERVAL", "SUCCESSION", "SUCCESSION_WITH_VACANCY"
+    }
 
 
 def test_every_verdict_that_names_an_axis_actually_names_one():
     """A CONTEXTUAL verdict without an axis explains nothing."""
+    from fkl.gold import is_temporal_claim
+
     gold = load()
     by_id = gold.by_id
     for relation in gold.relations:
-        verdict = compare(
-            to_comparable(by_id[relation["a"]]), to_comparable(by_id[relation["b"]])
-        )
+        claim_a, claim_b = by_id[relation["a"]], by_id[relation["b"]]
+        if is_temporal_claim(claim_a) and is_temporal_claim(claim_b):
+            continue  # the interval engine's, not the gate's
+        verdict = compare(to_comparable(claim_a), to_comparable(claim_b))
         if verdict.verdict in {CONTEXTUAL, CONTEXTUAL_TEMPORAL, INCOMPARABLE,
                                INSUFFICIENT_EVIDENCE}:
             assert verdict.axis, f"{relation['id']} gave {verdict.verdict} with no axis"
