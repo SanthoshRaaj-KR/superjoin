@@ -8,7 +8,7 @@ breaks a grader's run six months from now.
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -20,7 +20,11 @@ load_dotenv(REPO_ROOT / ".env")
 
 @dataclass(frozen=True)
 class Settings:
-    openai_api_key: str | None
+    # Never rendered. A dataclass repr is helpful right up to the moment a
+    # pytest traceback prints the whole settings object into a log — which is
+    # exactly how this was found. The key is read through `has_llm` and passed
+    # to the client; nothing needs to display it.
+    openai_api_key: str | None = field(repr=False)
     model_extract: str
     model_reason: str
     model_embed: str

@@ -216,3 +216,75 @@ class Quarantine(Base):
     detail: Mapped[str | None] = mapped_column(Text)
     payload: Mapped[dict | None] = mapped_column(JSON)  # the rejected claim
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+
+# --- L4 registries ----------------------------------------------------------
+#
+# Two registries, one shape. A registry holds canonical things and the many
+# strings documents use to refer to them, so that "Revenue from contracts with
+# customers" and "Revenue from services" can be recognised as one metric without
+# either spelling being privileged as the "real" one.
+#
+# Unlike claims, registries *are* mutable: they accumulate aliases as documents
+# arrive. That is the "schema that evolves" part of the brief, and it is safe
+# precisely because no fact lives here — only naming.
+
+
+class Entity(Base):
+    """A company, person or country that claims are made about."""
+
+    __tablename__ = "entities"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    canonical_name: Mapped[str] = mapped_column(String(512))
+    entity_type: Mapped[str] = mapped_column(String(32), default="organisation")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+    identifiers: Mapped[list["EntityIdentifier"]] = relationship(
+        back_populates="entity", cascade="all, delete-orphan"
+    )
+    aliases: Mapped[list["EntityAlias"]] = relationship(
+        back_populates="entity", cascade="all, delete-orphan"
+    )
+
+
+class EntityIdentifier(Base):
+    """A registration number that pins an entity across documents and spellings.
+
+    This is the strongest evidence available and it beats every similarity
+    measure. DIN 01173669 identifies one director whether a document writes
+    "Suvir Suren Sujan" or "Suvir Sujan"; the CIN registration number identifies
+    Delhivery across the `U` to `L` prefix change that listing caused, which no
+    string comparison would forgive and no embedding should be trusted to.
+    """
+
+    __tablename__ = "entity_identifiers"
+    __table_args__ = (UniqueConstraint("kind", "value", name="uq_identifier"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    entity_id: Mapped[int] = mapped_column(ForeignKey("entities.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(16))  # cin | din | isin | ...
+    value: Mapped[str] = mapped_column(String(64), index=True)
+    # The comparable form: a CIN with its listing prefix and company class
+    # removed, so `U...PLC221234` and `L...PLC221234` share a key.
+    normalized: Mapped[str] = mapped_column(String(64), index=True)
+
+    entity: Mapped[Entity] = relationship(back_populates="identifiers")
+
+
+class EntityAlias(Base):
+    """A surface form that has been seen referring to an entity."""
+
+    __tablename__ = "entity_aliases"
+    __table_args__ = (UniqueConstraint("alias_key", name="uq_entity_alias"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    entity_id: Mapped[int] = mapped_column(ForeignKey("entities.id"), index=True)
+    alias: Mapped[str] = mapped_column(String(512))
+    alias_key: Mapped[str] = mapped_column(String(512), index=True)
+    # How the link was made, so a wrong merge can be traced to its cause.
+    method: Mapped[str] = mapped_column(String(32), default="exact")
+    confidence: Mapped[float] = mapped_column(Float, default=1.0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+    entity: Mapped[Entity] = relationship(back_populates="aliases")
