@@ -47,6 +47,7 @@ class ExtractionRun:
     states: int = 0
     proposed: int = 0
     refused: int = 0  # claims that failed grounding
+    figure_pages_flagged: int = 0
     figure_pages_read: int = 0
     figure_pages_failed: int = 0
     figure_claims: int = 0
@@ -148,7 +149,7 @@ def extract_document_claims(
     *,
     pages: list[int] | None = None,
     workers: int = DEFAULT_WORKERS,
-    use_figures: bool = True,
+    use_figures: bool = False,
 ) -> ExtractionRun:
     """Extract, ground and persist claims for a document.
 
@@ -157,9 +158,19 @@ def extract_document_claims(
     preserved every value and destroyed every relationship — and reads them as
     images to recover which value belongs to which series and period.
 
+    The figure pass is **off by default**, and that is a measured decision
+    rather than a cost saving. On this corpus the charts restate numbers that
+    the tables already carry: the deck prints FY24 revenue as ``8,142`` inside a
+    chart on pages 8 and 9, and also as ``₹8,142 Cr`` in text on page 5 and
+    inside reconstructed table rows on pages 13, 16 and 22. Every demonstration
+    case is reachable without looking at a single image.
+
+    It stays available because that redundancy is a property of these documents,
+    not a guarantee about the next one. A deck that only ever charts a figure
+    would lose it entirely, and the routing signal makes that visible.
+
     ``pages`` restricts the run to specific page numbers, which keeps iterating
     on prompts cheap and makes a targeted re-run possible after a change.
-    ``use_figures=False`` skips the second pass entirely.
     """
     document = session.get(Document, document_id)
     if document is None:
@@ -211,6 +222,7 @@ def extract_document_claims(
 
     # --- second pass: charts, on pages whose figures came back unbound -------
     figure_pages = [p for p in page_rows if should_run(p.unbound_numbers, p.bound_numbers)]
+    run.figure_pages_flagged = len(figure_pages)
     figure_claims: dict[int, PageExtraction] = {}
     if figure_pages and use_figures:
         log.info("figure pass on %s page(s)", len(figure_pages))

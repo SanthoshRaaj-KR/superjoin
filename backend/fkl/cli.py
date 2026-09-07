@@ -109,7 +109,7 @@ def cmd_extract(args: argparse.Namespace) -> int:
             args.document_id,
             pages=parse_page_spec(args.pages),
             workers=args.workers,
-            use_figures=not args.no_figures,
+            use_figures=args.figures,
         )
         print(
             f"doc {run.document_id}: {run.pages_attempted} pages, "
@@ -121,6 +121,11 @@ def cmd_extract(args: argparse.Namespace) -> int:
             f"refused {run.refused}  "
             f"[grounding precision {run.grounding_precision:.0%}]"
         )
+        if run.figure_pages_flagged and not (run.figure_pages_read or run.figure_pages_failed):
+            print(
+                f"  {run.figure_pages_flagged} page(s) carry figures the layout pass "
+                "could not bind; re-run with --figures to read them as images"
+            )
         if run.figure_pages_read or run.figure_pages_failed:
             print(
                 f"  figure pass: {run.figure_pages_read} page(s) read, "
@@ -207,9 +212,9 @@ def main(argv: list[str] | None = None) -> int:
     p_extract.add_argument("--pages", help="page selection, e.g. 0-9,35,40 (default: all)")
     p_extract.add_argument("--workers", type=int, default=6)
     p_extract.add_argument(
-        "--no-figures",
+        "--figures",
         action="store_true",
-        help="skip the chart pass; text extraction only",
+        help="also read chart pages as images (opt-in; see fkl/llm/figures.py)",
     )
     p_extract.set_defaults(func=cmd_extract)
 

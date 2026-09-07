@@ -86,7 +86,7 @@ def test_figure_claims_are_grounded_like_any_other(db, monkeypatch):
     with session_scope() as session:
         doc_id = ingest_pdf(session, DECK, use_llm=False).document_id
     with session_scope() as session:
-        run = pipeline.extract_document_claims(session, doc_id, pages=[8], workers=1)
+        run = pipeline.extract_document_claims(session, doc_id, pages=[8], workers=1, use_figures=True)
 
     assert run.figure_pages_read == 1
     assert run.figure_claims == 1
@@ -150,7 +150,7 @@ def test_a_bound_figure_supersedes_the_unbound_text_reading(db, monkeypatch):
     with session_scope() as session:
         doc_id = ingest_pdf(session, DECK, use_llm=False).document_id
     with session_scope() as session:
-        run = pipeline.extract_document_claims(session, doc_id, pages=[8, 12], workers=1)
+        run = pipeline.extract_document_claims(session, doc_id, pages=[8, 12], workers=1, use_figures=True)
 
     assert run.superseded_by_figures >= 1
 

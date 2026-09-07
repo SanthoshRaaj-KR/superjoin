@@ -29,6 +29,32 @@ That is why this is a second pass rather than a replacement. The text pass reads
 prose and tables, where it is stronger and cheaper. The figure pass runs only on
 pages whose numbers came back unbound, and its output is held to exactly the
 same standard of proof.
+
+**It is off by default, and the measurement is why.**
+
+Asking whether the pass is *necessary* turned out to be a better question than
+asking whether it works. Two findings, in the order they arrived.
+
+First, the routing signal was mostly measuring a bug of our own. Of the 92 pages
+it originally selected, 40 were ordinary financial tables that the XY-cut had
+sliced down their own column gutters, orphaning every value from its label. That
+was a layout defect (fixed in ``pdf/layout.py``), and a vision call would have
+papered over it at roughly a thousand tokens a page. Of the unbound numbers that
+remain, a further 15% are axis tick marks — chart furniture, not facts.
+
+Second, and decisively: financial documents restate themselves. The earnings
+deck charts FY24 revenue as ``8,142`` on pages 8 and 9, and also prints it as
+``₹8,142 Cr`` in text on page 5 and inside reconstructed table rows on pages 13,
+16 and 22. Every demonstration case in this project is reachable from the text
+layer alone, including the cross-document ₹Cr-to-₹Mn corroboration that appeared
+to depend on reading a chart.
+
+So this pass earns its place as coverage for documents we have not seen, not as
+a component the results rest on. Redundancy is a property of these six PDFs, not
+a promise about the seventh, and a deck that only ever charts a number would
+lose it entirely. ``should_run`` therefore stays wired in even when the pass is
+disabled, and reports how many pages carry figures nothing could bind — an
+honest statement of what text extraction did not reach.
 """
 
 from __future__ import annotations
