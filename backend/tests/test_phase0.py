@@ -108,7 +108,9 @@ def test_the_extractor_is_shown_the_rendered_page_not_the_raw_text(db, monkeypat
     with session_scope() as session:
         doc_id = ingest_pdf(session, AR_PDF, use_llm=False).document_id
     with session_scope() as session:
-        pipeline.extract_document_claims(session, doc_id, pages=[35], workers=1)
+        pipeline.extract_document_claims(
+            session, doc_id, pages=[35], workers=1, use_figures=False
+        )
 
     assert "[CONTEXT IN FORCE]" in seen[35]
     assert "Revenue from contracts with customers | 81,415.38 | 72,253.01" in seen[35]
@@ -154,7 +156,9 @@ def test_grounding_gates_the_insert(db, monkeypatch):
     with session_scope() as session:
         doc_id = ingest_pdf(session, AR_PDF, use_llm=False).document_id
     with session_scope() as session:
-        run = pipeline.extract_document_claims(session, doc_id, pages=[1, 21], workers=1)
+        run = pipeline.extract_document_claims(
+            session, doc_id, pages=[1, 21], workers=1, use_figures=False
+        )
 
     assert run.pages_failed == 1
     assert run.proposed == 4
@@ -228,7 +232,9 @@ def test_a_rebuilt_table_row_is_kept_but_scored_lower(db, monkeypatch):
     with session_scope() as session:
         doc_id = ingest_pdf(session, AR_PDF, use_llm=False).document_id
     with session_scope() as session:
-        pipeline.extract_document_claims(session, doc_id, pages=[35], workers=1)
+        pipeline.extract_document_claims(
+            session, doc_id, pages=[35], workers=1, use_figures=False
+        )
 
     with session_scope() as session:
         claim = session.query(Claim).one()

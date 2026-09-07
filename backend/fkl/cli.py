@@ -109,6 +109,7 @@ def cmd_extract(args: argparse.Namespace) -> int:
             args.document_id,
             pages=parse_page_spec(args.pages),
             workers=args.workers,
+            use_figures=not args.no_figures,
         )
         print(
             f"doc {run.document_id}: {run.pages_attempted} pages, "
@@ -120,6 +121,12 @@ def cmd_extract(args: argparse.Namespace) -> int:
             f"refused {run.refused}  "
             f"[grounding precision {run.grounding_precision:.0%}]"
         )
+        if run.figure_pages_read or run.figure_pages_failed:
+            print(
+                f"  figure pass: {run.figure_pages_read} page(s) read, "
+                f"{run.figure_pages_failed} failed -> {run.figure_claims} claims, "
+                f"{run.superseded_by_figures} unbound text claims superseded"
+            )
         if run.grounding_methods:
             print("  matched: " + " · ".join(
                 f"{k} {v}" for k, v in sorted(run.grounding_methods.items())))
@@ -199,6 +206,11 @@ def main(argv: list[str] | None = None) -> int:
     p_extract.add_argument("document_id", type=int)
     p_extract.add_argument("--pages", help="page selection, e.g. 0-9,35,40 (default: all)")
     p_extract.add_argument("--workers", type=int, default=6)
+    p_extract.add_argument(
+        "--no-figures",
+        action="store_true",
+        help="skip the chart pass; text extraction only",
+    )
     p_extract.set_defaults(func=cmd_extract)
 
     p_export = sub.add_parser("export", help="dump a document and its claims as JSON")

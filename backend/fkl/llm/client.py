@@ -53,12 +53,17 @@ def structured(
     *,
     response_model: type[T],
     system: str,
-    user: str,
+    user: str | list[dict],
     model: str | None = None,
     max_retries: int = 2,
     temperature: float = 0.0,
 ) -> T:
     """One structured-output call. Returns a validated model or raises.
+
+    ``user`` is either a string or a list of content parts, which is how an
+    image is attached for the figure pass. Both go through this one function so
+    that temperature, retries and validation behave identically whether the
+    model is reading text or looking at a page.
 
     ``max_retries`` is instructor's validation retry: when the model returns
     something that fails Pydantic validation, the errors are fed back and it

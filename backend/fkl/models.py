@@ -143,6 +143,14 @@ class Claim(Base):
     page_no: Mapped[int] = mapped_column(Integer, index=True)
 
     claim_type: Mapped[str] = mapped_column(String(16))  # measurement | state
+    # Which pass produced this claim: "text" read it from the page's words,
+    # "figure" read it off a chart image. Recorded because the two carry
+    # different kinds of proof. Both have their VALUE verified against the page
+    # text, but a figure claim's BINDING — that 5,077 belongs to Express Parcel
+    # in FY24 rather than to the series beside it — rests on the vision model
+    # and cannot be checked against the text layer, because the flattening that
+    # loses the binding is exactly why the figure pass was needed.
+    source: Mapped[str] = mapped_column(String(16), default="text", index=True)
 
     subject: Mapped[str] = mapped_column(Text)
     predicate: Mapped[str] = mapped_column(Text)  # verbatim, not normalised here

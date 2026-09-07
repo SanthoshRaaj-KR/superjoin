@@ -28,6 +28,7 @@ from sqlalchemy.orm import Session
 
 from .grounding import GroundingResult, validate
 from .llm.claims import extract_page
+from .llm.figures import extract_figures, should_run
 from .llm.profile import parse_iso_date
 from .models import Claim, Document, Page, Quarantine
 from .schemas import MeasurementClaim, PageExtraction, StateClaim
@@ -46,6 +47,10 @@ class ExtractionRun:
     states: int = 0
     proposed: int = 0
     refused: int = 0  # claims that failed grounding
+    figure_pages_read: int = 0
+    figure_pages_failed: int = 0
+    figure_claims: int = 0
+    superseded_by_figures: int = 0
     grounding_methods: dict[str, int] = field(default_factory=dict)
     # Every reason code written to the quarantine table, of both kinds: claims
     # refused by grounding, and pages whose model call raised. Kept together
@@ -73,15 +78,32 @@ def _claimed_value(claim: MeasurementClaim | StateClaim) -> str:
     return claim.value_raw if isinstance(claim, MeasurementClaim) else claim.value_text
 
 
+# A figure claim's self-reported confidence is about reading the number, which
+# is the easy half. The model has no way to know whether it swapped two series
+# in a legend, and it reports 1.0 on chart pages where that is exactly the risk.
+# Capping it is not pessimism, it is refusing to record a certainty nobody
+# measured.
+FIGURE_CONFIDENCE_CAP = 0.75
+
+
 def _to_row(
     claim: MeasurementClaim | StateClaim,
     document: Document,
     page_no: int,
     grounding: GroundingResult,
+    source: str = "text",
 ) -> Claim:
     reasons = list(claim.confidence_reasons)
     if grounding.notes:
         reasons.extend(grounding.notes)
+
+    extraction_confidence = claim.confidence_extraction
+    if source == "figure":
+        extraction_confidence = min(extraction_confidence, FIGURE_CONFIDENCE_CAP)
+        reasons.append(
+            "series and period read from the chart image; the value is verified "
+            "against the page text but the binding is not"
+        )
 
     row = Claim(
         document_id=document.id,
@@ -102,7 +124,8 @@ def _to_row(
         # speaks from August 2024, and conflating the two collapses the whole
         # temporal model.
         assertion_time=document.as_of_date,
-        conf_extraction=claim.confidence_extraction,
+        source=source,
+        conf_extraction=extraction_confidence,
         conf_grounding=grounding.score,
         confidence_reasons=reasons,
     )
@@ -125,11 +148,18 @@ def extract_document_claims(
     *,
     pages: list[int] | None = None,
     workers: int = DEFAULT_WORKERS,
+    use_figures: bool = True,
 ) -> ExtractionRun:
     """Extract, ground and persist claims for a document.
 
+    Two passes. The text pass reads every page. The figure pass then looks at
+    the pages whose numbers came back unbound — chart pages, where flattening
+    preserved every value and destroyed every relationship — and reads them as
+    images to recover which value belongs to which series and period.
+
     ``pages`` restricts the run to specific page numbers, which keeps iterating
     on prompts cheap and makes a targeted re-run possible after a change.
+    ``use_figures=False`` skips the second pass entirely.
     """
     document = session.get(Document, document_id)
     if document is None:
@@ -142,6 +172,7 @@ def extract_document_claims(
 
     profile = document.profile_json
     run = ExtractionRun(document_id=document_id, pages_attempted=len(page_rows))
+    text_claims: dict[int, PageExtraction] = {}
 
     def work(page: Page) -> tuple[Page, PageExtraction | None, str | None]:
         try:
@@ -176,40 +207,119 @@ def extract_document_claims(
         assert extraction is not None
         if extraction.page_notes:
             run.notes.append((page.page_no, extraction.page_notes))
+        text_claims[page.page_no] = extraction
 
-        for claim in list(extraction.measurements) + list(extraction.states):
-            run.proposed += 1
-            grounding = validate(
-                quote=claim.evidence_quote,
-                value=_claimed_value(claim),
-                page_text=page.text,
-                rendered_text=page.rendered_text,
-            )
+    # --- second pass: charts, on pages whose figures came back unbound -------
+    figure_pages = [p for p in page_rows if should_run(p.unbound_numbers, p.bound_numbers)]
+    figure_claims: dict[int, PageExtraction] = {}
+    if figure_pages and use_figures:
+        log.info("figure pass on %s page(s)", len(figure_pages))
 
-            if not grounding.ok:
-                run.refused += 1
-                reason = grounding.reason_code or "unknown"
-                run.quarantine_reasons[reason] = run.quarantine_reasons.get(reason, 0) + 1
-                session.add(
-                    Quarantine(
-                        document_id=document_id,
-                        page_no=page.page_no,
-                        stage="grounding",
-                        reason_code=reason,
-                        detail=grounding.detail,
-                        payload=claim.model_dump(),
+        def look(page: Page):
+            try:
+                return page, extract_figures(document.source_path, page.page_no, profile), None
+            except Exception as exc:  # noqa: BLE001 - recorded, not swallowed
+                log.warning("figure pass failed on page %s: %s", page.page_no, exc)
+                return page, None, f"{type(exc).__name__}: {exc}"
+
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            for page, extraction, error in pool.map(look, figure_pages):
+                if error is not None:
+                    run.figure_pages_failed += 1
+                    run.quarantine_reasons["figure_pass_failed"] = (
+                        run.quarantine_reasons.get("figure_pass_failed", 0) + 1
                     )
-                )
-                continue
+                    session.add(
+                        Quarantine(
+                            document_id=document_id,
+                            page_no=page.page_no,
+                            stage="figures",
+                            reason_code="figure_pass_failed",
+                            detail=error,
+                        )
+                    )
+                    continue
+                figure_claims[page.page_no] = extraction
+                run.figure_pages_read += 1
 
-            run.grounding_methods[grounding.method] = (
-                run.grounding_methods.get(grounding.method, 0) + 1
-            )
-            session.add(_to_row(claim, document, page.page_no, grounding))
-            if isinstance(claim, MeasurementClaim):
-                run.measurements += 1
-            else:
-                run.states += 1
+    # --- persist, figure claims first so their bindings win ------------------
+    for page in page_rows:
+        bound_values: set[str] = set()
+
+        for claim in _claims_of(figure_claims.get(page.page_no)):
+            if _persist(session, run, document, page, claim, "figure"):
+                bound_values.add(_digits(_claimed_value(claim)))
+
+        for claim in _claims_of(text_claims.get(page.page_no)):
+            # The text pass on a chart page reports numbers it could not attach
+            # to a series or a period. Where the figure pass has bound the same
+            # number, its binding is the better record of the same fact, and
+            # keeping both would hand the comparison layer two readings of one
+            # bar to disagree about.
+            if isinstance(claim, MeasurementClaim) and _digits(claim.value_raw) in bound_values:
+                run.superseded_by_figures += 1
+                continue
+            _persist(session, run, document, page, claim, "text")
 
     session.flush()
     return run
+
+
+def _claims_of(extraction: PageExtraction | None) -> list[MeasurementClaim | StateClaim]:
+    if extraction is None:
+        return []
+    return list(extraction.measurements) + list(extraction.states)
+
+
+def _digits(value: str | None) -> str:
+    return "".join(ch for ch in (value or "") if ch.isdigit())
+
+
+def _persist(
+    session: Session,
+    run: ExtractionRun,
+    document: Document,
+    page: Page,
+    claim: MeasurementClaim | StateClaim,
+    source: str,
+) -> bool:
+    """Ground one claim and store it, or quarantine it. Returns whether it kept.
+
+    Figure claims go through exactly the same validator as text claims, against
+    the same raw page text. That is what keeps the second pass honest: a chart
+    reading can propose which bar a number sits on, but it cannot introduce a
+    number that was never printed on the page.
+    """
+    run.proposed += 1
+    grounding = validate(
+        quote=claim.evidence_quote,
+        value=_claimed_value(claim),
+        page_text=page.text,
+        rendered_text=page.rendered_text,
+    )
+
+    if not grounding.ok:
+        run.refused += 1
+        reason = grounding.reason_code or "unknown"
+        run.quarantine_reasons[reason] = run.quarantine_reasons.get(reason, 0) + 1
+        session.add(
+            Quarantine(
+                document_id=document.id,
+                page_no=page.page_no,
+                stage="grounding",
+                reason_code=reason,
+                detail=grounding.detail,
+                payload=claim.model_dump(),
+            )
+        )
+        return False
+
+    run.grounding_methods[grounding.method] = run.grounding_methods.get(grounding.method, 0) + 1
+    session.add(_to_row(claim, document, page.page_no, grounding, source))
+    if isinstance(claim, MeasurementClaim):
+        run.measurements += 1
+    else:
+        run.states += 1
+    if source == "figure":
+        run.figure_claims += 1
+    return True

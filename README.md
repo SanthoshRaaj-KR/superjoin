@@ -27,6 +27,7 @@ Under construction, phase by phase. This README is filled in as each layer lands
 |---|---|---|
 | 0 | Skeleton, storage, one PDF end-to-end | done |
 | 1 | Layout analysis, context inheritance, grounding validator | done |
+| 1b | Figure pass: charts read as images, values still grounded | done |
 | 2 | Units, periods, metric and entity registries | |
 | 2.5 | Hand-labelled gold set | |
 | 3 | Comparability gate | |
