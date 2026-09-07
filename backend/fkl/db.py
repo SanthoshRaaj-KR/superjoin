@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, inspect
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -52,10 +52,33 @@ def reset_engine() -> None:
     _Session = None
 
 
+class SchemaOutOfDate(RuntimeError):
+    """The database predates the current model definitions."""
+
+
 def init_db(db_url: str | None = None) -> Engine:
-    """Create any missing tables. Safe to call repeatedly."""
+    """Create any missing tables, and refuse to run against a stale database.
+
+    `create_all` adds missing tables but never missing *columns*, so a database
+    written by an earlier phase keeps working right up until something reads a
+    column that is not there. Checking up front turns a confusing runtime error
+    into one sentence naming the file to delete.
+    """
     engine = get_engine(db_url)
     Base.metadata.create_all(engine)
+
+    inspector = inspect(engine)
+    for table in Base.metadata.sorted_tables:
+        if table.name not in inspector.get_table_names():
+            continue
+        present = {c["name"] for c in inspector.get_columns(table.name)}
+        missing = {c.name for c in table.columns} - present
+        if missing:
+            raise SchemaOutOfDate(
+                f"table '{table.name}' is missing {sorted(missing)}. "
+                f"This database was written by an earlier version of the schema. "
+                f"Delete it and re-ingest: the PDFs are the source of truth."
+            )
     return engine
 
 

@@ -72,6 +72,11 @@ class Document(Base):
     default_consolidation: Mapped[str | None] = mapped_column(String(32))
     profile_json: Mapped[dict | None] = mapped_column(JSON)
 
+    # Measured once per document and reused for every page, so heading levels
+    # are consistent throughout rather than re-derived from whatever happens to
+    # be on each page.
+    body_font_size: Mapped[float | None] = mapped_column(Float)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
     pages: Mapped[list["Page"]] = relationship(
@@ -97,6 +102,14 @@ class Page(Base):
     sha256: Mapped[str] = mapped_column(String(64), index=True)
     text: Mapped[str] = mapped_column(Text)
     n_chars: Mapped[int] = mapped_column(Integer)
+
+    # The layout-aware reading of the page: reading order restored, table rows
+    # rebuilt, and the context in force stated inline. This is what the
+    # extractor is shown. It never replaces `text`, which stays the source of
+    # truth for grounding — a quote that matches only the rendering is a quote
+    # that was assembled rather than found.
+    rendered_text: Mapped[str | None] = mapped_column(Text)
+    context_json: Mapped[list | None] = mapped_column(JSON)
 
     document: Mapped[Document] = relationship(back_populates="pages")
 

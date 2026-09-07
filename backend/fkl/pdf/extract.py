@@ -1,9 +1,9 @@
 """PDF text extraction.
 
-Thin wrapper over PyMuPDF. Deliberately dumb at this stage: one page in, one
-string out. The layout-aware document tree that replaces naive page text is a
-later layer; keeping the two separate means the tree can be swapped in without
-touching ingestion or storage.
+Reads a PDF into raw page text plus, by default, a layout analysis of each page.
+Both are kept. The raw text is what the document actually says and is what the
+grounding validator checks quotes against; the layout is a reading of it, and a
+reading is not evidence.
 
 Page numbers are 0-indexed everywhere in this project, matching PyMuPDF, so a
 page number in the database is always directly openable in the source PDF.
@@ -18,12 +18,15 @@ from pathlib import Path
 
 import fitz
 
+from .layout import PageLayout, analyze_page, body_font_size, page_lines
+
 
 @dataclass
 class ExtractedPage:
     page_no: int
     text: str
     sha256: str
+    layout: PageLayout | None = None
 
     @property
     def n_chars(self) -> int:
@@ -37,6 +40,7 @@ class ExtractedDocument:
     n_pages: int
     pages: list[ExtractedPage]
     pdf_metadata: dict[str, str]
+    body_size: float = 10.0
 
     @property
     def n_chars(self) -> int:
@@ -67,16 +71,34 @@ def normalize_text(text: str) -> str:
     return text.replace(" ", " ").replace("​", "")
 
 
-def extract_document(path: str | Path) -> ExtractedDocument:
-    """Read every page of a PDF into memory."""
+def extract_document(path: str | Path, with_layout: bool = True) -> ExtractedDocument:
+    """Read every page of a PDF into memory, with layout analysis by default.
+
+    Body font size is measured once across the whole document and then used for
+    every page. A page that happens to be all table, or all heading, has no
+    meaningful internal mode, and deriving a threshold from it would invent a
+    heading hierarchy that is not there.
+    """
     path = Path(path)
     doc = fitz.open(path)
     try:
+        raw_lines = []
+        if with_layout:
+            for page in doc:
+                raw_lines.extend(page_lines(page))
+        body_size = body_font_size(raw_lines) if with_layout else 10.0
+
         pages = []
         for i in range(doc.page_count):
-            raw = doc[i].get_text()
-            text = normalize_text(raw)
-            pages.append(ExtractedPage(page_no=i, text=text, sha256=sha256_text(text)))
+            text = normalize_text(doc[i].get_text())
+            pages.append(
+                ExtractedPage(
+                    page_no=i,
+                    text=text,
+                    sha256=sha256_text(text),
+                    layout=analyze_page(doc[i], body_size) if with_layout else None,
+                )
+            )
         metadata = {k: v for k, v in (doc.metadata or {}).items() if v}
         n_pages = doc.page_count
     finally:
@@ -88,6 +110,7 @@ def extract_document(path: str | Path) -> ExtractedDocument:
         n_pages=n_pages,
         pages=pages,
         pdf_metadata=metadata,
+        body_size=body_size,
     )
 
 

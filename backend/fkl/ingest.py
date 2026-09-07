@@ -10,7 +10,7 @@ extraction lands.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from sqlalchemy import select
@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from .llm.profile import DocumentProfile, parse_iso_date, profile_document
 from .models import Document, Page
 from .pdf.extract import ExtractedDocument, extract_document, has_text_layer
+from .render import figure_context_coverage, render_page
 
 log = logging.getLogger(__name__)
 
@@ -35,6 +36,8 @@ class IngestResult:
     n_chars: int
     reused: bool  # True when the PDF was already ingested and nothing was redone
     profile: DocumentProfile | None
+    figure_pages: int = 0
+    axis_coverage: dict[str, int] = field(default_factory=dict)
 
 
 def _store_profile(row: Document, profile: DocumentProfile) -> None:
@@ -91,6 +94,8 @@ def ingest_pdf(
         n_pages=extracted.n_pages,
         n_chars=extracted.n_chars,
     )
+    row.body_font_size = extracted.body_size
+
     if existing is None:
         session.add(row)
         session.flush()
@@ -104,11 +109,17 @@ def ingest_pdf(
             )
             for p in extracted.pages
         )
+        session.flush()
 
     profile = None
     if use_llm:
         profile = profile_document(extracted)
         _store_profile(row, profile)
+
+    # Rendering happens after profiling because document-level defaults form the
+    # base of every page frame. A page rendered before the profile exists would
+    # report axes as undeclared that the document had in fact declared.
+    figure_pages, axis_coverage = _render_pages(session, row, extracted)
 
     session.flush()
     return IngestResult(
@@ -118,4 +129,39 @@ def ingest_pdf(
         n_chars=row.n_chars,
         reused=False,
         profile=profile,
+        figure_pages=figure_pages,
+        axis_coverage=axis_coverage,
     )
+
+
+def _render_pages(
+    session: Session, row: Document, extracted: ExtractedDocument
+) -> tuple[int, dict[str, int]]:
+    """Store the layout-aware rendering of every page.
+
+    Returns the number of pages carrying figures, and how many of those declare
+    each material axis. The gap is the honest number: it is the share of the
+    document where a figure would reach the extractor with no unit, no basis or
+    no period attached to it.
+    """
+    pages = {p.page_no: p for p in session.scalars(
+        select(Page).where(Page.document_id == row.id)
+    )}
+    figure_pages = 0
+    coverage: dict[str, int] = {}
+    for extracted_page in extracted.pages:
+        if extracted_page.layout is None:
+            continue
+        page_row = pages.get(extracted_page.page_no)
+        if page_row is None:
+            continue
+        rendered = render_page(extracted_page.layout, row.profile_json, extracted.body_size)
+        page_row.rendered_text = rendered.text
+        page_row.context_json = rendered.frames
+        declared = figure_context_coverage(rendered, extracted_page.text)
+        if declared is None:
+            continue  # no figures on this page; context coverage says nothing
+        figure_pages += 1
+        for axis in declared:
+            coverage[axis] = coverage.get(axis, 0) + 1
+    return figure_pages, coverage

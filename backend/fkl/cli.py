@@ -1,6 +1,7 @@
 """Command line entry point.
 
     python -m fkl.cli ingest <pdf> [--no-llm]
+    python -m fkl.cli page <doc-id> <page-no> [--raw]
     python -m fkl.cli extract <doc-id> [--pages 0-9,35]
     python -m fkl.cli export <doc-id> [-o out/doc.json]
     python -m fkl.cli docs
@@ -22,7 +23,8 @@ from sqlalchemy import select
 from .db import init_db, session_scope
 from .export import export_document, write_json
 from .ingest import ingest_pdf
-from .models import Document
+from .context import MATERIAL_AXES
+from .models import Document, Page
 from .pipeline import extract_document_claims
 
 
@@ -43,8 +45,40 @@ def cmd_ingest(args: argparse.Namespace) -> int:
             state = "reused" if result.reused else "ingested"
             print(f"[{state}] doc {result.document_id}  {result.filename}  "
                   f"{result.n_pages} pages, {result.n_chars:,} chars")
+            if not result.reused and result.figure_pages:
+                parts = [
+                    f"{axis} {result.axis_coverage.get(axis, 0)}"
+                    f" ({100 * result.axis_coverage.get(axis, 0) / result.figure_pages:.0f}%)"
+                    for axis in MATERIAL_AXES
+                ]
+                print(f"          context on {result.figure_pages} pages with figures: "
+                      + " · ".join(parts))
             if result.profile is not None:
                 print(json.dumps(result.profile.model_dump(), indent=2))
+    return 0
+
+
+def cmd_page(args: argparse.Namespace) -> int:
+    """Show a page as the extractor sees it, or as the PDF stores it.
+
+    Being able to read both side by side is the fastest way to tell whether a
+    bad claim came from a bad model call or from a page that was handed over
+    scrambled.
+    """
+    init_db()
+    with session_scope() as session:
+        page = session.scalar(
+            select(Page).where(
+                Page.document_id == args.document_id, Page.page_no == args.page_no
+            )
+        )
+        if page is None:
+            print(f"no page {args.page_no} in document {args.document_id}")
+            return 1
+        if args.raw or not page.rendered_text:
+            print(page.text)
+        else:
+            print(page.rendered_text)
     return 0
 
 
@@ -134,6 +168,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_ingest.add_argument("--force", action="store_true", help="re-ingest even if unchanged")
     p_ingest.set_defaults(func=cmd_ingest)
+
+    p_page = sub.add_parser("page", help="print one page as the extractor sees it")
+    p_page.add_argument("document_id", type=int)
+    p_page.add_argument("page_no", type=int)
+    p_page.add_argument("--raw", action="store_true", help="show the raw PDF text instead")
+    p_page.set_defaults(func=cmd_page)
 
     p_extract = sub.add_parser("extract", help="extract claims from an ingested document")
     p_extract.add_argument("document_id", type=int)
