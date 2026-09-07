@@ -28,6 +28,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -288,3 +289,80 @@ class EntityAlias(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
     entity: Mapped[Entity] = relationship(back_populates="aliases")
+
+
+class Metric(Base):
+    """A canonical thing that gets measured.
+
+    Metrics are discovered rather than enumerated. There is no whitelist of
+    financial line items anywhere in this project: the first document to say
+    "Revenue from contracts with customers" creates the metric, and the next
+    document saying "Revenue from services" is matched against it. A fixed
+    vocabulary would work on the annual report and fail on the IMF report, which
+    is the generalisation the brief is actually testing.
+    """
+
+    __tablename__ = "metrics"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    canonical_name: Mapped[str] = mapped_column(String(512))
+    # Two metrics with different dimensions are never the same metric, however
+    # similar their names. "Revenue growth" (percent) and "Revenue" (currency)
+    # read almost identically to an embedding.
+    dimension: Mapped[str | None] = mapped_column(String(32), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+    aliases: Mapped[list["MetricAlias"]] = relationship(
+        back_populates="metric", cascade="all, delete-orphan"
+    )
+
+
+class MetricAlias(Base):
+    """A predicate string that has been resolved to a metric.
+
+    ``method`` and ``similarity`` are kept because a registry that grows by
+    matching needs its matches auditable. A wrong alias silently widens a metric
+    forever, and the only way to find one later is to be able to see how it was
+    admitted.
+    """
+
+    __tablename__ = "metric_aliases"
+    __table_args__ = (UniqueConstraint("alias_key", "dimension", name="uq_metric_alias"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    metric_id: Mapped[int] = mapped_column(ForeignKey("metrics.id"), index=True)
+    alias: Mapped[str] = mapped_column(String(512))
+    alias_key: Mapped[str] = mapped_column(String(512), index=True)
+    dimension: Mapped[str | None] = mapped_column(String(32))
+    method: Mapped[str] = mapped_column(String(32), default="exact")
+    # Kept apart on purpose: `similarity` is how close the names looked,
+    # `confidence` is how sure we are they are the same metric. The measurement
+    # in `metrics.py` is that those are different questions — 0.846 of
+    # similarity between `Adjusted EBITDA` and `EBITDA` carries no confidence at
+    # all — so storing one number for both would erase the finding.
+    confidence: Mapped[float] = mapped_column(Float, default=1.0)
+    similarity: Mapped[float | None] = mapped_column(Float)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+    metric: Mapped[Metric] = relationship(back_populates="aliases")
+
+
+class Embedding(Base):
+    """A cached embedding vector, stored as raw float32 bytes.
+
+    Kept in the same SQLite file rather than a vector service. For a corpus this
+    size brute-force cosine over a few hundred vectors is microseconds, and the
+    blocking key — entity plus metric — is what carries the design to a corpus
+    where that stops being true. Adding a vector database here would be
+    infrastructure bought against a bottleneck that does not exist.
+    """
+
+    __tablename__ = "embeddings"
+    __table_args__ = (UniqueConstraint("model", "text_key", name="uq_embedding"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    model: Mapped[str] = mapped_column(String(64), index=True)
+    text_key: Mapped[str] = mapped_column(String(512), index=True)
+    dim: Mapped[int] = mapped_column(Integer)
+    vector: Mapped[bytes] = mapped_column(LargeBinary)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)

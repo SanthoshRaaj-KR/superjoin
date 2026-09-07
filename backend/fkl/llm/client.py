@@ -28,6 +28,7 @@ log = logging.getLogger(__name__)
 T = TypeVar("T", bound=BaseModel)
 
 _client: Any | None = None
+_raw: Any | None = None
 
 
 class LLMUnavailable(RuntimeError):
@@ -47,6 +48,24 @@ def get_client() -> Any:
             OpenAI(api_key=SETTINGS.openai_api_key), mode=instructor.Mode.TOOLS
         )
     return _client
+
+
+def raw_client() -> OpenAI:
+    """The unwrapped OpenAI client, for calls that are not structured output.
+
+    Only the embeddings endpoint needs this — instructor wraps chat completions
+    to enforce a response model, which embeddings have no use for. It goes
+    through this module anyway so that credentials, and the "no key, no silent
+    fallback" rule, stay in one place.
+    """
+    global _raw
+    if not SETTINGS.has_llm:
+        raise LLMUnavailable(
+            "OPENAI_API_KEY is not set. Copy .env.example to .env and add a key."
+        )
+    if _raw is None:
+        _raw = OpenAI(api_key=SETTINGS.openai_api_key)
+    return _raw
 
 
 def structured(

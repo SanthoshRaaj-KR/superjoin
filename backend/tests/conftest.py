@@ -38,5 +38,7 @@ def no_live_model_calls(monkeypatch):
         ("fkl.pipeline", "extract_page"),
         ("fkl.pipeline", "extract_figures"),
         ("fkl.llm.client", "get_client"),
+        ("fkl.llm.client", "raw_client"),
+        ("fkl.metrics", "embed_texts"),
     ):
         monkeypatch.setattr(module + "." + attr, forbid(f"{module}.{attr}"), raising=False)
