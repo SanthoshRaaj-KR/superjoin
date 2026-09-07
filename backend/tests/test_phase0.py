@@ -235,3 +235,33 @@ def test_a_rebuilt_table_row_is_kept_but_scored_lower(db, monkeypatch):
         assert claim.grounding_method == "reconstructed"
         assert claim.conf_grounding < 0.9
         assert any("layout-rebuilt" in r for r in claim.confidence_reasons)
+
+
+def test_an_axis_cannot_be_both_stated_and_unknown():
+    """A contradiction live extraction produces routinely.
+
+    The page frame says "consolidation: not stated anywhere in scope" and the
+    extractor copies that into unknown_qualifiers, while also reading the
+    sentence "on a standalone basis" in the body and writing that into
+    qualifiers. Both halves come from real evidence; the explicit local
+    statement wins.
+
+    This is quietly destructive rather than untidy. The comparability gate
+    refuses to compare on an unknown material axis, so a claim carrying both
+    would be ruled incomparable on an axis it had actually stated — which turns
+    the clearest reconciliation case in the corpus, standalone versus
+    consolidated FY24 revenue, into INSUFFICIENT_EVIDENCE.
+    """
+    claim = MeasurementClaim(
+        subject="Delhivery Limited",
+        predicate="Revenue from Operations",
+        qualifiers={"consolidation": "standalone"},
+        unknown_qualifiers=["consolidation", "segment"],
+        evidence_quote="on standalone basis for FY24 stood at 74,540.82",
+        value_raw="74,540.82",
+        value_num=74540.82,
+        unit_raw="INR million",
+        period_raw="FY24",
+    )
+    assert claim.qualifiers == {"consolidation": "standalone"}
+    assert claim.unknown_qualifiers == ["segment"]  # the genuinely unknown one survives

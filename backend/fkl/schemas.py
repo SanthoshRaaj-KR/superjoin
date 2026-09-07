@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 Modality = Literal["actual", "estimate", "projection", "target", "restated"]
 
@@ -106,6 +106,34 @@ class ClaimBase(BaseModel):
             "unreliable', 'label and value separated by a page break'."
         ),
     )
+
+    @model_validator(mode="after")
+    def _an_axis_cannot_be_both_known_and_unknown(self) -> "ClaimBase":
+        """Drop from ``unknown_qualifiers`` any axis that ``qualifiers`` states.
+
+        Live extraction produces this contradiction routinely, and it is worth
+        understanding why rather than just guarding against it. The page frame
+        tells the extractor "consolidation: not stated anywhere in scope", and
+        the extractor copies that into unknown_qualifiers — while also reading
+        the sentence "on a standalone basis" sitting in the middle of the page
+        and, correctly, writing that into qualifiers.
+
+        Both halves come from real evidence, so the resolution is not arbitrary:
+        an explicit local statement outranks the absence of a section-level
+        declaration. That is the same precedence the extractor is instructed to
+        apply, enforced here so it holds regardless of what comes back.
+
+        Left unresolved this is quietly destructive rather than merely untidy.
+        The comparability gate treats an unknown material axis as grounds to
+        refuse comparison, so a claim carrying both would be ruled incomparable
+        on an axis it had actually stated — turning the clearest reconciliation
+        case in the corpus, standalone versus consolidated revenue, into an
+        INSUFFICIENT_EVIDENCE verdict.
+        """
+        if self.qualifiers and self.unknown_qualifiers:
+            stated = set(self.qualifiers)
+            self.unknown_qualifiers = [a for a in self.unknown_qualifiers if a not in stated]
+        return self
 
 
 class MeasurementClaim(ClaimBase):

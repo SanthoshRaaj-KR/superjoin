@@ -39,10 +39,30 @@ class RenderedPage:
 
 
 def _frame_line(frame: ContextFrame) -> str:
+    """One line describing the context in force, and what is missing from it.
+
+    The wording of the "missing" half matters more than it looks. Saying an axis
+    is "not stated anywhere in scope" reads as *unknown, full stop*, and a model
+    that believes that will report the axis as unknown even while the sentence
+    in front of it says "on a standalone basis" — which is exactly what happened
+    on the directors' report page, where the basis is declared inline in prose
+    rather than as a section heading.
+
+    That page carries the clearest reconciliation case in the corpus, standalone
+    against consolidated revenue for the same year. Losing the basis there does
+    not lose a claim; it turns a resolvable difference into an unresolvable one.
+    So the line says what is actually true — that *no section declares it* — and
+    points at where to look instead.
+    """
     parts = frame.as_evidence_lines()
     unknown = frame.unknown_axes()
     if unknown:
-        parts.append("not stated anywhere in scope: " + ", ".join(unknown))
+        parts.append(
+            "no section-level declaration for: "
+            + ", ".join(unknown)
+            + " — read these from the sentence or table column if stated there, "
+            "and only record them as unknown if they are stated nowhere"
+        )
     return "[CONTEXT IN FORCE] " + "; ".join(parts) if parts else ""
 
 

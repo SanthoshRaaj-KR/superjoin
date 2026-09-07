@@ -184,8 +184,15 @@ def test_rendered_page_states_context_and_keeps_the_table(annual_report):
 
     assert "[CONTEXT IN FORCE]" in rendered.text
     assert "Revenue from contracts with customers | 81,415.38 | 72,253.01" in rendered.text
-    # Whatever is still undeclared must be named, not left implicit.
-    assert "not stated anywhere in scope" in rendered.text
+
+    # Whatever is still undeclared must be named, not left implicit — and named
+    # as a missing *section-level* declaration rather than as an unknown. A live
+    # run showed the difference is not cosmetic: told an axis was "not stated
+    # anywhere in scope", the extractor reported consolidation as unknown on
+    # both the standalone and the consolidated revenue figure, while the
+    # sentence beside each one said which basis it was.
+    assert "no section-level declaration for" in rendered.text
+    assert "read these from the sentence or table column" in rendered.text
 
     # `period` is correctly *not* declared at section scope on this page. The
     # table carries two periods side by side in its column headers, so a single

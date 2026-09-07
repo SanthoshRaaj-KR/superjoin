@@ -151,3 +151,98 @@ def test_grounding_against_a_real_page_of_prose():
         page_text=page_text,
     )
     assert result.ok, result.detail
+
+
+# --- partially quoted table rows -------------------------------------------
+#
+# All of these come from a live extraction run. The model, quoting a wide table,
+# writes back the cells it used and drops the ones it did not: given
+# `Revenues from express parcel services | 50,765.87 | 62.35% | 45,522.22 |
+# 63.00%` it returns the label and the two revenue figures. Fifteen real claims
+# were refused this way before this tier existed.
+
+ROW_A = "Revenues from express parcel services | 50,765.87 | 62.35% | 45,522.22 | 63.00%"
+ROW_B = "Revenues from part truckload services | 15,174.05 | 18.63% | 11,565.38 | 16.01%"
+TABLE = f"{ROW_A}\n{ROW_B}"
+
+
+def test_a_row_with_middle_cells_dropped_is_accepted_at_its_own_tier():
+    result = validate(
+        quote="Revenues from express parcel services | 50,765.87 | 45,522.22",
+        value="50,765.87",
+        page_text="the raw page, where no row is contiguous",
+        rendered_text=TABLE,
+    )
+    assert result.ok
+    assert result.method == "row_subset"
+    assert result.score == 0.6  # below every tier that saw the whole row
+    assert any("omits cells" in n for n in result.notes)
+
+
+def test_a_cell_that_is_not_in_the_row_is_refused():
+    result = validate(
+        quote="Revenues from express parcel services | 99,999.99",
+        value="99,999.99",
+        page_text="x",
+        rendered_text=TABLE,
+    )
+    assert not result.ok and result.reason_code == REASON_QUOTE_NOT_FOUND
+
+
+def test_cells_from_two_different_rows_cannot_be_stitched_together():
+    """The failure mode this tier has to avoid, and it is easy to hit.
+
+    Folding collapses newlines into spaces, so folding the table before
+    splitting it would merge every row into one and let this pass. Rows are
+    split first for exactly that reason.
+    """
+    result = validate(
+        quote="Revenues from express parcel services | 50,765.87 | 11,565.38",
+        value="50,765.87",
+        page_text="x",
+        rendered_text=TABLE,
+    )
+    assert not result.ok, "cells from different rows must never satisfy one quote"
+
+
+def test_cells_quoted_out_of_order_are_refused():
+    result = validate(
+        quote="Revenues from express parcel services | 63.00% | 50,765.87",
+        value="50,765.87",
+        page_text="x",
+        rendered_text=TABLE,
+    )
+    assert not result.ok
+
+
+def test_a_complete_row_still_scores_above_a_partial_one():
+    complete = validate(quote=ROW_B, value="15,174.05", page_text="x", rendered_text=TABLE)
+    partial = validate(
+        quote="Revenues from part truckload services | 15,174.05 | 11,565.38",
+        value="15,174.05",
+        page_text="x",
+        rendered_text=TABLE,
+    )
+    assert complete.method == "reconstructed"
+    assert partial.method == "row_subset"
+    assert complete.score > partial.score
+
+
+def test_hyphenation_is_folded_symmetrically():
+    """A live failure. The page breaks `fuel-efficient` across two lines; the
+    model reads it correctly and writes it back unbroken.
+
+    Joining only where whitespace follows normalises the page and not the
+    quote, so the two never meet and a correct claim is refused.
+    """
+    page = (
+        "The share of load carried through fuel-\n"
+        "efficient 46-ft tractor trailers crossed \n"
+        "70% by the end of FY24."
+    )
+    quote = (
+        "The share of load carried through fuel-efficient 46-ft tractor "
+        "trailers crossed 70% by the end of FY24."
+    )
+    result = validate(quote=quote, value="70%", page_text=page)
+    assert result.ok and result.method == "dehyphenated"
