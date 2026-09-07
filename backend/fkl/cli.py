@@ -110,10 +110,13 @@ def cmd_extract(args: argparse.Namespace) -> int:
             pages=parse_page_spec(args.pages),
             workers=args.workers,
             use_figures=args.figures,
+            force=args.force,
         )
         print(
             f"doc {run.document_id}: {run.pages_attempted} pages, "
             f"{run.pages_failed} failed"
+            + (f", {run.pages_skipped} already extracted (--force to redo)"
+               if run.pages_skipped else "")
         )
         print(
             f"  proposed {run.proposed} -> kept {run.claims} "
@@ -131,6 +134,13 @@ def cmd_extract(args: argparse.Namespace) -> int:
                 f"  figure pass: {run.figure_pages_read} page(s) read, "
                 f"{run.figure_pages_failed} failed -> {run.figure_claims} claims, "
                 f"{run.superseded_by_figures} unbound text claims superseded"
+            )
+        if run.normalized:
+            print(
+                f"  normalised {run.normalized}: "
+                f"{run.unresolved_units} without a unit, "
+                f"{run.unresolved_periods} without a period, "
+                f"{run.unresolved_metrics} without a metric"
             )
         if run.grounding_methods:
             print("  matched: " + " · ".join(
@@ -211,6 +221,11 @@ def main(argv: list[str] | None = None) -> int:
     p_extract.add_argument("document_id", type=int)
     p_extract.add_argument("--pages", help="page selection, e.g. 0-9,35,40 (default: all)")
     p_extract.add_argument("--workers", type=int, default=6)
+    p_extract.add_argument(
+        "--force",
+        action="store_true",
+        help="re-extract pages that already have claims (default: skip them)",
+    )
     p_extract.add_argument(
         "--figures",
         action="store_true",

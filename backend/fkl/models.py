@@ -187,6 +187,27 @@ class Claim(Base):
     assertion_time: Mapped[date | None] = mapped_column(Date, index=True)
 
     # --- decomposed confidence; never blended into a single float ---
+    # --- L4 canonical form
+    #
+    # Written beside the raw strings, never instead of them. `value_raw` is what
+    # the page says and `value_canonical` is what it means; keeping both is what
+    # lets a comparison be explained back to the reader in the document's own
+    # units after being made in base ones.
+    entity_id: Mapped[int | None] = mapped_column(ForeignKey("entities.id"), index=True)
+    metric_id: Mapped[int | None] = mapped_column(ForeignKey("metrics.id"), index=True)
+    value_canonical: Mapped[float | None] = mapped_column(Float)
+    unit_dimension: Mapped[str | None] = mapped_column(String(32), index=True)
+    unit_currency: Mapped[str | None] = mapped_column(String(8))
+    unit_scale: Mapped[float | None] = mapped_column(Float)
+    period_start: Mapped[date | None] = mapped_column(Date, index=True)
+    period_end: Mapped[date | None] = mapped_column(Date, index=True)
+    period_label: Mapped[str | None] = mapped_column(String(64), index=True)
+    period_granularity: Mapped[str | None] = mapped_column(String(24))
+    # A period read from a bare year-end date with no section declaration to
+    # resolve it. Carried through to the verdict rather than discarded, because
+    # "these agree" means something different when one side was a guess.
+    period_ambiguous: Mapped[bool] = mapped_column(Boolean, default=False)
+
     conf_extraction: Mapped[float] = mapped_column(Float, default=0.0)
     conf_grounding: Mapped[float] = mapped_column(Float, default=0.0)
     conf_normalization: Mapped[float] = mapped_column(Float, default=0.0)

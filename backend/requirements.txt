@@ -19,3 +19,6 @@ numpy==2.4.2
 
 # Config
 python-dotenv==1.1.1
+
+# Gold set (Phase 2.5)
+PyYAML==6.0.3

@@ -271,3 +271,70 @@ def test_an_axis_cannot_be_both_stated_and_unknown():
     )
     assert claim.qualifiers == {"consolidation": "standalone"}
     assert claim.unknown_qualifiers == ["segment"]  # the genuinely unknown one survives
+
+
+def test_re_extracting_a_page_is_a_no_op_rather_than_a_second_copy(db, monkeypatch):
+    """The claims table is append-only, so a repeated run cannot correct
+    anything — it can only duplicate.
+
+    Found the honest way. Three accidental re-runs of one extract command left
+    53% of the table duplicated, and nothing complained: every claim was
+    correctly extracted, correctly grounded and correctly normalised, three
+    times over. Downstream that is worse than an error, because the headline
+    number this project reports is a count of agreements and disagreements, and
+    duplicates inflate both while looking like corroboration.
+    """
+    calls: list[int] = []
+
+    def fake_extract(page_text, page_no, profile=None, model=None):
+        calls.append(page_no)
+        return PageExtraction(
+            measurements=[
+                MeasurementClaim(
+                    subject="Delhivery Limited",
+                    predicate="Revenue from contracts with customers",
+                    value_raw="81,415.38",
+                    value_num=81415.38,
+                    unit_raw="INR million",
+                    period_raw="March 31, 2024",
+                    evidence_quote=(
+                        "Revenue from contracts with customers | 81,415.38"
+                    ),
+                    confidence_extraction=0.9,
+                )
+            ]
+        )
+
+    monkeypatch.setattr(pipeline, "extract_page", fake_extract)
+    with session_scope() as session:
+        doc_id = ingest_pdf(session, AR_PDF, use_llm=False).document_id
+
+    with session_scope() as session:
+        first = pipeline.extract_document_claims(
+            session, doc_id, pages=[35], workers=1, use_figures=False,
+            adjudicate=False,
+        )
+    assert first.claims == 1
+    assert len(calls) == 1
+
+    with session_scope() as session:
+        second = pipeline.extract_document_claims(
+            session, doc_id, pages=[35], workers=1, use_figures=False,
+            adjudicate=False,
+        )
+    # No model call, no second row.
+    assert len(calls) == 1
+    assert second.pages_skipped == 1
+    assert second.claims == 0
+
+    with session_scope() as session:
+        assert session.query(Claim).count() == 1
+
+    # `--force` is the deliberate way through, for when a prompt has changed.
+    with session_scope() as session:
+        forced = pipeline.extract_document_claims(
+            session, doc_id, pages=[35], workers=1, use_figures=False,
+            adjudicate=False, force=True,
+        )
+    assert forced.claims == 1
+    assert len(calls) == 2

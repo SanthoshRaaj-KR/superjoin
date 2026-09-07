@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .canonical import canonicalize, context_hint
 from .grounding import GroundingResult, validate
 from .llm.claims import extract_page
 from .llm.figures import extract_figures, should_run
@@ -42,11 +43,16 @@ DEFAULT_WORKERS = 6
 class ExtractionRun:
     document_id: int
     pages_attempted: int = 0
+    pages_skipped: int = 0
     pages_failed: int = 0
     measurements: int = 0
     states: int = 0
     proposed: int = 0
     refused: int = 0  # claims that failed grounding
+    normalized: int = 0
+    unresolved_units: int = 0
+    unresolved_periods: int = 0
+    unresolved_metrics: int = 0
     figure_pages_flagged: int = 0
     figure_pages_read: int = 0
     figure_pages_failed: int = 0
@@ -150,6 +156,8 @@ def extract_document_claims(
     pages: list[int] | None = None,
     workers: int = DEFAULT_WORKERS,
     use_figures: bool = False,
+    adjudicate: bool = True,
+    force: bool = False,
 ) -> ExtractionRun:
     """Extract, ground and persist claims for a document.
 
@@ -181,8 +189,34 @@ def extract_document_claims(
         stmt = stmt.where(Page.page_no.in_(pages))
     page_rows = session.scalars(stmt).all()
 
+    # Extraction is idempotent by page. The claims table is append-only, so
+    # without this a second run over the same pages does not correct anything —
+    # it silently doubles them, and every downstream count of agreements and
+    # disagreements doubles with it. Found the honest way: three accidental
+    # re-runs of one command left 53% of the table duplicated.
+    if not force:
+        already = set(
+            session.scalars(
+                select(Claim.page_no).where(Claim.document_id == document_id).distinct()
+            )
+        ) | set(
+            session.scalars(
+                select(Quarantine.page_no)
+                .where(Quarantine.document_id == document_id)
+                .distinct()
+            )
+        )
+        skipped = [p for p in page_rows if p.page_no in already]
+        page_rows = [p for p in page_rows if p.page_no not in already]
+    else:
+        skipped = []
+
     profile = document.profile_json
-    run = ExtractionRun(document_id=document_id, pages_attempted=len(page_rows))
+    run = ExtractionRun(
+        document_id=document_id,
+        pages_attempted=len(page_rows),
+        pages_skipped=len(skipped),
+    )
     text_claims: dict[int, PageExtraction] = {}
 
     def work(page: Page) -> tuple[Page, PageExtraction | None, str | None]:
@@ -259,7 +293,7 @@ def extract_document_claims(
         bound_values: set[str] = set()
 
         for claim in _claims_of(figure_claims.get(page.page_no)):
-            if _persist(session, run, document, page, claim, "figure"):
+            if _persist(session, run, document, page, claim, "figure", adjudicate):
                 bound_values.add(_digits(_claimed_value(claim)))
 
         for claim in _claims_of(text_claims.get(page.page_no)):
@@ -271,7 +305,7 @@ def extract_document_claims(
             if isinstance(claim, MeasurementClaim) and _digits(claim.value_raw) in bound_values:
                 run.superseded_by_figures += 1
                 continue
-            _persist(session, run, document, page, claim, "text")
+            _persist(session, run, document, page, claim, "text", adjudicate)
 
     session.flush()
     return run
@@ -294,6 +328,7 @@ def _persist(
     page: Page,
     claim: MeasurementClaim | StateClaim,
     source: str,
+    adjudicate: bool = True,
 ) -> bool:
     """Ground one claim and store it, or quarantine it. Returns whether it kept.
 
@@ -327,7 +362,23 @@ def _persist(
         return False
 
     run.grounding_methods[grounding.method] = run.grounding_methods.get(grounding.method, 0) + 1
-    session.add(_to_row(claim, document, page.page_no, grounding, source))
+    row = _to_row(claim, document, page.page_no, grounding, source)
+    # After grounding, before the insert. A claim reaches the table already
+    # comparable, so nothing above has to re-derive its unit or its interval.
+    canonicalize(session, row, hint=context_hint(page.context_json),
+                 adjudicate=adjudicate)
+    run.normalized += 1
+    if row.unit_dimension is None and row.claim_type == "measurement":
+        run.unresolved_units += 1
+    if row.period_start is None and row.period_raw:
+        run.unresolved_periods += 1
+    # Counted rather than raised. Metric resolution can make a model call, and a
+    # claim whose metric could not be resolved is still a good claim — it simply
+    # will not join a comparison. Silence here would hide a broken registry
+    # behind a clean-looking run, so the count is reported.
+    if row.metric_id is None:
+        run.unresolved_metrics += 1
+    session.add(row)
     if isinstance(claim, MeasurementClaim):
         run.measurements += 1
     else:
