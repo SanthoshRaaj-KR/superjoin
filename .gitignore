@@ -27,3 +27,6 @@ frontend/.vite/
 .DS_Store
 Thumbs.db
 
+
+# Browser-automation scratch
+.playwright-mcp/
