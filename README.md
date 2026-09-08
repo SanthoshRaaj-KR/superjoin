@@ -1,776 +1,574 @@
 # Fact Knowledge Layer
 
-Extracts numerical and semantic facts from PDFs, grounds every fact in the exact
-text that supports it, and decides whether two facts corroborate, contradict, or
-merely answer different questions.
+**A system that reads PDFs, pulls out the facts, and works out whether two facts
+actually disagree — or whether they were only ever answering different
+questions.**
 
-The central idea:
-
-> **Don't ask whether two facts contradict. Ask whether they are comparable at all.**
-
-`₹81,415M` and `₹74,541M` are not in disagreement. One is consolidated and one is
-standalone — they answer two different questions, and no amount of model quality
-fixes that, because the information needed to tell them apart is usually discarded
-before the comparison is ever made.
-
-So the LLM never issues a verdict here. It does the fuzzy work: turning prose and
-tables into typed claims with their context attached. The verdict comes from a
-deterministic gate that names the axis responsible for a difference.
+<sub>Python 3.13 · FastAPI · SQLite · 272 tests · 16/16 on the hand-labelled gold set</sub>
 
 ---
 
-## Status
+## The problem
 
-Under construction, phase by phase. This README is filled in as each layer lands.
+When two documents report different numbers for what looks like the same thing,
+the obvious conclusion is that one of them is wrong.
 
-| Phase | Scope | State |
+Usually neither is.
+
+Two figures can differ because they cover different **reporting scopes**,
+different **time periods**, different **definitions**, different **estimate
+vintages**, or because one is a forecast and the other is an actual. The numbers
+disagree; the facts do not.
+
+Most systems miss this for a structural reason. They chop the document into
+chunks, embed them, retrieve the ones that look similar, and ask a model *"do
+these conflict?"* — but the information needed to tell the two figures apart is
+almost never in the same chunk as the number. It's in a section heading, a
+column header, a footnote, a parenthetical. Chunking throws it away, and after
+that no amount of model quality can recover it.
+
+## The idea
+
+> ### Don't ask whether two facts contradict.
+> ### Ask whether they are comparable at all.
+
+That single change reorders the whole system.
+
+The language model does the part it is genuinely good at: reading messy prose
+and tables and turning them into typed facts **with their context attached**.
+
+It never issues a verdict. The verdict comes from a deterministic comparison
+step that checks the context first, and **names the axis** responsible for any
+difference it finds.
+
+This matters beyond correctness. A model that says *"these contradict"* gives you
+an opinion you have to trust. This system says *"these differ on reporting
+scope"* — a statement you can check against the page yourself.
+
+---
+
+## How it works
+
+```
+   PDF
+    │
+    ▼
+ ① EXTRACT ──── page by page, with document structure and inherited context
+    │
+    ▼
+ ② GROUND ───── every fact traced back to the exact text that supports it
+    │
+    ▼
+ ③ CANONICALIZE  entities · units · periods · metrics → one internal form
+    │
+    ▼
+ ④ BLOCK ────── only compare facts that could possibly be about the same thing
+    │
+    ▼
+ ⑤ THE GATE ─── are these two comparable?  ──── no, an axis differs → CONTEXTUAL
+    │                                      └─── no, context missing → INSUFFICIENT
+    │ yes
+    ▼
+   compare values  ──── agree → CORROBORATES
+                   └─── differ → ⑥ SECOND LOOK ──── context found → CONTEXTUAL
+                                                └── nothing found → CONTRADICTS
+```
+
+### ① Extraction — page by page, not one big prompt
+
+The PDF is parsed **locally, one page at a time**. The whole document is never
+thrown at the model in a single call.
+
+That's deliberate. Even when a document fits inside the context window, very long
+contexts suffer from attention dilution — the well-known *lost-in-the-middle*
+problem, where information far from the edges of the prompt gets used less
+reliably. Sending 500 pages at once is a good way to get a confident, average,
+slightly wrong answer.
+
+But there's a catch: **a fact on one page often depends on information from
+another page.** A number in a financial table means nothing without the
+`(All amounts in millions)` note at the top of the section and the
+`Consolidated · year ended March 31` in the heading above it.
+
+So instead of chunking, the system builds a **document tree** —
+document → section → subsection → table → row — and each node carries a *context
+frame*: the units, the reporting basis, the period, the entity in force at that
+point. Context flows downward and merges. By the time the extractor reaches a
+cell, it already knows the unit, the basis and the period, even though none of
+those words are anywhere near the number.
+
+The model then returns **structured claims**, not prose:
+
+```jsonc
+{
+  "subject":    "…",              // who or what the fact is about
+  "predicate":  "…",              // the document's own wording, not a standard name
+  "value_raw":  "…",              // the number exactly as printed
+  "unit_raw":   "…",              // including scale
+  "period_raw": "…",
+  "modality":   "actual",         // actual | estimate | projection | target | restated
+  "qualifiers": { … },            // open dictionary — the context that applies
+  "unknown_qualifiers": [ … ],    // context it could NOT determine
+  "evidence_quote": "…"           // copied verbatim from the page
+}
+```
+
+Two fields do most of the work here.
+
+`qualifiers` is an **open dictionary**, not a fixed schema. The system doesn't
+decide in advance which kinds of context exist, because the next document will
+have one nobody thought of.
+
+`unknown_qualifiers` is the extractor **declaring what it could not determine**.
+This is the difference between a system that guesses and one that knows it is
+guessing.
+
+### ② Grounding — the model proposes, the document proves
+
+Nothing the model says is taken on trust.
+
+Every claim must survive two checks against the real page:
+
+1. the `evidence_quote` must actually be **locatable** in the source text, and
+2. the value must actually appear **inside that quote**.
+
+If either fails, the claim is **quarantined with a reason code** — not silently
+dropped, and not silently stored. It goes into a visible list you can read.
+
+This catches the failure mode that matters most: a model that read the numbers
+correctly but *invented the citation* — stitching a header row onto a data row,
+say, producing a quotation that exists nowhere on the page. The numbers look
+fine. The proof doesn't exist. Those claims don't get stored.
+
+The cost is real and it's stated plainly: some genuine facts get thrown away
+because layout mangled their quote. The quarantine view makes that loss visible
+rather than pretending it didn't happen.
+
+### ③ Canonicalization — so facts can actually meet
+
+Facts extracted independently need to be brought into a common form before they
+can be compared at all:
+
+| | |
+|---|---|
+| **Entities** | `Acme Limited`, `Acme Ltd.`, `Acme` → one entity. Where the document prints a registration number or an official identifier, that pins the match far better than name similarity ever could. |
+| **Units** | lakh / crore / million / billion → one base scale, with the currency and dimension kept separate. |
+| **Periods** | `FY24`, `2023-24`, `FY2023/24`, `year ended March 31, 2024` → one interval. Different institutions write the same fiscal year in different ways. |
+| **Metrics** | The document's own wording is preserved, then matched against a registry of canonical metrics that grows as new documents arrive. |
+
+One deliberate refusal: **currencies are never converted.** A figure in USD and a
+figure in INR are marked `INCOMPARABLE` rather than joined at an invented
+exchange rate. Correct-by-refusal beats plausible-and-wrong.
+
+### ④ Blocking — not every pair, only the plausible ones
+
+Comparing every fact against every other fact is O(n²) and mostly wasted work.
+
+Instead, claims are grouped into blocks by **canonical entity + canonical
+metric**. Facts about unrelated things never reach the expensive comparison
+stage at all. This is also the scaling story: the blocking key is what carries
+this design from hundreds of pages to hundreds of thousands.
+
+### ⑤ The comparability gate — the core
+
+For each candidate pair, checks run in a fixed order:
+
+1. **Sufficiency** — is any axis that matters for this metric *undetermined* on
+   either side?
+2. **Axis difference** — on which axes do the two context vectors disagree?
+3. **Time** — same period, overlapping, or disjoint?
+4. **Value** — after normalization, do the numbers agree within a tolerance
+   derived from how precisely each was printed?
+
+And the verdict follows from the answers:
+
+| Situation | Verdict | What it means |
 |---|---|---|
-| 0 | Skeleton, storage, one PDF end-to-end | done |
-| 1 | Layout analysis, context inheritance, grounding validator | done |
-| 1b | Figure pass: charts read as images, values still grounded | done, opt-in |
-| 2 | Units, periods, metric and entity registries | done |
-| 2.5 | Hand-labelled gold set | done |
-| 3 | Comparability gate | done |
-| 4 | Temporal engine, cross-document | done |
-| 5 | Reconciliation review, API, UI wired to it | done |
-| 6 | Macro corpus, zero code changes | done |
-| 7 | Axis registry, `/ask`, upload-a-folder, evidence page images | done |
-| 7.5 | ContextRank: personalized PageRank over the claim-context graph | done |
+| A material axis is undetermined | `INSUFFICIENT_EVIDENCE` | We can't tell. Says which axis is missing. |
+| Comparable, values agree | `CORROBORATES` | Two sources, one fact. |
+| Comparable, values differ | `CONTRADICTS` | A real disagreement. |
+| Values differ, **but an axis differs too** | `CONTEXTUAL` | Not a conflict — names the axis. |
+| Different periods | `CONTEXTUAL_TEMPORAL` | A trend, not a conflict. |
+| Different units of meaning | `INCOMPARABLE` | Different questions entirely. |
 
-## Setup and Run Instructions
+Every explanation is **templated from the difference itself**, so it is
+reproducible and says exactly what was decided and why.
+
+Two consequences worth stating, because they're easy to get wrong:
+
+**Absent is not equal.** If one claim states its reporting scope and the other
+simply doesn't know, they do **not** match on that axis. Missing context *blocks*
+a comparison rather than permitting it. This is why `INSUFFICIENT_EVIDENCE` is a
+first-class verdict and not an error state — sometimes the honest answer is that
+the documents don't say.
+
+**The axis vocabulary is open.** Some axes are built in. Others are **discovered**:
+when the same distinguishing phrase turns up in enough independent pairs, it is
+promoted into the registry as a real axis, and affected pairs are re-compared. An
+axis that stops explaining anything lapses back out. The schema grows from the
+documents rather than from a list someone wrote in advance.
+
+### ⑥ The second look — recovering context that extraction missed
+
+Here's the honest limit of everything above: **the gate can only reason about
+context that reached it.**
+
+If two claims arrive with the same entity, the same metric, the same period and
+nothing to tell them apart, the gate *must* call it a contradiction. It's right,
+given what it was handed. The question is whether what it was handed was
+complete.
+
+Often it isn't. The distinguishing detail was printed on the page — in the
+sentence around the number, in a row label, in a footnote — and simply didn't
+survive extraction.
+
+So before a contradiction is reported, it is **sent back to its pages**:
+
+1. **Free deterministic scouts run first.** Some distinctions need no model at
+   all — the same magnitude printed once in parentheses and once under a `Less:`
+   label is a sign convention, not a disagreement, and that is decidable by rule.
+
+2. **ContextRank decides where to look.** The system builds a graph of the
+   claims and the things they share — sections, metrics, periods, qualifiers,
+   known axes, distinctive words in the evidence — and runs a personalized
+   PageRank seeded on the two claims. It reads off two signals: what sits near
+   **both** claims (a live concept in this neighbourhood) and what sits near
+   **one and not the other** (a candidate distinction). Edges are weighted by
+   inverse frequency, so a term attached to half the corpus can't win by being
+   popular.
+
+3. **The model investigates, and proposes a fact about the document** — never a
+   verdict. "This page labels one figure X and the other Y."
+
+4. **The recovered context is grounded like any other claim**, and then the same
+   deterministic gate re-decides.
+
+The boundary is the whole point, and it's enforced in the code and in the tests:
+**ContextRank ranks contextual relevance, never truthfulness.** A figure repeated
+across ten documents is not thereby correct, and a graph that scored sources by
+centrality would say it was. Nothing here produces a verdict, changes a value, or
+withdraws a contradiction on its own. A wrong ranking costs one wasted
+suggestion.
+
+And a recovery has to be *knowledge about a claim*, not a story about a pair —
+so it propagates to every other comparison those claims take part in, and it
+carries across runs, re-judged rather than merely replayed.
+
+### ⑦ Time — states are intervals, not values
+
+Facts like *"who holds this role"* or *"what is the registered address"* aren't
+numbers. They're **states that hold over an interval**, and treating a change
+over time as a disagreement is a classic false positive.
+
+So the system tracks two independent clocks:
+
+- **valid time** — when the fact was true in the world
+- **assertion time** — when a document claimed it
+
+A later document that closes an earlier open-ended interval is a **refinement**,
+not a contradiction. Two documents giving *different end dates* for the same
+interval **is** a contradiction.
+
+It also tracks how many holders a role can have at once. That turns "is this a
+conflict?" into a constraint check:
+
+| Holders allowed | Intervals | Verdict |
+|---|---|---|
+| one | back-to-back | `SUCCESSION` — a clean handover |
+| one | with a gap | `SUCCESSION_WITH_VACANCY` — and the gap is reported |
+| one | overlapping, different holders | `CONTRADICTS` |
+| many | overlapping | no conflict — both simply hold |
+
+That count is **inferred from grammar and corrected by observation**: if the same
+document shows two people genuinely holding a role at once, the system learns
+the role admits many, rather than manufacturing a contradiction from its own
+assumption. It's a learned property, not a hard-coded list.
+
+---
+
+## What comes out
+
+Run over a six-document corpus of 511 pages, spanning corporate filings and
+macroeconomic reports:
+
+| | |
+|---|---|
+| Facts extracted and grounded | **666** of 797 proposed (**83.6%**) |
+| Claims quarantined, with reasons | 131 |
+| Comparable blocks | 129 |
+| Pairs compared | 1,505 (297 cross-document) |
+| **Raw disagreements** (what a context-blind system would flag) | **1,373** |
+| → explained by a named context axis | **1,084** |
+| → blocked: a material axis was undetermined | 287 |
+| → **genuinely unresolved** | **2** |
+| **Reduction** | **79%** of apparent disagreements dissolved by context |
+| Contradictions raised and then withdrawn on review | 8 |
+| Context axes the system **learned** (not built in) | 11 discovered, 7 promoted |
+| Hand-labelled gold set | **16 / 16** |
+
+Every one of those numbers is one command away, against the database that ships
+with this repository and with no API key:
 
 ```bash
-pip install -r backend/requirements.txt
-cp .env.example .env      # then add your OPENAI_API_KEY
 cd backend
-python -m fkl.cli serve   # UI and API on http://127.0.0.1:8000/
+FKL_DB_URL=sqlite:///data/snapshot.sqlite python -m fkl.cli relate
 ```
 
-The UI and the API are one process on one port, so there is no CORS story and
-nothing to configure. `/docs` gives the OpenAPI surface if you would rather
-read the data than the screens.
+<sub>That writes a new generation of verdicts into the store. It is append-only,
+so nothing is overwritten and every earlier run is still there —
+`git checkout data/snapshot.sqlite` puts the file back if you'd rather it
+stayed untouched.</sub>
 
-The interface has seven screens. Two are worth opening first.
+The denominator is chosen deliberately: it's what a system with no notion of
+context would have flagged — same entity, same metric, values differ. That's the
+baseline this design is arguing against.
 
-**Ask** takes a question in English and answers it without averaging. "What was Delhivery's revenue in FY24?" comes back as ₹81,415.38M consolidated *and* ₹74,540.82M standalone, each with its own evidence, because both are correct and the axis that separates them is named. "How fast is India's economy growing in FY26?" comes back as **6.5% · 6.6%**, flagged — two institutions, same period, same modality, and nothing recorded distinguishes them. The model parses the question and stops; retrieval is an exact query over typed claims, and the split comes from the qualifier vectors the extractor attached.
+**The measure of success here is how many apparent disagreements the system
+dissolves, not how many it flags.**
 
-**Compare** is the other one.
-It lists candidate pairs with the contradictions the engine *withdrew on
-review* at the top, and each one can be taken apart: the two facts, every
-context axis with a ✓ or a difference, the evidence span from each source page,
-and the verdict. Below that is a row of **mask** buttons — hold an axis out of
-the reasoning set and the verdict recomputes live against `POST /compare`:
+---
 
-```
-INSUFFICIENT_EVIDENCE  →  Mask Time_reference  →  CONTRADICTS
-```
+## Getting started
 
-`time_reference` is not a built-in axis. The system found it on a second look
-at IMF page 9, and it is maskable for the same reason every other axis is —
-the vocabulary is open all the way through, including in the UI.
+### Requirements
 
-Ingest and inspect a document. `--no-llm` runs layout analysis and context
-inheritance with no API key and no spend:
+Python 3.11+ (developed on 3.13). No database server, no vector store, no
+external services.
+
+### Install
 
 ```bash
-python -m fkl.cli ingest ../starter-datasets/delhivery/*.pdf --no-llm
-python -m fkl.cli page 2 35          # page 35 as the extractor will see it
-python -m fkl.cli page 2 35 --raw    # the same page as the PDF stores it
+git clone <this-repo>
+cd SuperJoin
+pip install -r backend/requirements.txt
 ```
 
-The difference between those two commands is most of Phase 1. With a key set:
+### Try it with no API key at all
 
-```bash
-python -m fkl.cli models --prefix gpt   # what your key can actually see
-python -m fkl.cli ingest ../starter-datasets/delhivery/02-*.pdf
-python -m fkl.cli extract 1 --pages 20-24,33-36
-python -m fkl.cli report
-python -m fkl.cli export 1 -o ../out/ar-fy24.json
-```
-
-Extraction is idempotent by page — re-running skips pages that already have
-claims, so a repeat costs nothing and cannot duplicate. `--force` redoes them.
-
-**Or drop a folder on it.** The *Add documents* screen accepts a folder of
-PDFs, filters out everything that is not one, and runs ingest, extraction and a
-corpus-wide comparison pass behind a job whose log you can watch as it goes.
-The comparison at the end is over the *whole* corpus rather than the upload,
-because the value of a new document is what it disagrees with. The same thing
-over HTTP:
-
-```bash
-curl -F files=@report.pdf -F files=@deck.pdf      "http://127.0.0.1:8000/api/v1/documents?maxPages=20"
-# {"id": 3, "status": "queued", ...}
-curl http://127.0.0.1:8000/api/v1/jobs/3
-```
-
-A PDF already in the store is recognised by content hash and reused rather than
-re-ingested; a scanned one is named and skipped rather than failing the batch.
-
-### Browsing the results without an API key
-
-The store ships. `data/snapshot.sqlite` is the corpus as this README describes
-it — 6 documents, 511 pages, 666 grounded claims, 1,505 compared pairs, every
-verdict, every withdrawn contradiction and both survivors:
+A pre-computed database ships with the repository, so the whole system can be
+explored — every screen, every verdict, every piece of evidence — without
+credentials and without spending anything:
 
 ```bash
 cd backend
 FKL_DB_URL=sqlite:///data/snapshot.sqlite python -m fkl.cli serve
 ```
 
-No key, no spend, every screen populated. This is here because the brief asks
-for enough output to evaluate the work without the author's account, and that
-is a stronger requirement than it first looks: everything interesting this
-system produces exists only after a full extraction pass, and a full extraction
-pass costs money. Without a shipped database a grader sees an empty interface
-and has to take this file's word for all of it.
+Open **http://127.0.0.1:8000/**.
 
-It is a *live* database, not a screenshot. Page text and rendered text are kept,
-which is most of its 8.6 MB, so the comparability gate, the interval engine and
-the deterministic sign scout all re-run against it and produce the same numbers
-with no credentials at all:
+This is a *live* database, not a set of screenshots. The page text is kept, so
+the comparability gate, the interval engine and the deterministic scouts all
+re-run against it and produce the same numbers with no key:
 
 ```bash
 FKL_DB_URL=sqlite:///data/snapshot.sqlite python -m fkl.cli relate
 ```
 
-What is trimmed is only what no screen reads: relations from superseded
-generations — the store is append-only, so thirteen runs leave thirteen copies
-of every pair — and job rows, which describe runs on a machine you do not have.
-Regenerate it with `python -m fkl.cli snapshot`.
+### Run it on your own PDFs
 
-The evidence panels render the actual source page with the located span
-highlighted, and that needs the PDFs at the paths they were ingested from. With
-the starter dataset checked out beside the repository they resolve; without it
-the panel falls back to the stored quote and says which it is showing.
-
-### The headline number
+Add your API key:
 
 ```bash
-python -m fkl.cli relate
+cp .env.example .env      # then fill in OPENAI_API_KEY
 ```
 
-Runs the gate over every comparable pair of stored claims and reports the
-reduction. Over all six documents (319 claims, 451 pairs):
-
-```
-  382 pairs whose raw values disagree
-    263 explained by a named context axis
-    115 blocked — a material axis was undetermined
-      4 genuinely unresolved
-  reduction: 69% of apparent disagreements dissolved by context
-```
-
-The denominator is deliberately what a *context-blind* system would flag: same
-entity, same metric, values differ. That is the baseline being argued against.
-
-### A contradiction has to survive an investigation
-
-The gate is careful and it is still not careful enough, because it can only
-reason about context that reached it. Two claims arriving with the same entity,
-the same metric, the same period and no distinguishing qualifier *must* be
-called a contradiction — the gate is right, given what it was handed. The
-question is whether what it was handed was complete.
-
-It usually is not. Auditing the eight contradictions the gate first produced
-across this corpus, **not one was a real disagreement.** Every single one was a
-qualifier printed on the page that did not survive extraction:
-
-```
-"Real hourly wages have grown by 16 and 26 percent since 2018
- in rural and urban areas, respectively"     -> one sentence, two facts     [area]
-
-July WEO | 6.4 | 6.4                         -> a scenario table whose row
-Current  | 6.6 | 6.2                            labels are the distinction   [estimate_vintage]
-
-Less: Exceptional Items | 224.10             -> the same figure as (224.10),
-                                                sign carried by a row label  [sign_convention]
-```
-
-So `relate --review` sends every contradiction back to its pages before
-reporting it:
-
-```
-  second look: 7 contradiction(s) sent back to the page, 3 withdrawn
-    context recovered on review: sign_convention 1 · measure_basis 1 · definition 1
-```
-
-Over six documents: 319 claims, 451 relations, 3 quarantined. The four
-survivors are one real disagreement and three traceable defects — the RBI/IMF
-projection below, one core-inflation pair whose two labels each quoted their
-own figure, and two from a single EBITDA extraction error.
-
-**The survivor that matters is the one it did not withdraw.** The RBI projects
-6.5% real GDP growth for 2025-26; the IMF projects 6.6% for the same year. Two
-institutions disagreeing about the same future is the corpus's one genuine
-contradiction, and the second look was asked about it and left it standing:
-
-```
-claims 394 vs 420: same real GDP growth for India in FY2026, comparable on every
-stated axis, and the values are 0.1 apart — the smallest gap two figures printed
-at this precision can have. Adjacent, and still not the same value.
-```
-
-That took three fixes to become visible at all, and it was invisible in three
-independent ways: the RBI sentence was never extracted, `Indian economy` and
-`India` were separate entities, and the IMF's forecasts were stored as `actual`
-so modality separated them anyway. Each one alone was enough to hide it.
-
-**A label never contains the number it labels**, and learning that took two
-attempts. The first guard stripped the figure from a proposed label and asked
-whether anything substantive remained — enough to catch `"4.6 percent"` offered
-as a label for the figure 4.6, which passes "the value must appear on the page"
-perfectly because it *is* the value.
-
-It was not enough. Asked what separated the RBI's *"real GDP growth for 2025-26
-is projected at 6.5 per cent"* from the IMF's 6.6%, the investigator proposed a
-`scenario` axis with the value `"2025-26 is projected at 6.5 per cent, with
-risks"` — the claim's own sentence, padded with enough words to look like a
-description once the figure was removed. It grounded, because the sentence
-really is on the page. And it dissolved the one genuine disagreement in the
-corpus, which is the worst thing this layer can do.
-
-So the test is containment, not residue: `July WEO`, `urban areas`, `Adj. EBITDA
-margin`, `first advance estimate` — not one names its own value, because a label
-says which *kind* of measurement this is and the measurement is the other half
-of the pair. And a *rejected* label is not an *absent* one: dropping only the
-bad half left a one-sided recovery, which blocks the pair on an "undetermined"
-axis and takes it out of the residual set just as effectively as explaining it.
-A side we deleted is evidence the model was reaching, and the whole proposal
-goes with it.
-
-**The investigator recovers context. It never issues a verdict.** It is asked
-one question — is there a qualifier on this page these two claims differ on? —
-and its answer is a proposed *fact about the document*, grounded against the
-page exactly like any other claim and then fed back through the same
-deterministic `compare()`. The gate decides, twice. Three things constrain it:
-
-- **Every recovered value must be found on the page.** The quoted span has to
-  locate under the grounding validator, and the axis value has to appear inside
-  that span. Two correct proposals were rejected on this rule before the prompt
-  was taught to cite the label rather than the figure — the rule did not move.
-- **It can only ever make claims less comparable.** CONTRADICTS becomes
-  CONTEXTUAL or INSUFFICIENT_EVIDENCE, never CORROBORATES. "Look harder until
-  they match" is the failure mode this layer would otherwise introduce, and the
-  path is closed by assertion rather than by hope.
-- **An axis stated for only one side blocks rather than explains.** If the page
-  labels one figure and says nothing about the other, that is an undetermined
-  material axis, not a resolution — absent is not equal, applied to an axis
-  nobody knew to look for until the second pass found it.
-
-**What is reproducible and what is not.** The gate is a pure function and the
-sign-convention scout is arithmetic plus a lexical check, so both give the same
-answer on every run — `relate` without `--review` is byte-identical run to run.
-The review pass calls a model, and a model at temperature 0 is still not a
-guarantee. Its output is therefore constrained rather than trusted: nothing it
-proposes takes effect unless it grounds, and the verdict is always recomputed by
-the deterministic gate. The residual set can move by a pair between runs; the
-verdicts themselves cannot be written by the model at all.
-
-`sign_convention` is resolved with no model call at all: matching magnitudes,
-opposing signs, and a sign-carrying row label found on the page. `area` was
-never in any list — it was discovered, which is what the axis vocabulary being
-open is for.
-
-Withdrawn contradictions are stored beside their original verdict rather than
-replacing it, so the record shows what the first pass concluded, what the
-second found, and on what evidence. A contradiction the system raised and then
-took back is a more interesting object than one it never raised.
-
-### ContextRank: ranking where to look, never what is true
-
-A contradiction is sent back to its pages before it is reported. The question
-this layer answers is *where on those pages to look*, and until now the answer
-was three hand-set constants — 0.9 for a shared span, 0.8 for a row label, 0.3
-for a neighbourhood. Those numbers ranked the scouts. Nothing ranked the axes.
-
-ContextRank is a Personalized PageRank over a graph the pipeline has already
-built without meaning to: claims, and the things claims share — documents,
-sections, metrics, periods, the qualifier bindings the extractor read off the
-text, the axes earlier reviews recovered, and the distinctive words in each
-evidence span. Seeded on the two claims in a suspicious pair, it returns a
-ranked shortlist of what might separate them.
-
-**The boundary is the whole point, and it is enforced structurally.** This
-ranks *contextual relevance*, never truthfulness. A figure repeated across ten
-documents is not thereby correct, and a graph that scored sources by centrality
-would say it was. So nothing here produces a verdict, nothing changes a value,
-and no score can withdraw a contradiction. The output is a list of axis names
-and words worth asking about; the model still has to find the values on the
-page, grounding still has to locate them, and the same deterministic
-`compare()` still decides. A wrong ranking costs a wasted suggestion. There is
-a test asserting that a `Ranking` carries no field that could be mistaken for
-an answer.
-
-#### Two vectors, not one
-
-A single walk seeded on both claims ranks what is central to the pair — and
-what is central to a pair is usually what they have in common, which by
-definition cannot distinguish them. Both claims are about FY2026 GDP growth;
-that is why they are being compared, not why they differ. So two walks are run,
-one per claim, and two quantities are read off them:
-
-```
-connection   min(r_a[n], r_b[n])            n sits near both claims
-divergence   |r_a[n] − r_b[n]| / (sum)      n sits near one and not the other
-```
-
-An **axis** is a candidate when it is connected — the concept is live in this
-neighbourhood. A **value** is a candidate when it diverges. An axis both claims
-already agree on scores on the first and not the second, and explains nothing.
-
-#### What it measurably does
-
-The honest experiment is a cold run — no remembered recoveries, so every
-contradiction is genuinely investigated — with the structural shortlist in the
-prompt and without it. Same corpus, same pairs, same number of model calls:
-
-| | contradictions withdrawn | left unresolved | reduction |
-|---|---|---|---|
-| without ContextRank | 5 | 5 | 78.7% |
-| with ContextRank | **8** | **2** | 79.0% |
-
-Same twelve investigations, same three axes in the recovered vocabulary,
-three more pairs correctly explained. One corpus and twelve pairs is
-suggestive, not conclusive, and it is the number this repository has.
-
-#### Two things that had to be measured before they could be believed
-
-**Inverse frequency is not an optimisation, it is the whole thing.** The first
-version weighted every edge equally and was useless: `consolidation` is
-recorded or declared undetermined on 366 of 666 claims, so on raw structure it
-is adjacent to everything and won every ranking — including for a pair the
-pages distinguish by sign convention. That is the popularity signal this module
-exists to avoid, arriving through the side door. Weighting each edge by
-`log(N / n)` is the statement that a node connected to most of the corpus is
-not *about* any particular pair of claims.
-
-**The axis ranker cannot discover an axis; the term ranker can.** Scored
-against the six recoveries this corpus already had, the axis ranking got 6 of 6
-— and held out, with each pair's own recovery removed from the graph, it got
-**0 of 6**. It was reading back its own answer key. The reason is structural
-and worth stating: an axis only exists as a node because something already
-recorded it, so ranking known axes can find a *recurrence* and never a
-discovery. What survives the holdout is the vocabulary: `less` ranked first for
-the sign-convention pair, `adjusted` second for the EBITDA pair, `generated`
-and `operations` first and second for the two cash-flow pairs — five of six,
-with no knowledge of the answer. So the shortlist handed to the investigator is
-words first and known axes second, and the two are labelled differently in the
-prompt.
-
-#### Attention allocation, and why it is off by default
-
-ContextRank scores how much structural signal a pair has, which makes it a
-natural way to decide where to spend model calls. `relate --budget` does
-exactly that. It is **off by default**, and that is measured rather than
-cautious: the pair the deck distinguishes as `EBITDA margin` against `Adj.
-EBITDA margin` scores **zero** on structural vocabulary, because both claims
-were read out of one sentence and share every word in it. A budgeted run skips
-a pair this system demonstrably explains. The flag exists for a corpus too
-large to investigate exhaustively, it trades recall for cost, and a pair it
-skips is recorded as *not investigated* rather than *unexplained* — which is a
-different and more honest thing to say.
-
-#### Where it shows up
-
-The comparison view carries a **ContextRank** panel under the verdict, headed
-*where to look, not what is true*: the ranked axes with their scores and a
-templated sentence each, and the words that sit near one claim and not the
-other. On the corpus's one surviving cross-institution contradiction it ranks
-`scenario` first — which is precisely the axis an investigator once proposed to
-explain that disagreement away, and which the circularity guard rejected
-because the proposed label quoted its own figure. The two layers disagree in
-public, and the deterministic one wins. That is the architecture working, and
-it is more informative than a panel that only ever agreed with the verdict.
-
-Every relation stores its certificate in `context_rank`, whether or not
-anything came of it. A suggestion that led nowhere is part of the reasoning.
-
-### Time, and the difference between not knowing and being wrong
-
-State claims — who holds a role, what the CIN is — assert intervals, and they
-need a different engine. Two clocks: *valid time* is when something was true,
-*assertion time* is when a document said so.
-
-The 2022 prospectus lists Suvir Sujan as a serving director with no end date.
-The FY24 annual report says he resigned in August 2023. Those do not contradict
-— the prospectus was correct about its own moment. Reporting a conflict there
-is not strictness, it is an error, and it fires for every officer and address in
-any corpus that spans time.
-
-Cardinality turns "is this a conflict?" into a constraint check. Seeded from
-generic vocabulary (singular markers tested first, so `Managing Director` comes
-out 1 while `Non-Executive Director` comes out N) and corrected by evidence —
-one document listing two people in a seat at once is telling us the seat holds
-more than one. From the annual report's KMP table:
-
-```
-SUCCESSION               Bansal to 2023-05-31, then Vivek from 2023-06-01
-SUCCESSION_WITH_VACANCY  Vivek to 2024-03-27, then Rawat from 2024-05-17
-                         50 days with no Company Secretary
-```
-
-Fifty, not fifty-one. The two dates are 51 days apart and the seat is empty on
-50 of them — 28 March through 16 May. The engine keeps both numbers because
-they answer different questions: the date difference is what the contiguity
-test reads (a gap of 1 is a clean handover, not a one-day vacancy), and the
-vacancy is what a reader should be told. Conflating them put an off-by-one in
-the most visible finding in the corpus, and the UI's timeline is what caught it.
-
-That vacancy exists only because intervals are modelled rather than
-overwritten. A store keeping "current Company Secretary" as a mutable field
-shows Rawat and nothing else.
+Then start the server and use the interface:
 
 ```bash
-python -m fkl.cli as-of 2024-04-15   # the seat is empty
-python -m fkl.cli as-of 2024-06-01   # Rawat
+cd backend
+python -m fkl.cli serve   # UI and API together on http://127.0.0.1:8000/
 ```
 
-Current state is a query with an as-of clause over immutable claims, never a
-stored field, which is what lets two dates give two different rosters and both
-be right.
+Go to **Add documents**, drop in a folder of PDFs, and set how many pages per
+document to read. Ingest, extraction and a corpus-wide comparison run behind a
+job whose progress and log you can watch live.
 
-### The gold set
+> **Note on cost and time.** Extraction is the only part of this system that
+> spends money — one structured model call per page, six pages in flight at a
+> time. Start with a small page cap. Everything else, including the entire
+> comparison layer, is free and deterministic.
 
-~28 claims and 16 relations, hand-labelled from the source pages **before** the
-comparability gate exists, so the gate is built against a target rather than
-scored afterwards. No key needed:
+The comparison at the end runs over the **whole corpus**, not just the upload —
+because the value of a new document is what it agrees and disagrees with.
+
+### Or use the command line
 
 ```bash
-python -m fkl.cli gold --verify
+cd backend
+
+# 1. Ingest. --no-llm does layout analysis only: no key, no spend.
+python -m fkl.cli ingest ../path/to/*.pdf --no-llm
+
+# 2. See a page exactly as the extractor will see it, and as the PDF stores it.
+python -m fkl.cli page 1 12
+python -m fkl.cli page 1 12 --raw
+
+# 3. Extract facts (needs a key). Page ranges keep iteration cheap.
+python -m fkl.cli ingest ../path/to/*.pdf
+python -m fkl.cli extract 1 --pages 0-19
+
+# 4. Compare everything, with the second look enabled.
+python -m fkl.cli relate --review
+
+# 5. Look at the results.
+python -m fkl.cli report
+python -m fkl.cli docs
+python -m fkl.cli export 1 -o ../out/doc1.json
 ```
 
-`--verify` re-reads all six PDFs and checks that every labelled quote is on the
-page it cites. That check is not ceremony: a gold set with a wrong page number
-does not fail loudly, it quietly becomes the definition of correct. Two entries
-in the first draft were wrong and this is what caught them.
+Extraction is **idempotent by page** — re-running skips pages that already have
+claims, so a repeat costs nothing and can't create duplicates. `--force` redoes
+them properly, replacing rather than appending.
 
-About a third of the labelled relations are pairs that must **not** be linked.
-A gold set of only true matches measures nothing, because a system that links
-everything scores perfectly on it.
+### Command reference
 
-### Comparing values: what the numbers taught us
+| Command | What it does |
+|---|---|
+| `ingest` | Parse, profile and store PDFs. `--no-llm` for layout only |
+| `page` | Print one page as the extractor sees it (`--raw` for the source text) |
+| `extract` | Extract, ground and store claims. `--pages`, `--force` |
+| `relate` | Run the comparability gate over the corpus. `--review` for the second look |
+| `as-of` | Time-travel: what was true on a given date |
+| `gold` | The hand-labelled evaluation set. `--verify`, `--score` |
+| `report` | Extraction quality across the corpus |
+| `export` | Dump a document and its claims as JSON |
+| `snapshot` | Rebuild the shippable database |
+| `serve` | Run the UI and the API together |
+| `models` | List the model ids your key can actually see |
 
-Three findings from measuring this corpus, each of which changed a design:
+### The API
 
-**No similarity threshold separates metric names.** Embedding fifteen predicate
-pairs with `text-embedding-3-small`:
-
-```
-should match      0.683 ─────────────────────── 0.944
-should NOT match  0.574 ─────────────── 0.846
-
-0.687  Revenue from contracts with customers :: Revenue from services   SAME
-0.846  Adjusted EBITDA :: EBITDA                                        DIFFERENT
-```
-
-Any cutoff loose enough to catch the first fuses the second. So embeddings
-generate candidates and an adjudicator decides, with dimension as a free
-pre-filter — that alone separates `Express Parcel revenue` from `Express Parcel
-shipments` at 0.801 without a model call.
-
-**Rounding tolerance cannot be a percentage.** `Revenues from sale of traded
-goods` FY23 is `16.54 ₹Mn` in the annual report and `2 ₹Cr` in the deck. That is
-21% apart and both are correct, because one crore is the deck's entire precision
-at that magnitude. Tolerance has to come from the coarser unit's granularity.
-
-**A year-end date is ambiguous and the ambiguity has to survive.** Annual report
-page 35 heads its columns `March 31, 2024` above revenue, meaning the year; page
-90 heads them identically above lease liabilities, meaning the instant. Only the
-section declaration separates them, so a period read without one is stored
-flagged rather than silently resolved.
-
-### Do we need to read the images?
-
-Mostly no, and the measurement is worth more than the answer.
-
-Charts and scanned pages are the obvious worry in a corpus like this, so the
-first thing built was a router that finds pages carrying numbers the layout pass
-could not attach to anything, and a vision pass to read them. The router
-selected 92 of 511 pages. Three things then turned up, in order:
-
-1. **43% of those pages were a bug of ours, not a chart.** The XY-cut was
-   slicing financial tables down their own column gutters, so labels landed in
-   one region and values in another and nothing could rejoin them. Fixing that
-   took the corpus from 70.1% to 86.4% of figures bound to a label, and the
-   router from 92 pages to 52. A vision call would have hidden the defect at
-   about a thousand tokens a page.
-2. **15% of what remains is axis furniture.** `56 54 52 50 48` down the side of
-   a PMI chart are tick marks, not facts.
-3. **Financial documents restate themselves.** The earnings deck charts FY24
-   revenue as `8,142` on pages 8 and 9 — and prints `₹8,142 Cr` in text on page
-   5, and in reconstructed table rows on pages 13, 16 and 22. Every case this
-   project has to demonstrate is reachable from the text layer, including the
-   cross-document ₹Cr-to-₹Mn corroboration that looked like it needed a chart.
-
-Only one page in the whole corpus is genuinely image-only (the IMF cover), and
-it carries no data. There is no OCR here because there is nothing to OCR.
-
-So the pass ships **off by default**. It stays because redundancy is a property
-of these six PDFs rather than a promise about the seventh, and because the
-router is worth running either way — it reports what text extraction did not
-reach instead of leaving that unmeasured:
+The UI and the API are one process on one port, so there's no CORS setup and
+nothing to configure. **http://127.0.0.1:8000/docs** gives the full OpenAPI
+surface if you'd rather read the data than the screens.
 
 ```bash
-python -m fkl.cli extract 3 --pages 8 --figures   # read the charts
-python -m fkl.cli extract 3 --pages 8             # text only; says what it skipped
+# Upload a folder and watch the job
+curl -F files=@a.pdf -F files=@b.pdf \
+     "http://127.0.0.1:8000/api/v1/documents?maxPages=20"
+curl http://127.0.0.1:8000/api/v1/jobs/1
+
+# Ask a question in English
+curl "http://127.0.0.1:8000/api/v1/ask?q=..."
+
+# Re-run one comparison with an axis held out of the reasoning
+curl -X POST http://127.0.0.1:8000/api/v1/compare \
+     -d '{"a": "f-1", "b": "f-2", "mask_axes": ["consolidation"]}'
 ```
 
-A figure claim is held to the same standard as any other: the value must be
-locatable in the page's own text layer, so vision may propose which bar a number
-sits on but can never introduce a number that was not printed. What it cannot
-prove is the binding itself, so those claims are stored with `source=figure` and
-a confidence ceiling of 0.75.
+---
 
-Run the tests. They stub the single model call, so the suite needs no key:
+## The interface
+
+Eight screens. Three carry most of the idea:
+
+**Compare** — takes any pair apart: both facts side by side, every context axis
+with a ✓ or a difference, the actual source page image from each document with
+the evidence span highlighted, and the verdict with its named axis. Below it,
+**mask** buttons hold an axis out of the reasoning and the verdict recomputes
+live. Watching `CONTEXTUAL` flip to `CONTRADICTS` when you hide the axis — and
+flip back when you restore it — is the clearest proof that the reasoning is
+*computed*, not stored.
+
+**Ask** — a question in English, answered **without averaging**. If a question
+has two correct answers in two different contexts, you get both, each with its
+own evidence and the axis that separates them. The model parses the question and
+then stops; retrieval is an exact query over typed claims.
+
+**Timeline** — role and state histories rendered as intervals, with successions
+and vacancies derived rather than extracted.
+
+The rest: **Overview** (the reduction number across the corpus), **Documents**,
+**Add documents** (the folder upload), **Facts** (every grounded claim with its
+full context), and **Corpus quality** — the quarantine, with a reason for every
+claim that didn't make it in, alongside the vocabulary the corpus taught itself.
+
+---
+
+## Project layout
+
+```
+backend/
+  fkl/
+    ingest.py      pdf/       PDF parsing, layout analysis
+    context.py     render.py  the document tree and context inheritance
+    llm/           schemas.py structured extraction
+    grounding.py              quote and value verification
+    canonical.py   units.py   canonicalization
+    periods.py     entities.py  metrics.py
+    compare.py                THE COMPARABILITY GATE
+    relate.py                 corpus-wide comparison
+    reconcile.py              the second look
+    contextrank.py            ranking where to look
+    temporal.py               intervals, succession, vacancy
+    registry.py               learned axes and cardinality
+    ask.py         api.py     question answering, HTTP
+  tests/                      272 tests
+PDF Fact Reconciliation System/
+                              the single-page interface
+gold/                         the hand-labelled evaluation set
+data/snapshot.sqlite          a pre-computed corpus, so this runs with no key
+docs/ENGINEERING.md           the long version: every decision and what it cost
+```
+
+## Testing
 
 ```bash
-python -m pytest tests/ -q
+cd backend
+python -m pytest -q          # 272 tests, no API key needed
 ```
 
-Fuller instructions land with the API in a later phase.
+The whole comparison layer — the gate, the interval engine, canonicalization,
+the deterministic scouts — is testable with no credentials, because none of it
+calls a model. That's a property of the design, not an accident of the tests.
 
-### Does this generalise, and where exactly does it stop?
-
-Worth answering with an audit rather than a claim, because "no document-specific
-logic" is easy to say and easy to get wrong.
-
-**What is genuinely open.** There is no metric whitelist and no entity
-whitelist anywhere in the codebase — `grep` finds zero. `qualifiers` is an open
-dict, and `AXIS_PRIORITY` in the gate is only a tie-break ordering for naming a
-primary axis; an axis missing from it still works, it just sorts last. The
-proof is in the store: five axes now in use appear in no list anywhere —
-`sign_convention`, `measure_basis`, `scenario`, `time_reference`, `definition`
-— all recovered from the documents themselves.
-
-The corpus already spans two domains that share nothing structurally: a
-company's annual report, prospectus and earnings deck, and macroeconomic
-reports from three different institutions. The same pipeline reads both, and
-the discovered axes come from both halves.
-
-**The cold test.** The 2022 prospectus had never been ingested — a different
-document type, from a different year, with sections nothing else in the corpus
-has. Run cold, with no code changes:
-
-```
-ingest   100 pages · doc_type "prospectus" · as_of_date 2022-05-14 read from
-         "Dated May 14, 2022" · default_consolidation left null, with the note
-         "contains both consolidated and proforma financials; do not assume a
-         single consolidation basis"
-extract  46 claims from 2 pages, grounding precision 100%
-relate   2 new cross-document corroborations, 1 new discovered axis (nominee_of)
+```bash
+FKL_DB_URL=sqlite:///data/snapshot.sqlite python -m fkl.cli gold --score
 ```
 
-Sahil Barua and Deepak Kapoor each resolved to one person across the prospectus
-and the annual report, and their roles corroborated across two documents two
-years apart. Nothing was configured for any of that.
+runs the gate against every hand-labelled relation and scores it.
 
-It also found two bugs, which is the more useful half of a generalisation test:
+---
 
-- **Touching intervals read as overlapping.** The company's own renamings —
-  SSN Logistics, then Delhivery Private, then Delhivery Limited — are recorded
-  with correct consecutive dates, because a renaming happens *on* its date. The
-  annual report writes handovers the other way, "to 31 May, from 1 June".
-  Treating the shared boundary as an overlap turned a correctly extracted name
-  history into two contradictions about what the company is called.
-- **The gate never checked cardinality.** "Other Directorships: Spoton
-  Logistics" and "Other Directorships: Vave Health Inc" are both true of the
-  same person on the same day. The interval engine has always checked this
-  before reporting a conflict; the gate had not, because until a document
-  listed someone's other directorships nothing reached it. Cardinality is now
-  inferred from the predicate's grammar rather than a vocabulary — a plural
-  head noun asks for a list — with the head taken from before any dash, since
-  "Head - New Ventures" is one post and not a list of ventures.
+## What this deliberately does not build
 
-Both fixed, both regression-tested. Contradictions went 11 to 6, and the one
-that matters stayed.
+Restraint is a design decision, so it's stated:
 
-**Where the vocabulary is tuned, and it is worth being precise.** Parsers
-probed with inputs this corpus does not contain:
+- **No agent swarm.** Five agents passing messages is a meeting, not an
+  architecture.
+- **No graph database.** The system builds a graph of claims and context, but
+  the interesting part is the reasoning over it, not a visualization of it.
+- **No RAG over raw chunks.** Chunking is precisely what discards the
+  section-scope context that makes any of this decidable. Facts are extracted
+  *with* context attached, then queried exactly.
+- **No currency conversion.** Cross-currency pairs are `INCOMPARABLE`, not
+  joined at an invented rate.
+- **No verdict from the model.** It proposes; structure decides.
 
-```
-US$ million   -> USD million       ✓      FY2023-24                -> 2023-04-01..2024-03-31  ✓
-$bn           -> USD billion       ✓      year ended March 31 2024 -> 2023-04-01..2024-03-31  ✓
-EUR thousand  -> EUR thousand      ✓      calendar year 2023       -> 2023-01-01..2023-12-31  ✓
-GBP million   -> GBP million       ✓      FY2024 (Oct-Sep)         -> 2023-04-01..2024-03-31  ✗
-bps           -> percent           ✓      Q3 2024                  -> 2023-10-01..2023-12-31  ✗
-million tonnes-> mass_tonnes       ✓      H1 2024                  -> the whole year          ✗
-JPY billion   -> UNKNOWN           ✗
-```
+## Known limitations
 
-Three real limits, stated rather than discovered later:
+Stated up front rather than discovered:
 
-- **The fiscal calendar is now the document's, not ours.** It used to be a
-  module constant, which is the *quiet* kind of wrong: a September filer read as
-  April–March gives intervals confidently off by six months and comparisons that
-  all look fine. `infer_fy_start_month` reads it from the document's own wording
-  — "year ended December 31" says the year opened in January — and it is
-  threaded through as a parameter, defaulting to April when a document never
-  says. Quarters follow: `Q3` is October–December on an April year and
-  July–September on a calendar one, and that was the reading that differed
-  silently.
+- **Scanned PDFs are not supported.** There's no OCR. A scan is named and
+  skipped rather than failing the batch.
+- **Chart-heavy pages are the weak point.** When a chart's text layer has no
+  reading order, values and their labels can't be reliably bound. An optional
+  image-based pass exists; grounding still refuses anything it can't verify, so
+  the failure shows up as quarantine rather than as bad data.
+- **Inferred role cardinality is a heuristic** and can over-correct. The inferred
+  value is shown in the interface so it can be audited.
+- **Half-year periods widen to a full year** in the current period parser.
+- **A small number of duplicate claims survive** — the same fact read twice on
+  one page with different period readings.
+- **Identifier-based entity merging is currently tuned to one jurisdiction's
+  identifier formats.**
+- **SQLite with brute-force similarity** is right for this scale. The blocking
+  key is what carries the design further; the store is what would need to change.
 
-  ```
-  FY2024, calendar filer      -> 2024-01-01 .. 2024-12-31
-  Q3 2024, calendar filer     -> 2024-07-01 .. 2024-09-30
-  FY2024, September filer     -> 2023-10-01 .. 2024-09-30
-  Q3 FY24, April filer        -> 2023-10-01 .. 2023-12-31   (unchanged)
-  ```
-- **Half-years are still not modelled.** `H1 2024` widens to the full year.
-- **Identifiers are Indian.** CIN, DIN and ISIN are recognised; a US filing's
-  CIK and EIN are not. This one degrades safely rather than failing: no
-  identifier means resolution falls back to names and adjudication, which is
-  the path everything without a registration number already takes.
+The full reasoning behind each of these, plus the experiments that produced the
+numbers above, is in **[docs/ENGINEERING.md](docs/ENGINEERING.md)**.
 
-Legal-form stripping is not India-specific — `Acme Corporation`, `Acme Corp.`
-and `Acme Inc` all normalise to `acme`.
+---
 
-## Approach
-
-See [PLAN.md](PLAN.md) for the full architecture and the reasoning behind it.
-
-## Limitations and Next Steps
-
-Written against what actually shipped, and in the order that matters.
-
-**Extraction is the binding constraint, not the gate.** The gate scores 16/16
-on the hand-labelled gold set. Every failure this project actually hit was on
-the other side of it: a sentence the extractor never read, a company name that
-did not resolve, a forecast stored as an actual. The flagship contradiction in
-this corpus — the RBI's 6.5% against the IMF's 6.6% for FY26 GDP growth — was
-invisible three separate ways, and none of them was a reasoning error. If there
-is one honest summary of where the remaining risk lives, it is that the
-comparability argument is sound and the reading is where it breaks.
-
-**The extractor emits some facts twice.** Around 0.6% of stored claims are one
-fact read twice on one page with different period readings — a stake described
-once as *July 2023* and once with no period, a tonnage read once as FY24 and
-once as *since inception*, which is what the page actually says. Nothing
-deduplicates within a page. Both copies are grounded and both are visible; the
-effect is a slightly inflated claim count and one spurious pair. The fix is a
-within-page identity check on `(subject, predicate, value, period)`, deciding
-which period reading the evidence span supports.
-
-**Chart pages need the figure pass, and it is off by default.** The text layer
-of the earnings deck preserves every number on a chart and destroys which
-series and year each belongs to. Page 8 is in the corpus as the required
-extraction-failure case, quarantined with a reason. `--figures` reads such
-pages as images and recovers the bindings; it is opt-in because on this corpus
-the charts restate figures the tables already carry, so every demonstration
-case is reachable without it. That is a property of these documents, not a
-guarantee about the next deck.
-
-**No FX conversion, ever.** A USD claim and an INR claim about the same metric
-are `INCOMPARABLE`. Converting them would need a rate, and a rate needs a date
-and a source that no document supplies. Correct-by-refusal, and stated rather
-than hidden.
-
-**Cardinality is inferred, and the inference is visible because it is sometimes
-wrong.** A predicate wrongly read as single-holder manufactures a contradiction
-out of two people who held different posts. Grammar seeds it, and
-same-document observation corrects it — the corpus corrects several, including
-`Chief People Officer`, where one document names two concurrent holders. It
-also over-corrects: `Managing Director and Chief Executive Officer` reads as
-multi-holder because director biographies list that post for several *other*
-companies, and the org scope is not always recovered from a biography. The
-`/api/v1/predicates` endpoint and the Corpus quality screen show the grammar's
-guess beside the corpus's evidence for exactly this reason.
-
-**People are never merged automatically.** Organisations, places and
-institutions can be merged by an adjudicated decision; `person` is deliberately
-excluded, because two people with similar names are a different and much worse
-error than two records for one person. The cost is visible in the corpus: the
-same Company Secretary appears under two spellings until an identifier ties
-them together.
-
-**Periods below a year are widened.** A half-year reference with no other
-signal resolves to the enclosing fiscal year, which makes an H1 figure look
-comparable to a full-year one. Quarters parse correctly; half-years are the
-gap.
-
-**Identifier kinds are Indian.** CIN, DIN and ISIN are recognised; an SEC CIK
-or a UK company number is not. This degrades safely — resolution falls back to
-names and adjudication, which is the path every entity without a registration
-number already takes — but the strongest resolution signal is unavailable
-outside India until the kinds are extended.
-
-**The axis promotion threshold is set for a small corpus.** A discovered axis is
-believed at two independent pairs. That is defensible over 511 pages and would
-be far too low over fifty thousand; the count is stored per axis, so the
-threshold is a number to raise rather than a rule to rewrite.
-
-**Remembered recoveries are re-judged but not re-grounded.** A recovery carried
-forward from an earlier run has its circularity and confidence checks re-run —
-which matters, and was found the hard way when replaying a pre-fix recovery
-silently dissolved the corpus's one genuine cross-institution disagreement.
-What is not re-run is the page-location check, because the evidence spans are
-not stored on the relation. The claims and pages are immutable, so this is safe
-today; storing the spans would make it verifiable rather than merely safe.
-
-**Evidence page images need the source PDFs.** The comparison and evidence
-views render the actual page with the located span highlighted, which requires
-the file at the path it was ingested from. A database browsed without its
-documents falls back to the stored quote and says so on the panel.
-
-**SQLite, and similarity by brute force over stored vectors.** Right for 511
-pages, and the blocking key on `(entity, metric)` is what carries the design
-past it. At fifty thousand pages the store becomes Postgres and the embedding
-scan becomes an index; nothing above the storage layer changes, which is the
-point of blocking being a design decision rather than an optimisation.
-
-**ContextRank ranks recurrence, not discovery.** Held out, its axis ranking
-scores zero: an axis is only a node in the graph because something already
-recorded it, so the ranking can find an axis applying *again* and can never
-name one for the first time. The vocabulary ranking is what survives a holdout,
-and it is words rather than axes — turning a ranked word list into a proposed
-axis name is still the model's job. A/B'd over twelve pairs on one corpus it
-explains three more of them; that is one experiment, not a result.
-
-### Next, in priority order
-
-1. Deduplicate within a page, and decide the period from the evidence span.
-2. Store recovery evidence spans on the relation so a remembered recovery can
-   be re-grounded rather than trusted.
-3. Recover `org_scope` from biography sections, which is what would stop
-   `Managing Director and Chief Executive Officer` being read as multi-holder.
-4. Half-year period parsing.
-5. Non-Indian identifier kinds.
-6. OCR, for the scanned documents this system currently names and skips.
-7. A larger A/B for ContextRank, on a corpus where twelve pairs is not
-   the whole sample.
-
-## Additional Notes
-
-**On the LLM's role.** It is used in five places and issues a verdict in none of
-them: profiling a document, turning a page into typed claims, adjudicating a
-name or a metric in the grey band between "clearly the same" and "clearly not",
-parsing a question into `(entity, metric, period)`, and proposing a *fact about
-the document* when a contradiction is sent back to its pages. That last one is
-the most constrained: the proposal must locate on the page, must appear inside
-its own evidence, and must not quote the figure it claims to label — and then
-the same deterministic gate re-decides. It can supply context. It cannot supply
-a conclusion.
-
-**On answering questions without averaging.** `/api/v1/ask` parses the question
-and stops. Retrieval is a SQL query over typed claims, and the answer is grouped
-by the qualifier vectors the extractor already attached, so "Delhivery's FY24
-revenue" comes back as ₹81,415.38M consolidated *and* ₹74,540.82M standalone,
-with the axis that separates them named. Where two claims share a context and
-still disagree, the answer says so rather than choosing the more confident one —
-which is how the RBI/IMF disagreement surfaces from a plain English question.
-
-**On the parts that were measured rather than designed.** The entity
-adjudication prompt refused all nine test pairs on its first version; the
-current one separates *an entity referred to through an aspect* from *a distinct
-body associated with it*, and gets 9 of 9. The circularity guard was written
-twice, because the first version tested for residue and the second for
-containment, and only the second stops a claim's own sentence being proposed as
-the label that explains it away. Both are recorded in comments where they
-happened.
-
-**On what is deliberately absent.** No agent swarm, no GraphRAG, no graph
-database, no RAG over raw chunks, no FX conversion. The reasoning for each is in
-[PLAN.md](PLAN.md); the short version is that chunking discards the
-section-scope context that makes any of this decidable, and summarisation
-destroys the exact values, units and page-level evidence that are the things
-being graded.
+<sub>Built for the Superjoin engineering assignment. Credentials are never
+committed; `.env` is gitignored and `.env.example` holds placeholders only.</sub>

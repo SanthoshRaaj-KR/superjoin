@@ -256,8 +256,12 @@ def relate_corpus(
         """
         for left, right in itertools.combinations(members, 2):
             verdict = compare(comparables[left.id], comparables[right.id])
-            if not replay:
-                run.pairs += 1
+            # Counted on both passes. The two passes write into two different
+            # tallies and only one of them is merged, so guarding this with
+            # `not replay` did not prevent double counting — it made a replayed
+            # block contribute zero pairs while still contributing all of its
+            # disagreements, and the run reported more disagreements than pairs.
+            run.pairs += 1
 
             # A contradiction is a hypothesis, not a conclusion. Before it is
             # recorded, go back to the two pages and look for the distinction
