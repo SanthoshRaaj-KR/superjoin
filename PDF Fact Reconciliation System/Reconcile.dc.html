@@ -1079,7 +1079,12 @@ class Component extends DCLogic {
       const on = p.key === s.page;
       const counts = {
         overview: "", documents: String(s.docs.length), facts: String(s.facts.length),
-        compare: String(s.pairs.length), timeline: "3", quality: String(s.quarantine.length),
+        compare: String(s.pairs.length),
+        // Counted, not carried over from the mock. It said "3" regardless of
+        // what was loaded, which on an empty corpus is an interface asserting
+        // three facts that do not exist.
+        timeline: String(s.facts.filter((f) => f.kind === "tenure").length),
+        quality: String(s.quarantine.length),
       };
       return { ...p, go: () => this.setState({ page: p.key }), mark: on ? "#7FB894" : "transparent",
         fg: on ? "#F3F5EF" : "#A8AF9E", weight: on ? 600 : 400, count: counts[p.key] };
