@@ -287,3 +287,114 @@ def test_a_pair_that_is_half_tenure_does_not_break_the_listing(client):
     assert rows.status_code == 200
     labels = [p["label"] for p in rows.json()]
     assert any("Company Secretary" in l for l in labels)
+
+
+# --- the surfaces added with the folder upload -------------------------------
+
+
+def test_one_fact_carries_its_provenance_and_what_was_said_about_it(client):
+    """The list endpoint returns what a table row needs. This returns what a
+    reader needs to decide whether to believe the claim: which stage was least
+    sure of it, what it was read from, and what it was compared against."""
+    with session_scope() as s:
+        s.add(Relation(claim_a_id=1, claim_b_id=2, verdict="CONTEXTUAL",
+                       axis="consolidation", explanation="different bases",
+                       differing_axes=["consolidation"], missing_axes=[],
+                       values_differ=True, generation=1))
+        s.flush()
+
+    body = client.get("/api/v1/facts/f-1").json()
+    assert body["id"] == "f-1"
+    assert body["confidenceParts"]["normalization"] == 0.8
+    assert body["unknownQualifiers"] == []
+    assert body["modality"] == "actual"
+    assert [r["other"] for r in body["relations"]] == ["f-2"]
+    assert body["relations"][0]["axis"] == "consolidation"
+    assert client.get("/api/v1/facts/f-999").status_code == 404
+
+
+def test_relations_can_be_asked_for_by_verdict(client):
+    """`/pairs` is the UI's feed — curated, capped and spread across metrics so
+    one busy line item cannot fill it. This is the underlying data, for when
+    the question is "every contradiction" rather than "something interesting"."""
+    with session_scope() as s:
+        s.add(Relation(claim_a_id=1, claim_b_id=2, verdict="CONTRADICTS",
+                       axis=None, explanation="they disagree", differing_axes=[],
+                       missing_axes=[], values_differ=True, generation=1))
+        s.add(Relation(claim_a_id=1, claim_b_id=3, verdict="CORROBORATES",
+                       axis=None, explanation="they agree", differing_axes=[],
+                       missing_axes=[], values_differ=False, generation=1))
+        s.flush()
+
+    everything = client.get("/api/v1/relations").json()
+    assert len(everything) == 2
+    only = client.get("/api/v1/relations?type=CONTRADICTS").json()
+    assert [r["verdict"] for r in only] == ["CONTRADICTS"]
+    assert only[0]["a"] == "f-1" and only[0]["b"] == "f-2"
+
+
+def test_the_axis_registry_separates_what_was_built_in_from_what_was_learned(client):
+    """The distinction is the whole point of keeping a table. A seeded axis is
+    something this system was born knowing; a discovered one is a phrase a
+    document supplied, and the count against the threshold says whether it has
+    been seen often enough to be believed."""
+    rows = {a["axis"]: a for a in client.get("/api/v1/axes").json()}
+    assert "period" in rows
+    assert rows["period"]["origin"] == "seeded"
+    assert rows["period"]["threshold"] >= 2
+    # The UI's vocabulary, not the corpus's: `consolidation` reaches it as
+    # `scope`, and the translation lives in the API rather than in the gate.
+    assert "scope" in rows
+
+
+def test_cardinality_is_reported_with_the_reasoning_behind_it(client):
+    """A predicate wrongly read as single-holder manufactures a contradiction
+    out of two people who held different posts, so the grammar's guess has to
+    be visible beside the corpus's evidence."""
+    from fkl.registry import record_predicate
+
+    with session_scope() as s:
+        record_predicate(s, "Chief People Officer", inferred=1, observed=0,
+                         evidence="two concurrent holders in one document",
+                         holders=2)
+        record_predicate(s, "Registered Office", inferred=1)
+
+    rows = {p["predicate"]: p for p in client.get("/api/v1/predicates").json()}
+    assert rows["Chief People Officer"]["cardinality"] == "many"
+    assert rows["Chief People Officer"]["inferred"] == "one"
+    assert rows["Chief People Officer"]["corrected"] is True
+    assert rows["Registered Office"]["corrected"] is False
+    assert rows["Registered Office"]["basis"] == "grammar"
+
+
+def test_a_page_image_without_its_pdf_is_a_404_not_a_blank_picture(client):
+    """A database browsed without its source documents is a normal state, and
+    the interface falls back to the quote. Handing it an empty image would
+    leave it with something it has to explain away."""
+    assert client.get("/api/v1/pages/D-01/21/image").status_code == 404
+    assert client.get("/api/v1/pages/D-99/1/image").status_code == 404
+
+
+def test_ask_splits_one_question_into_the_answers_the_corpus_actually_holds(client):
+    """Revenue in FY24 is ₹74,540.82M and ₹81,415.38M, and both are right.
+    Returning one would be a guess on the reader's behalf; averaging them
+    would invent a number that appears in no document."""
+    body = client.get("/api/v1/ask", params={"q": "Delhivery revenue FY2024"}).json()
+    assert body["matched"] == 2
+    assert len(body["answers"]) == 2
+    assert "scope" in body["splitBy"]          # the UI's name for consolidation
+    assert {a["context"]["scope"] for a in body["answers"]} == {
+        "standalone", "consolidated"}
+    assert "each is correct in its own context" in body["note"]
+    # No usable key in the tests, so this took the registry-matching path.
+    assert "registry match" in body["parsedBy"]
+
+
+def test_ask_says_so_when_nothing_answers_the_question(client):
+    """Including — and especially — when the question pinned nothing at all.
+    Answering an unparsed question with every claim in the store gives the
+    reader eight confident answers to a question nobody understood."""
+    body = client.get("/api/v1/ask", params={"q": "cash flow from financing"}).json()
+    assert body["query"] == {"entity": "", "metric": "", "period": ""}
+    assert body["answers"] == []
+    assert "Nothing in the corpus answers this" in body["note"]

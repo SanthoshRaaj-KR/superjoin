@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Collation — evidence-grounded fact reconciliation</title>
+<!-- Inline, so there is no second request and no 404 in a console a reader
+     may well open to check that nothing else is going wrong. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2314180F'/%3E%3Crect x='3.5' y='3.5' width='9' height='9' rx='1.5' fill='none' stroke='%237FB894' stroke-width='1.6'/%3E%3Crect x='5.5' y='5.6' width='5' height='1.4' fill='%237FB894'/%3E%3C/svg%3E">
 <script src="./support.js"></script>
 </head>
 <body>
@@ -101,6 +105,143 @@
     </div>
 
     <div class="sb" style="flex:1; padding:24px 28px 56px">
+
+      <!-- ═══ ASK ═══════════════════════════════════════════════════════ -->
+      <sc-if value="{{ isAsk }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:900px">
+
+          <div style="display:flex; gap:10px; align-items:stretch">
+            <input value="{{ question }}" onInput="{{ onQuestion }}" onKeyDown="{{ onQuestionKey }}"
+              placeholder="What was Delhivery's revenue in FY24?"
+              style="flex:1; padding:13px 15px; border:1px solid #C8C6BC; border-radius:3px; background:#fff; font-size:14.5px; color:#20241D; outline:none" />
+            <div onClick="{{ runAsk }}" style="display:flex; align-items:center; padding:0 20px; border-radius:3px; background:#1F4D36; color:#F3F5EF; cursor:pointer; font:500 11px/1 'IBM Plex Mono',monospace; letter-spacing:0.08em; white-space:nowrap" style-hover="background:#2A6549">{{ askBusy }}</div>
+          </div>
+
+          <div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:7px; align-items:center">
+            <span class="label" style="font-size:9.5px; color:#A2A79A">TRY</span>
+            <sc-for list="{{ examples }}" as="e" hint-placeholder-count="3">
+              <div onClick="{{ e.go }}" style="padding:5px 10px; border:1px solid #DEDCD3; border-radius:14px; background:#fff; cursor:pointer; font-size:11.5px; color:#5A6055" style-hover="border-color:#9CBFA4; color:#1F4D36">{{ e.q }}</div>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ hasAskError }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:16px; padding:12px 14px; border:1px solid #E6C4BE; background:#F7E5E2; border-radius:3px; font-size:12.5px; color:#93231A">{{ askError }}</div>
+          </sc-if>
+
+          <sc-if value="{{ askState.asked }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:22px">
+
+              <div style="padding:14px 16px; background:#fff; border:1px solid #DEDCD3; border-radius:4px">
+                <div style="font-size:14px; line-height:1.55; color:#20241D; text-wrap:pretty">{{ askState.note }}</div>
+                <div style="margin-top:11px; padding-top:11px; border-top:1px solid #EFEDE6; display:grid; grid-template-columns:auto 1fr; gap:5px 14px; font:400 10.5px/1.6 'IBM Plex Mono',monospace; color:#7C8276">
+                  <span style="color:#A2A79A">QUERY</span><span>{{ askState.parsed }}</span>
+                  <span style="color:#A2A79A">PARSED BY</span><span>{{ askState.parsedBy }}</span>
+                  <span style="color:#A2A79A">RETRIEVAL</span><span>{{ askState.matched }} — exact query over typed claims, no vector search</span>
+                </div>
+              </div>
+
+              <sc-for list="{{ answers }}" as="a" hint-placeholder-count="3">
+                <div style="margin-top:12px; background:{{ a.bg }}; border:1px solid {{ a.edge }}; border-radius:4px; overflow:hidden">
+                  <div style="padding:15px 17px">
+                    <div style="display:flex; align-items:baseline; gap:12px; flex-wrap:wrap">
+                      <div style="font:500 22px/1.2 'IBM Plex Mono',monospace; color:#14180F; letter-spacing:-0.01em">{{ a.value }}</div>
+                      <sc-if value="{{ a.unresolved }}" hint-placeholder-val="{{ false }}">
+                        <span style="font:500 9px/1 'IBM Plex Mono',monospace; letter-spacing:0.06em; padding:4px 6px; border-radius:2px; background:#F7E5E2; color:#93231A">{{ a.flag }}</span>
+                      </sc-if>
+                    </div>
+                    <div style="margin-top:9px; font:400 11px/1.6 'IBM Plex Mono',monospace; color:#6C7266">{{ a.context }}</div>
+                    <div style="margin-top:4px; font:400 10.5px/1.6 'IBM Plex Mono',monospace; color:#A2A79A">{{ a.support }}</div>
+                  </div>
+                  <div style="border-top:1px solid #EFEDE6; background:#FBFAF7">
+                    <sc-for list="{{ a.cites }}" as="c" hint-placeholder-count="2">
+                      <div onClick="{{ c.go }}" style="padding:10px 17px; border-bottom:1px solid #F2F0E9; cursor:pointer; display:flex; gap:12px; align-items:baseline" style-hover="background:#F4F6F2">
+                        <span style="font:400 10px/1.5 'IBM Plex Mono',monospace; color:#8A9083; white-space:nowrap">{{ c.ref }}</span>
+                        <span style="font-size:12px; line-height:1.5; color:#4E5449">{{ c.quote }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+
+              <sc-if value="{{ askState.empty }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:12px; padding:26px; text-align:center; border:1px dashed #D2D0C6; border-radius:4px; color:#8A9083; font-size:13px">The parsed query matched no stored claim. Try naming the entity and the metric the way a document would.</div>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ═══ ADD DOCUMENTS ═════════════════════════════════════════════ -->
+      <sc-if value="{{ isUpload }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:900px">
+
+          <div onDrop="{{ onDrop }}" onDragOver="{{ onDragOver }}"
+            style="padding:34px 26px; border:1px dashed #C8C6BC; border-radius:5px; background:#fff; text-align:center">
+            <div class="display" style="font-size:17px; color:#20241D">Drop a folder of PDFs here</div>
+            <div style="margin-top:6px; font-size:12.5px; color:#7C8276; max-width:60ch; margin-left:auto; margin-right:auto; line-height:1.6">Every PDF in the folder is ingested, profiled, extracted and then compared against everything already in the corpus. Anything that is not a PDF is ignored, and a scanned page is named and skipped rather than failing the batch.</div>
+            <div style="margin-top:16px; display:flex; gap:9px; justify-content:center; flex-wrap:wrap">
+              <label style="padding:9px 16px; border:1px solid #C8C6BC; border-radius:3px; background:#F6F5F1; cursor:pointer; font:500 11px/1 'IBM Plex Mono',monospace; letter-spacing:0.06em; color:#3A3F36" style-hover="border-color:#191C16">
+                CHOOSE FOLDER
+                <input type="file" webkitdirectory="" directory="" multiple="" onChange="{{ onPick }}" style="display:none" />
+              </label>
+              <label style="padding:9px 16px; border:1px solid #C8C6BC; border-radius:3px; background:#F6F5F1; cursor:pointer; font:500 11px/1 'IBM Plex Mono',monospace; letter-spacing:0.06em; color:#3A3F36" style-hover="border-color:#191C16">
+                CHOOSE FILES
+                <input type="file" accept="application/pdf" multiple="" onChange="{{ onPick }}" style="display:none" />
+              </label>
+            </div>
+          </div>
+
+          <div style="margin-top:16px; display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap">
+            <div style="flex:1 1 380px; background:#fff; border:1px solid #DEDCD3; border-radius:4px; overflow:hidden">
+              <div class="label" style="padding:10px 14px; border-bottom:1px solid #E6E4DB; font-size:10px; line-height:1; color:#8A9083">SELECTED · {{ upload.count }} PDF</div>
+              <sc-for list="{{ upload.names }}" as="f" hint-placeholder-count="3">
+                <div style="padding:9px 14px; border-bottom:1px solid #F2F0E9; display:flex; justify-content:space-between; gap:12px; font-size:12px; color:#3A3F36">
+                  <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ f.name }}</span>
+                  <span style="font:400 10.5px/1.5 'IBM Plex Mono',monospace; color:#A2A79A; white-space:nowrap">{{ f.size }}</span>
+                </div>
+              </sc-for>
+              <sc-if value="{{ upload.hasMore }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:9px 14px; font:400 11px/1 'IBM Plex Mono',monospace; color:#A2A79A">{{ upload.more }}</div>
+              </sc-if>
+              <sc-if value="{{ upload.hasIgnored }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:9px 14px; border-top:1px solid #F2F0E9; font:400 11px/1 'IBM Plex Mono',monospace; color:#7A5410">{{ upload.ignored }}</div>
+              </sc-if>
+            </div>
+
+            <div style="flex:0 1 300px; background:#fff; border:1px solid #DEDCD3; border-radius:4px; padding:15px 16px">
+              <div class="label" style="font-size:10px; line-height:1; color:#8A9083">PAGES TO READ PER DOCUMENT</div>
+              <input value="{{ maxPages }}" onInput="{{ onMaxPages }}" type="number" min="1"
+                style="margin-top:9px; width:100%; padding:8px 10px; border:1px solid #DEDCD3; border-radius:3px; font:400 13px/1 'IBM Plex Mono',monospace; color:#20241D; outline:none" />
+              <div style="margin-top:9px; font-size:11.5px; line-height:1.6; color:#7C8276">Extraction is the only part of this system that costs money — one structured model call per page. The cap keeps an unattended upload of a 400-page filing from spending on its own.</div>
+              <div onClick="{{ startUpload }}" style="margin-top:14px; padding:11px; text-align:center; border-radius:3px; background:{{ upload.buttonBg }}; color:#F3F5EF; cursor:pointer; font:500 11px/1 'IBM Plex Mono',monospace; letter-spacing:0.08em">{{ upload.buttonLabel }}</div>
+              <sc-if value="{{ upload.hasError }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:10px; font-size:11.5px; line-height:1.5; color:#93231A">{{ upload.error }}</div>
+              </sc-if>
+            </div>
+          </div>
+
+          <sc-if value="{{ jobView.open }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:18px; background:#fff; border:1px solid #DEDCD3; border-radius:4px; overflow:hidden">
+              <div style="padding:13px 16px; border-bottom:1px solid #E6E4DB; display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap">
+                <div style="display:flex; align-items:center; gap:9px">
+                  <span style="font:500 9.5px/1 'IBM Plex Mono',monospace; letter-spacing:0.07em; padding:4px 7px; border-radius:2px; background:{{ jobView.statusBg }}; color:{{ jobView.statusFg }}">{{ jobView.status }}</span>
+                  <span style="font:400 11.5px/1 'IBM Plex Mono',monospace; color:#5A6055">{{ jobView.stage }} {{ jobView.detail }}</span>
+                </div>
+                <span style="font:400 10.5px/1 'IBM Plex Mono',monospace; color:#8A9083">{{ jobView.summary }}</span>
+              </div>
+              <div style="height:3px; background:#EFEDE6"><div style="height:3px; background:#7FB894; width:{{ jobView.pctWidth }}"></div></div>
+              <div class="sb" style="padding:13px 16px; max-height:280px; overflow:auto; display:flex; flex-direction:column; gap:6px; font:400 11.5px/1.6 'IBM Plex Mono',monospace; color:#4E5449">
+                <sc-for list="{{ jobView.log }}" as="l" hint-placeholder-count="4">
+                  <div style="display:flex; gap:8px"><span style="color:#9CBFA4">▸</span><span>{{ l }}</span></div>
+                </sc-for>
+              </div>
+              <sc-if value="{{ jobView.hasError }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:11px 16px; border-top:1px solid #E6C4BE; background:#F7E5E2; font-size:12px; color:#93231A">{{ jobView.error }}</div>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
 
       <!-- ═══ COMPARE ═══════════════════════════════════════════════════ -->
       <sc-if value="{{ isCompare }}" hint-placeholder-val="{{ true }}">
@@ -489,13 +630,40 @@
         </div>
 
         <div style="margin-top:16px; background:#fff; border:1px solid #DEDCD3; border-radius:4px; overflow:hidden">
-          <div class="label" style="padding:10px 14px; border-bottom:1px solid #E6E4DB; font-size:10px; line-height:1; color:#8A9083">DISCOVERED CONTEXTUAL AXES</div>
-          <sc-for list="{{ axisRows }}" as="a" hint-placeholder-count="5">
-            <div style="display:grid; grid-template-columns:1fr 2fr auto auto; gap:14px; padding:11px 14px; border-bottom:1px solid #F0EEE7; align-items:center">
-              <div style="font-size:12.5px; font-weight:500; color:#20241D">{{ a.axis }}</div>
-              <div style="font:400 11px/1.5 'IBM Plex Mono',monospace; color:#6C7266">{{ a.values }}</div>
-              <div style="font:400 11px/1 'IBM Plex Mono',monospace; color:#9AA093; white-space:nowrap">{{ a.occ }}</div>
-              <div style="font:400 11px/1 'IBM Plex Mono',monospace; color:#1F4D36; white-space:nowrap">{{ a.res }}</div>
+          <div style="padding:10px 14px; border-bottom:1px solid #E6E4DB; display:flex; align-items:baseline; justify-content:space-between; gap:14px; flex-wrap:wrap">
+            <span class="label" style="font-size:10px; line-height:1; color:#8A9083">AXIS REGISTRY</span>
+            <span style="font:400 10.5px/1 'IBM Plex Mono',monospace; color:#1F4D36">{{ learnedLabel }}</span>
+          </div>
+          <sc-for list="{{ axisRegistry }}" as="a" hint-placeholder-count="6">
+            <div style="padding:11px 14px; border-bottom:1px solid #F0EEE7">
+              <div style="display:grid; grid-template-columns:auto 1fr auto auto; gap:12px; align-items:center">
+                <span style="font:500 8.5px/1 'IBM Plex Mono',monospace; letter-spacing:0.06em; padding:4px 6px; border-radius:2px; background:{{ a.originBg }}; color:{{ a.originFg }}">{{ a.origin }}</span>
+                <span style="font-size:12.5px; font-weight:500; color:#20241D">{{ a.axis }}</span>
+                <span style="font:400 10.5px/1 'IBM Plex Mono',monospace; color:#9AA093; white-space:nowrap">{{ a.status }}</span>
+                <span style="font:400 10.5px/1 'IBM Plex Mono',monospace; color:{{ a.resolvesFg }}; white-space:nowrap">{{ a.resolves }}</span>
+              </div>
+              <div style="margin-top:6px; font:400 11px/1.5 'IBM Plex Mono',monospace; color:#6C7266">{{ a.values }}</div>
+              <sc-if value="{{ a.hasExample }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:5px; font-size:11.5px; line-height:1.55; color:#8A9083; text-wrap:pretty">{{ a.example }}</div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="margin-top:16px; background:#fff; border:1px solid #DEDCD3; border-radius:4px; overflow:hidden">
+          <div style="padding:10px 14px; border-bottom:1px solid #E6E4DB; display:flex; align-items:baseline; justify-content:space-between; gap:14px; flex-wrap:wrap">
+            <span class="label" style="font-size:10px; line-height:1; color:#8A9083">PREDICATE CARDINALITY</span>
+            <span style="font:400 10.5px/1 'IBM Plex Mono',monospace; color:#7A5410">{{ correctedLabel }}</span>
+          </div>
+          <div style="padding:10px 14px; border-bottom:1px solid #F0EEE7; font-size:11.5px; line-height:1.6; color:#7C8276; text-wrap:pretty">A predicate wrongly inferred to admit one holder manufactures a contradiction out of two people who genuinely held different posts. It is shown here so that failure is auditable rather than silent.</div>
+          <sc-for list="{{ predicateRows }}" as="p" hint-placeholder-count="6">
+            <div style="display:grid; grid-template-columns:auto 1fr auto; gap:12px; padding:10px 14px; border-bottom:1px solid #F0EEE7; align-items:center">
+              <span style="font:500 8.5px/1 'IBM Plex Mono',monospace; letter-spacing:0.06em; padding:4px 6px; border-radius:2px; background:{{ p.cardBg }}; color:{{ p.cardFg }}; white-space:nowrap">{{ p.cardinality }}</span>
+              <div>
+                <div style="font-size:12.5px; color:#20241D">{{ p.predicate }}</div>
+                <div style="margin-top:3px; font:400 10.5px/1.5 'IBM Plex Mono',monospace; color:{{ p.basisFg }}">{{ p.basis }}</div>
+              </div>
+              <span style="font:400 10.5px/1 'IBM Plex Mono',monospace; color:#A2A79A; white-space:nowrap">{{ p.holders }}</span>
             </div>
           </sc-for>
         </div>
@@ -535,21 +703,53 @@
 
       <div class="sb" style="flex:1; overflow:auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:0; align-items:start">
         <div style="padding:22px">
-          <div style="background:#fff; border:1px solid #D2D0C6; box-shadow:0 1px 3px rgba(20,24,15,0.07); padding:46px 44px; position:relative">
-            <div style="position:absolute; top:14px; right:18px; font:400 9.5px/1 'IBM Plex Mono',monospace; color:#B8BCB0">{{ ev.pageLabel }}</div>
-            <div style="font-size:10px; font-weight:600; letter-spacing:0.12em; color:#8A9083; text-transform:uppercase">{{ ev.section }}</div>
-            <sc-for list="{{ ev.linesTop }}" as="l" hint-placeholder-count="5">
-              <div style="height:7px; border-radius:2px; background:#E8E6DE; margin-top:10px; width:{{ l }}%"></div>
-            </sc-for>
-            <div style="margin:20px 0; padding:14px 16px; background:#EEF4EC; border:1px solid #9CBFA4; border-radius:2px; position:relative">
-              <div style="position:absolute; top:-8px; left:12px; padding:1px 5px; background:#1F4D36; color:#fff; font:500 8.5px/1.6 'IBM Plex Mono',monospace; letter-spacing:0.06em">EVIDENCE SPAN</div>
-              <div style="font-size:14px; line-height:1.6; color:#14180F; text-wrap:pretty">{{ ev.quote }}</div>
+          <!-- The page as the document printed it, with the stored evidence
+               span highlighted on it. This is the whole argument of the
+               project made checkable in one glance: the reader does not have
+               to take the quote's word for it. -->
+          <sc-if value="{{ ev.hasImage }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <!-- A background rather than an <img>. The browser parses this
+                   markup before the runtime substitutes anything into it, so a
+                   templated `src` is requested verbatim and arrives in the log
+                   as a 404 for a path made of mustache braces. A background
+                   image is only fetched once the style actually resolves. -->
+              <div style="background:#fff; border:1px solid #D2D0C6; box-shadow:0 1px 3px rgba(20,24,15,0.07); padding:10px">
+                <div role="img" aria-label="Source page with the evidence highlighted"
+                  style="width:100%; aspect-ratio:{{ ev.aspect }}; background-image:url({{ ev.image }}); background-size:contain; background-position:top center; background-repeat:no-repeat; border-radius:1px"></div>
+              </div>
+              <div style="margin-top:9px; display:flex; justify-content:space-between; gap:10px; font:400 9px/1.5 'IBM Plex Mono',monospace; letter-spacing:0.04em; color:{{ ev.imageFg }}">
+                <span>{{ ev.imageNote }}</span>
+                <span style="color:#B8BCB0; white-space:nowrap">p. {{ ev.pageLabel }}</span>
+              </div>
+              <div style="margin-top:14px; padding:13px 15px; background:#EEF4EC; border:1px solid #9CBFA4; border-radius:2px; position:relative">
+                <div style="position:absolute; top:-8px; left:12px; padding:1px 5px; background:#1F4D36; color:#fff; font:500 8.5px/1.6 'IBM Plex Mono',monospace; letter-spacing:0.06em">EVIDENCE SPAN AS STORED</div>
+                <div style="font-size:13px; line-height:1.6; color:#14180F; text-wrap:pretty">{{ ev.quote }}</div>
+              </div>
             </div>
-            <sc-for list="{{ ev.linesBottom }}" as="l" hint-placeholder-count="6">
-              <div style="height:7px; border-radius:2px; background:#E8E6DE; margin-top:10px; width:{{ l }}%"></div>
-            </sc-for>
-            <div style="margin-top:26px; font:400 9px/1 'IBM Plex Mono',monospace; color:#C0C4B8">PAGE RENDER · SURROUNDING BODY TEXT SHOWN AS LAYOUT BLOCKS</div>
-          </div>
+          </sc-if>
+
+          <!-- No image means the source PDF is not on this machine, which is
+               what a database browsed without its documents looks like. The
+               quote is still the evidence; the page around it is drawn rather
+               than claimed. -->
+          <sc-if value="{{ ev.noImage }}" hint-placeholder-val="{{ true }}">
+            <div style="background:#fff; border:1px solid #D2D0C6; box-shadow:0 1px 3px rgba(20,24,15,0.07); padding:46px 44px; position:relative">
+              <div style="position:absolute; top:14px; right:18px; font:400 9.5px/1 'IBM Plex Mono',monospace; color:#B8BCB0">{{ ev.pageLabel }}</div>
+              <div style="font-size:10px; font-weight:600; letter-spacing:0.12em; color:#8A9083; text-transform:uppercase">{{ ev.section }}</div>
+              <sc-for list="{{ ev.linesTop }}" as="l" hint-placeholder-count="5">
+                <div style="height:7px; border-radius:2px; background:#E8E6DE; margin-top:10px; width:{{ l }}%"></div>
+              </sc-for>
+              <div style="margin:20px 0; padding:14px 16px; background:#EEF4EC; border:1px solid #9CBFA4; border-radius:2px; position:relative">
+                <div style="position:absolute; top:-8px; left:12px; padding:1px 5px; background:#1F4D36; color:#fff; font:500 8.5px/1.6 'IBM Plex Mono',monospace; letter-spacing:0.06em">EVIDENCE SPAN</div>
+                <div style="font-size:14px; line-height:1.6; color:#14180F; text-wrap:pretty">{{ ev.quote }}</div>
+              </div>
+              <sc-for list="{{ ev.linesBottom }}" as="l" hint-placeholder-count="6">
+                <div style="height:7px; border-radius:2px; background:#E8E6DE; margin-top:10px; width:{{ l }}%"></div>
+              </sc-for>
+              <div style="margin-top:26px; font:400 9px/1 'IBM Plex Mono',monospace; color:#C0C4B8">SOURCE PDF NOT AVAILABLE HERE · SURROUNDING TEXT SHOWN AS LAYOUT BLOCKS</div>
+            </div>
+          </sc-if>
         </div>
 
         <div style="padding:22px 22px 22px 0">
@@ -603,12 +803,15 @@ const AXIS_STATUS = {
 };
 const PAGES = [
   { key: "overview", label: "Overview", title: "Corpus overview", sub: "Extraction, grounding and reconciliation state across the loaded document set." },
+  { key: "ask", label: "Ask", title: "Ask", sub: "A question in English, answered from typed claims — split by the context that separates the answers rather than averaged into one." },
   { key: "documents", label: "Documents", title: "Documents", sub: "Ingested PDFs with per-document extraction and grounding counts." },
+  { key: "upload", label: "Add documents", title: "Add documents", sub: "Drop a folder of PDFs. Ingest, extraction and corpus-wide comparison run behind a job you can watch." },
   { key: "facts", label: "Facts", title: "Facts", sub: "Every grounded claim as a passport: entity, metric, value, unit, period, scope, source." },
   { key: "compare", label: "Compare", title: "Compare", sub: "Two facts, their context axes and the verdict the engine returns for the pair." },
   { key: "timeline", label: "Timeline", title: "Timeline", sub: "Time-bound facts, office succession and recorded vacancies at a chosen date." },
-  { key: "quality", label: "Corpus quality", title: "Corpus quality", sub: "Grounding rate, confidence distribution, quarantined claims and discovered axes." },
+  { key: "quality", label: "Corpus quality", title: "Corpus quality", sub: "Grounding rate, confidence distribution, quarantined claims, and the vocabulary the corpus taught itself." },
 ];
+const BLANK_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 const T0 = new Date("2017-01-01").getTime();
 const T1 = new Date("2026-12-31").getTime();
 const pos = (d) => ((new Date(d).getTime() - T0) / (T1 - T0)) * 100;
@@ -619,13 +822,23 @@ class Component extends DCLogic {
     pairId: "r-02", masked: [], result: null, busy: false,
     factId: "f-3307", query: "", fEntity: "all", fMetric: "all", fPeriod: "all", fDoc: "all",
     asOf: "2023-09-15", ev: null,
+    // ask
+    question: "", asking: false, answer: null, askError: "",
+    // upload
+    picked: [], job: null, uploading: false, uploadError: "", maxPages: 40,
+    // registries
+    axes: [], predicates: [],
+    // the source page behind the open evidence drawer
+    evImage: null, evAspect: "4 / 3", evLocated: false, evDetail: null,
   };
 
   async componentDidMount() {
     const mod = await import("./api.js");
-    const [corpus, docs, facts, pairs, quarantine] = await Promise.all([
-      mod.api.corpus(), mod.api.documents(), mod.api.facts(), mod.api.pairs(), mod.api.quarantine(),
+    const [corpus, docs, facts, pairs, quarantine, axes, predicates] = await Promise.all([
+      mod.api.corpus(), mod.api.documents(), mod.api.facts(), mod.api.pairs(),
+      mod.api.quarantine(), mod.api.axes(), mod.api.predicates(),
     ]);
+    this.setState({ axes, predicates });
     // Ids come from whatever corpus is loaded, so the opening selection has to
     // be chosen from the data rather than named in advance. The pair list is
     // returned most-interesting first — a contradiction the engine withdrew on
@@ -655,7 +868,114 @@ class Component extends DCLogic {
     masked: s.masked.includes(key) ? s.masked.filter((k) => k !== key) : s.masked.concat(key),
   }), this.recompute);
 
-  openEvidence = (id) => this.setState({ ev: id });
+  // ── evidence: the source page, not a drawing of one
+  //
+  // The drawer used to render grey bars where the page text would be and label
+  // them "PAGE RENDER". That was honest about being a placeholder and useless
+  // for the one thing a reader opens it to do, which is to satisfy themselves
+  // that the figure really is on the page. The server renders the page and
+  // highlights the located span; the placeholder stays only for the case where
+  // the source PDF is not on this machine, which is what a shipped database
+  // without its documents looks like.
+  openEvidence = async (id) => {
+    this.setState({ ev: id, evImage: null, evLocated: false, evDetail: null });
+    const f = this.fact(id);
+    if (!f || !this.state.api) return;
+    const mod = this.state.api;
+    const [img, detail] = await Promise.all([
+      mod.pageImage(f.doc, f.page, { quote: f.quote || "", value: f.display || "" }),
+      mod.api.fact(id).catch(() => null),
+    ]);
+    if (this.state.ev !== id) return;   // the reader moved on while we fetched
+    // Measured rather than assumed. A crop of one table row is wide and short;
+    // a whole page is tall. Reserving the wrong shape either letterboxes the
+    // evidence into a strip or leaves a page-sized hole above the text.
+    const aspect = img ? await new Promise((res) => {
+      const probe = new Image();
+      probe.onload = () => res(`${probe.naturalWidth} / ${probe.naturalHeight}`);
+      probe.onerror = () => res("4 / 3");
+      probe.src = img.url;
+    }) : "4 / 3";
+    if (this.state.ev !== id) return;
+    this.setState({ evImage: img ? img.url : null, evAspect: aspect,
+                    evLocated: !!(img && img.located), evDetail: detail });
+  };
+
+  // ── ask
+  ask = async () => {
+    const q = this.state.question.trim();
+    if (!q || !this.state.api) return;
+    this.setState({ asking: true, askError: "" });
+    try {
+      const answer = await this.state.api.api.ask(q);
+      this.setState({ answer, asking: false });
+    } catch (e) {
+      this.setState({ asking: false, askError: String(e.message || e) });
+    }
+  };
+
+  askExample = (q) => this.setState({ question: q }, this.ask);
+
+  // ── upload
+  //
+  // A folder picker hands back every file it finds, spreadsheets and hidden
+  // files included. Filtering here as well as on the server is not redundant:
+  // it lets the panel say "3 PDFs, 2 other files ignored" before anything is
+  // sent, so a folder that was going to arrive half-empty says so in advance.
+  pickFiles = (fileList) => {
+    const all = Array.from(fileList || []);
+    const pdfs = all.filter((f) => /\.pdf$/i.test(f.name));
+    this.setState({ picked: pdfs, ignored: all.length - pdfs.length, uploadError: "" });
+  };
+
+  onPick = (e) => this.pickFiles(e.target.files);
+  onDrop = (e) => { e.preventDefault(); this.pickFiles(e.dataTransfer.files); };
+  onDragOver = (e) => e.preventDefault();
+
+  startUpload = async () => {
+    if (!this.state.picked.length || !this.state.api) return;
+    this.setState({ uploading: true, uploadError: "", job: null });
+    try {
+      const job = await this.state.api.api.upload(this.state.picked,
+        { maxPages: this.state.maxPages, review: true });
+      this.setState({ job });
+      this.pollJob(job.id);
+    } catch (e) {
+      this.setState({ uploading: false, uploadError: String(e.message || e) });
+    }
+  };
+
+  // Polled rather than streamed. The job writes its progress to a table as it
+  // goes, so a reader who reloads the page mid-run picks the same job back up —
+  // which a server-sent stream would not give without more machinery than one
+  // upload panel earns.
+  pollJob = async (id) => {
+    if (!this.state.api) return;
+    try {
+      const job = await this.state.api.api.job(id);
+      this.setState({ job });
+      if (job.status === "done" || job.status === "failed") {
+        this.setState({ uploading: false });
+        if (job.status === "done") await this.reload();
+        return;
+      }
+    } catch { /* a transient failure is not a reason to stop watching */ }
+    setTimeout(() => this.pollJob(id), 2000);
+  };
+
+  // Everything the corpus panels read, after an upload changed the corpus.
+  // Cheaper than reloading the page and it keeps the reader where they were.
+  reload = async () => {
+    const mod = this.state.api;
+    const [corpus, docs, facts, pairs, quarantine, axes, predicates] = await Promise.all([
+      mod.api.corpus(), mod.api.documents(), mod.api.facts(), mod.api.pairs(),
+      mod.api.quarantine(), mod.api.axes(), mod.api.predicates(),
+    ]);
+    const pairId = pairs.some((p) => p.id === this.state.pairId)
+      ? this.state.pairId : (pairs[0] || {}).id;
+    this.setState({ corpus, docs, facts, pairs, quarantine, axes, predicates, pairId },
+      this.recompute);
+  };
 
   fact(id) { return this.state.facts.find((f) => f.id === id); }
   doc(id) { return this.state.docs.find((d) => d.id === id); }
@@ -911,29 +1231,188 @@ class Component extends DCLogic {
     const quarantine = s.quarantine.map((q) => ({ reason: q.reason.replace(/_/g, " ").toUpperCase(),
       ref: `${q.doc} · p.${q.page}`, claim: q.claim, note: q.note, conf: q.confidence.toFixed(2) }));
 
+    // ── registries: the vocabulary the corpus taught itself
+    //
+    // Split by origin, because the two halves are different claims. A seeded
+    // axis is something this system was built knowing. A discovered one is a
+    // phrase a document supplied, and `occurrences` against the threshold is
+    // what says whether it has been seen often enough to be believed — a
+    // candidate at 1 of 2 is a hypothesis, and showing it as one is more
+    // honest than hiding it until it graduates.
+    const axisRegistry = s.axes.map((a) => ({
+      axis: a.axis,
+      origin: a.origin === "seeded" ? "BUILT IN" : "LEARNED",
+      originFg: a.origin === "seeded" ? "#4A4F47" : "#1F4D36",
+      originBg: a.origin === "seeded" ? "#E9E8E2" : "#E7EFE9",
+      status: a.status === "candidate"
+        ? `candidate · ${a.occurrences}/${a.threshold} pairs`
+        : a.status === "lapsed"
+          ? "lapsed · names no pair in the current corpus"
+          : `${a.occurrences} pair${a.occurrences === 1 ? "" : "s"}`,
+      resolves: a.resolves ? `${a.resolves} dissolved` : "explains nothing yet",
+      resolvesFg: a.resolves ? "#1F4D36" : "#A2A79A",
+      values: (a.values || []).join(" · ") || "—",
+      example: a.example || "",
+      hasExample: !!a.example,
+    }));
+    // Cardinality, shown because a wrong one manufactures a contradiction. The
+    // corrected rows are the interesting ones: grammar guessed a single seat
+    // and one document proved otherwise by naming two holders at once.
+    const predicateRows = s.predicates
+      .filter((p) => p.corrected || p.cardinality === "one")
+      .slice(0, 24)
+      .map((p) => ({
+        predicate: p.predicate,
+        cardinality: p.cardinality === "one" ? "ONE AT A TIME" : "MANY",
+        cardFg: p.cardinality === "one" ? "#2C3E75" : "#4A4F47",
+        cardBg: p.cardinality === "one" ? "#E4E9F5" : "#E9E8E2",
+        basis: p.corrected
+          ? `grammar said ${p.inferred}; the corpus showed ${p.observed}`
+          : `inferred from the head noun`,
+        basisFg: p.corrected ? "#7A5410" : "#8A9083",
+        holders: `${p.holders} holder${p.holders === 1 ? "" : "s"}`,
+      }));
+    const correctedCount = s.predicates.filter((p) => p.corrected).length;
+    const learnedCount = s.axes.filter((a) => a.origin === "discovered").length;
+
+    // ── ask
+    const ans = s.answer;
+    const answers = ans ? ans.answers.map((a) => ({
+      value: a.values.join("  ·  "),
+      multiple: a.values.length > 1,
+      context: Object.entries(a.context)
+        .map(([k, v]) => `${k} = ${v}`).join("   ·   "),
+      support: `${a.agreeing} claim${a.agreeing === 1 ? "" : "s"} · confidence ${a.confidence.toFixed(2)}`,
+      unresolved: a.unresolved,
+      // An unresolved group is the interesting one: claims that share a context
+      // and still disagree. It is styled as a conflict rather than an answer,
+      // because that is what it is.
+      edge: a.unresolved ? "#E6C4BE" : "#DEDCD3",
+      bg: a.unresolved ? "#FCF6F5" : "#fff",
+      flag: a.unresolved ? "NOTHING DISTINGUISHES THESE" : "",
+      cites: (a.support || []).map((f) => ({
+        ref: `${f.doc} · p.${f.page}`,
+        quote: (f.quote || "").slice(0, 160),
+        go: () => this.openEvidence(f.id),
+      })),
+    })) : [];
+    const askState = {
+      asked: !!ans,
+      note: ans ? ans.note : "",
+      parsed: ans ? `entity = ${ans.query.entity || "any"}   ·   metric = ${ans.query.metric || "any"}   ·   period = ${ans.query.period || "any"}` : "",
+      parsedBy: ans ? ans.parsedBy : "",
+      matched: ans ? `${ans.matched} claim${ans.matched === 1 ? "" : "s"} matched` : "",
+      split: ans && ans.splitBy.length
+        ? `split by ${ans.splitBy.join(", ")}` : "",
+      hasSplit: !!(ans && ans.splitBy.length),
+      empty: !!(ans && !ans.answers.length),
+    };
+    const EXAMPLES = [
+      "What was Delhivery's revenue in FY24?",
+      "How fast is India's economy growing in FY26?",
+      "Who has been Delhivery's company secretary?",
+    ].map((q) => ({ q, go: () => this.askExample(q) }));
+
+    // ── upload
+    const job = s.job;
+    const upload = {
+      count: s.picked.length,
+      names: s.picked.slice(0, 8).map((f) => ({
+        name: f.name, size: (f.size / 1048576).toFixed(1) + " MB" })),
+      more: s.picked.length > 8 ? `and ${s.picked.length - 8} more` : "",
+      hasMore: s.picked.length > 8,
+      ready: s.picked.length > 0 && !s.uploading,
+      ignored: s.ignored ? `${s.ignored} non-PDF file(s) ignored` : "",
+      hasIgnored: !!s.ignored,
+      error: s.uploadError,
+      hasError: !!s.uploadError,
+      buttonLabel: s.uploading ? "RUNNING…" : `INGEST ${s.picked.length || ""} PDF${s.picked.length === 1 ? "" : "S"}`.trim(),
+      buttonBg: s.picked.length && !s.uploading ? "#1F4D36" : "#C8C6BC",
+    };
+    const jobView = job ? {
+      open: true,
+      status: job.status.toUpperCase(),
+      statusFg: job.status === "failed" ? "#93231A" : job.status === "done" ? "#1F4D36" : "#7A5410",
+      statusBg: job.status === "failed" ? "#F7E5E2" : job.status === "done" ? "#E7EFE9" : "#F6EBD4",
+      stage: job.stage,
+      detail: job.detail || "",
+      pct: Math.round((job.progress || 0) * 100),
+      pctWidth: Math.max(2, Math.round((job.progress || 0) * 100)) + "%",
+      summary: `${job.filesDone}/${job.filesTotal} files · ${job.pagesRead} pages read · ${job.claims} claims · ${job.relations} pairs`,
+      log: job.log,
+      error: job.error || "",
+      hasError: !!job.error,
+    } : { open: false, log: [] };
+
     // ── evidence viewer
     const ef = s.ev ? this.fact(s.ev) : null;
     const ed = ef ? this.doc(ef.doc) : null;
+    const det = s.evDetail;
     const ev = ef ? {
       open: true, docTitle: ed ? ed.title : ef.doc, ref: `${ef.doc} · page ${ef.page}`,
       section: ef.section, pageLabel: `${ef.page} / ${ed ? ed.pages : "—"}`,
       quote: ef.quote || "No sentence-level evidence span was located within ±2 pages of the extracted value.",
       claim: ef.claim, rows: this.passportRows(ef),
       linesTop: [96, 92, 98, 88, 94], linesBottom: [95, 98, 90, 96, 84, 92],
+      hasImage: !!s.evImage,
+      noImage: !s.evImage,
+      // A transparent pixel rather than "" for the not-yet-loaded case. The
+      // runtime lays the <img> out before the binding resolves, and an empty
+      // src makes the browser request the page's own URL — which arrives in
+      // the log as a 404 for a path containing the literal mustache braces.
+      image: s.evImage || BLANK_PIXEL,
+      aspect: s.evAspect || "4 / 3",
+      imageNote: s.evLocated
+        ? "SOURCE PAGE · THE HIGHLIGHTED SPAN IS THE STORED EVIDENCE"
+        : "SOURCE PAGE · THE EVIDENCE SPAN COULD NOT BE LOCATED ON IT",
+      imageFg: s.evLocated ? "#8A9083" : "#93231A",
+      // The provenance chain, from what the store recorded. An earlier version
+      // computed a plausible-looking character offset from the page number,
+      // which is a fabricated number in the one panel whose whole purpose is
+      // that nothing in it is invented.
       chain: [
-        `${ef.doc} · page ${ef.page} · ${ef.section}`,
-        `span located at char offset ${1200 + ef.page * 7}–${1200 + ef.page * 7 + (ef.quote || "").length}`,
-        `axes resolved from governing heading: scope=${ef.scope}, basis=${ef.basis}`,
-        `period anchored to ${ef.period}`,
-        `confidence ${ef.confidence.toFixed(2)} · ${ef.noEvidence ? "quarantined" : "grounded"}`,
-      ],
-    } : { open: false, linesTop: [], linesBottom: [], rows: [], chain: [] };
+        `${ef.doc} · page ${ef.page}${ef.section ? " · " + ef.section : ""}`,
+        det && det.groundingMethod
+          ? `evidence located by ${det.groundingMethod.replace(/_/g, " ")}`
+          : "evidence span located on the cited page",
+        det && det.periodRaw ? `period read from "${det.periodRaw}" → ${ef.period}`
+          : `period ${ef.period}`,
+        det && det.unitRaw ? `unit read from "${det.unitRaw}"` : `unit ${ef.unit}`,
+        det && det.assertionTime ? `asserted by the document as of ${det.assertionTime}`
+          : `scope ${ef.scope} · basis ${ef.basis}`,
+        `confidence ${ef.confidence.toFixed(2)} — weakest of `
+          + Object.entries(ef.confidenceParts || {})
+              .map(([k, v]) => `${k.replace("_", " ")} ${v.toFixed(2)}`).join(", "),
+      ].concat(
+        det && (det.unknownQualifiers || []).length
+          ? [`undetermined: ${det.unknownQualifiers.join(", ")}`] : []),
+    } : { open: false, linesTop: [], linesBottom: [], rows: [], chain: [],
+      hasImage: false, noImage: true, image: BLANK_PIXEL, aspect: "4 / 3",
+      imageNote: "", imageFg: "#8A9083" };
 
     return {
       nav, pairs, pageTitle: page.title, pageSub: page.sub,
       corpusName: (s.docs[0] && s.docs[0].org) || "—",
       isCompare: s.page === "compare", isFacts: s.page === "facts", isTimeline: s.page === "timeline",
       isDocuments: s.page === "documents", isOverview: s.page === "overview", isQuality: s.page === "quality",
+      isAsk: s.page === "ask", isUpload: s.page === "upload",
+      question: s.question,
+      onQuestion: (e) => this.setState({ question: e.target.value }),
+      onQuestionKey: (e) => { if (e.key === "Enter") this.ask(); },
+      runAsk: this.ask,
+      asking: s.asking, askBusy: s.asking ? "SEARCHING…" : "ASK",
+      askError: s.askError, hasAskError: !!s.askError,
+      askState, answers, examples: EXAMPLES,
+      upload, jobView,
+      onPick: this.onPick, onDrop: this.onDrop, onDragOver: this.onDragOver,
+      startUpload: this.startUpload,
+      maxPages: String(s.maxPages),
+      onMaxPages: (e) => this.setState({ maxPages: Math.max(1, Number(e.target.value) || 1) }),
+      axisRegistry, predicateRows,
+      learnedLabel: `${learnedCount} axis name${learnedCount === 1 ? "" : "s"} came from the documents themselves`,
+      correctedLabel: correctedCount
+        ? `${correctedCount} predicate${correctedCount === 1 ? "" : "s"} had an inferred cardinality corrected by observation`
+        : "no inferred cardinality has been corrected by observation yet",
       stats: { claims: (c.claims || 0).toLocaleString("en-IN"), grounded: (c.grounded || 0).toLocaleString("en-IN"),
         quarantined: c.quarantined || 0, relationships: c.relationships || 0 },
       A: this.factCard(A), B: this.factCard(B),

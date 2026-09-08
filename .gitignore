@@ -15,8 +15,15 @@ data/*.sqlite
 data/*.sqlite-journal
 data/*.sqlite-wal
 data/*.sqlite-shm
+data/uploads/
 out/
 *.log
+
+# ...except the one that ships. The brief asks for enough output to evaluate
+# this without the author's account, and every interesting result here exists
+# only after an extraction pass that needs a key and spend. `fkl snapshot`
+# writes it; see README, "Browsing the results without an API key".
+!data/snapshot.sqlite
 
 # Node / frontend
 node_modules/

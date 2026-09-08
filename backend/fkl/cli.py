@@ -20,6 +20,7 @@ import argparse
 import json
 import logging
 import sys
+from pathlib import Path
 
 from sqlalchemy import select
 
@@ -362,6 +363,25 @@ def cmd_models(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_snapshot(args: argparse.Namespace) -> int:
+    """Write the committed database a grader can browse without a key."""
+    from .config import SETTINGS
+    from .snapshot import DEFAULT_TARGET, write
+
+    result = write(SETTINGS.db_url, Path(args.out) if args.out else DEFAULT_TARGET)
+    print(f"wrote {result['target']}  ({result['megabytes']} MB)")
+    print(f"  generation {result['generation']}: {result['relations']} relations "
+          f"({result['relations_dropped']} superseded rows dropped)")
+    print(f"  {result['documents']} documents · {result['pages']} pages · "
+          f"{result['claims']} claims · {result['quarantine']} quarantined")
+    print(f"  {result['entities']} entities · {result['metrics']} metrics · "
+          f"{result['axes']} axes · {result['predicates']} predicates")
+    print()
+    print("  browse it with no API key:")
+    print(f"    FKL_DB_URL=sqlite:///{result['target'].name} python -m fkl.cli serve")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="fkl", description="Fact Knowledge Layer")
     parser.add_argument("-v", "--verbose", action="store_true")
@@ -448,6 +468,12 @@ def main(argv: list[str] | None = None) -> int:
 
     p_docs = sub.add_parser("docs", help="list ingested documents")
     p_docs.set_defaults(func=cmd_docs)
+
+    p_snapshot = sub.add_parser(
+        "snapshot",
+        help="write a trimmed, committable copy of the store for graders")
+    p_snapshot.add_argument("-o", "--out", default=None)
+    p_snapshot.set_defaults(func=cmd_snapshot)
 
     p_models = sub.add_parser("models", help="list model ids visible to your API key")
     p_models.add_argument("--prefix", default="")

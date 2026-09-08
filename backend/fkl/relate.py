@@ -31,7 +31,7 @@ import itertools
 import logging
 from collections import defaultdict
 from datetime import date
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -44,7 +44,7 @@ from .compare import (
     compare,
 )
 from .models import Claim, Entity, Metric, Page, Relation
-from .reconcile import reconcile
+from .reconcile import Recovery, reapply, reconcile
 from .periods import UNKNOWN as UNKNOWN_PERIOD
 from .periods import Period
 from .units import UNKNOWN as UNKNOWN_UNIT
@@ -148,6 +148,10 @@ class RelateRun:
     # it into the headline would hide that.
     investigated: int = 0
     withdrawn: int = 0
+    # Withdrawals reached by remembering an earlier run's recovery rather than
+    # going back to the page. Counted apart from `investigated` so a run's cost
+    # stays legible: these are the pairs that cost nothing.
+    remembered: int = 0
     recovered_axes: dict[str, int] = field(default_factory=dict)
 
     @property
@@ -205,25 +209,21 @@ def relate_corpus(
 
     run = RelateRun(claims=len(claims), generation=generation)
     pages: dict = {}
+    remembered_recoveries = _load_recoveries(session)
 
-    for (entity_id, metric_id), members in blocks.items():
-        if len(members) < 2:
-            continue
-        run.blocks += 1
-        if len(members) > MAX_BLOCK:
-            run.oversized_blocks.append((names.get(metric_id, str(metric_id)),
-                                         len(members)))
-            continue
+    def _block_pairs(members, comparables, run, rows, learned, found,
+                     replay=False):
+        """Compare every pair in one block, appending the relations to `rows`.
 
-        metric_name = names.get(metric_id, str(metric_id))
-        entity_name = entity_names.get(entity_id, str(entity_id))
-        comparables = {
-            c.id: to_comparable(c, metric_name, entity_name) for c in members
-        }
-
+        `replay` marks the second pass over a block, made once anything was
+        learned about one of its claims. The investigation does not run again
+        on a replay — every contradiction has already been back to its pages,
+        and going again would spend a model call to be told the same thing.
+        """
         for left, right in itertools.combinations(members, 2):
             verdict = compare(comparables[left.id], comparables[right.id])
-            run.pairs += 1
+            if not replay:
+                run.pairs += 1
 
             # A contradiction is a hypothesis, not a conclusion. Before it is
             # recorded, go back to the two pages and look for the distinction
@@ -231,19 +231,62 @@ def relate_corpus(
             # this only supplies it with context it did not have.
             recovery = None
             original = verdict.verdict
-            if verdict.verdict == CONTRADICTS and (investigator or reconcile_signs):
-                run.investigated += 1
-                result = reconcile(
-                    comparables[left.id], comparables[right.id],
-                    a_page=_page_text(session, pages, left),
-                    b_page=_page_text(session, pages, right),
-                    investigator=investigator,
-                )
-                if result.changed:
-                    verdict, recovery = result.verdict, result.recovery
-                    run.withdrawn += 1
-                    run.recovered_axes[recovery.axis] = (
-                        run.recovered_axes.get(recovery.axis, 0) + 1)
+            if (verdict.verdict == CONTRADICTS and not replay
+                    and (investigator or reconcile_signs)):
+                # Context recovered on an earlier run is context this system
+                # has. Re-investigating a pair it has already been back to the
+                # page for costs another model call to reach the same
+                # conclusion, and — worse — a run made without a key would
+                # silently lose the recovery and report a contradiction the
+                # system had already withdrawn. Remembering is not caching: the
+                # claims are immutable, so the page cannot have changed.
+                remembered = _prior_recovery(session, remembered_recoveries,
+                                             left.id, right.id)
+                if remembered is not None:
+                    verdict, recovery = reapply(
+                        comparables[left.id], comparables[right.id], remembered)
+                    if recovery is not None:
+                        run.withdrawn += 1
+                        run.remembered += 1
+                        run.recovered_axes[recovery.axis] = (
+                            run.recovered_axes.get(recovery.axis, 0) + 1)
+
+                if recovery is None:
+                    run.investigated += 1
+                    result = reconcile(
+                        comparables[left.id], comparables[right.id],
+                        a_page=_page_text(session, pages, left),
+                        b_page=_page_text(session, pages, right),
+                        investigator=investigator,
+                    )
+                    if result.changed:
+                        verdict, recovery = result.verdict, result.recovery
+                        run.withdrawn += 1
+                        run.recovered_axes[recovery.axis] = (
+                            run.recovered_axes.get(recovery.axis, 0) + 1)
+
+                if recovery is not None:
+                    # A recovery is knowledge about the two *claims*, not about
+                    # the pair that happened to surface it. The page said one
+                    # of these figures is the adjusted measure; that stays true
+                    # in every other comparison either claim takes part in, and
+                    # the second pass below applies it there.
+                    for claim_id, value in ((left.id, recovery.a_value),
+                                            (right.id, recovery.b_value)):
+                        if value:
+                            learned.setdefault(claim_id, {})[recovery.axis] = value
+                    found[(left.id, right.id)] = (original, recovery)
+
+            if replay:
+                # On the replay this pair may no longer reach CONTRADICTS at
+                # all — the recovered axis is now sitting in its qualifiers, so
+                # the gate explains it before the second look would be reached.
+                # The withdrawal still happened, and a stored row that does not
+                # say so loses the most interesting thing this system did: it
+                # raised a contradiction and then took it back, on evidence.
+                previous = found.get((left.id, right.id))
+                if previous is not None:
+                    original, recovery = previous
 
             run.verdicts[verdict.verdict] = run.verdicts.get(verdict.verdict, 0) + 1
             if verdict.axis:
@@ -288,7 +331,7 @@ def relate_corpus(
                         run.explaining_axes[verdict.axis] = (
                             run.explaining_axes.get(verdict.axis, 0) + 1)
 
-            session.add(
+            rows.append(
                 Relation(
                     claim_a_id=left.id,
                     claim_b_id=right.id,
@@ -314,19 +357,166 @@ def relate_corpus(
                 )
             )
 
-    session.flush()
 
-    # The axes this run named, written down and counted. Done here rather than
-    # in the API because discovery is a property of the run: an axis is
-    # believed because several independent pairs produced it, and only the code
-    # that made those pairs knows how many there were.
+    for (entity_id, metric_id), members in blocks.items():
+        if len(members) < 2:
+            continue
+        run.blocks += 1
+        if len(members) > MAX_BLOCK:
+            run.oversized_blocks.append((names.get(metric_id, str(metric_id)),
+                                         len(members)))
+            continue
+
+        metric_name = names.get(metric_id, str(metric_id))
+        entity_name = entity_names.get(entity_id, str(entity_id))
+        comparables = {
+            c.id: to_comparable(c, metric_name, entity_name) for c in members
+        }
+
+        # The plan calls this "re-run affected pairs", and the corpus made the
+        # case for it plainly. The second look found that one deck page prints
+        # both `EBITDA margin` and `Adj. EBITDA margin`, and it withdrew that
+        # contradiction — but two *other* pairs involving the very same claim
+        # stayed contradictions, because the recovery was filed against a pair
+        # rather than against the claim. Three pairs, one distinction, one of
+        # them explained.
+        #
+        # So the block is compared, and if anything was learned about a claim
+        # in it, compared once more with that knowledge in place. Once, not to
+        # a fixed point: a second pass cannot discover anything the first did
+        # not, since the investigation has already run on every contradiction.
+        learned: dict[int, dict[str, str]] = {}
+        rows: list[Relation] = []
+        found: dict[tuple[int, int], tuple[str, Recovery]] = {}
+        tally = RelateRun()
+        _block_pairs(members, comparables, tally, rows, learned, found)
+        if any(c.id in learned for c in members):
+            for claim_id, axes in learned.items():
+                if claim_id in comparables:
+                    comparables[claim_id] = _with_qualifiers(
+                        comparables[claim_id], axes)
+            rows = []
+            # The replay's verdicts *replace* the first pass's, so its counts
+            # do too — adding them would report every re-examined pair twice
+            # and inflate the reduction with pairs that were only ever counted
+            # once. What carries over is what the replay does not redo: the
+            # investigation, which has already happened and is not repeated.
+            replayed = RelateRun(
+                investigated=tally.investigated, withdrawn=tally.withdrawn,
+                remembered=tally.remembered,
+                recovered_axes=dict(tally.recovered_axes),
+            )
+            _block_pairs(members, comparables, replayed, rows, learned,
+                         found, replay=True)
+            tally = replayed
+        _merge(run, tally)
+        session.add_all(rows)
+
+    session.flush()
+    _finish(session, run, generation)
+    log.info("compared %s pairs across %s blocks", run.pairs, run.blocks)
+    return run
+
+
+
+def _merge(run: RelateRun, block: RelateRun) -> None:
+    """Fold one block's tally into the run's.
+
+    Blocks are counted separately so that a block which had to be compared
+    twice contributes once. Everything here is either a sum or a union of
+    counters; nothing about a block depends on another block.
+    """
+    for name in ("pairs", "raw_disagreements", "explained", "unresolved",
+                 "blocked", "cross_document", "investigated", "withdrawn",
+                 "remembered"):
+        setattr(run, name, getattr(run, name) + getattr(block, name))
+    for name in ("verdicts", "axes", "explaining_axes", "recovered_axes"):
+        target = getattr(run, name)
+        for key, count in getattr(block, name).items():
+            target[key] = target.get(key, 0) + count
+
+def _with_qualifiers(claim: Comparable, axes: dict[str, str]) -> Comparable:
+    """A claim carrying context a review recovered about it.
+
+    Written onto ``qualifiers`` rather than anywhere special, because that is
+    where context lives and the gate should not be able to tell the difference
+    between an axis the extractor read off the page and one a second look found
+    on it. Any axis name already present is left alone: what the page stated
+    directly outranks what was recovered from it.
+    """
+    merged = dict(claim.qualifiers or {})
+    for axis, value in axes.items():
+        merged.setdefault(axis, value)
+    return replace(claim, qualifiers=merged)
+
+
+def _finish(session: Session, run: RelateRun, generation: int) -> None:
+    """Fold this run's axes into the registry.
+
+    Done here rather than in the API because discovery is a property of the
+    run: an axis is believed because several independent pairs produced it, and
+    only the code that made those pairs knows how many there were.
+    """
     from .registry import record_axes
 
     record_axes(session, generation)
 
-    log.info("compared %s pairs across %s blocks", run.pairs, run.blocks)
-    return run
 
+def _load_recoveries(session: Session) -> dict[tuple[int, int], Recovery]:
+    """Every grounded recovery the store holds, keyed by the pair it explains.
+
+    Read once for the whole run rather than queried per contradiction. There
+    are a few dozen of these against hundreds of pairs, and the alternative is
+    a round trip inside the hottest loop in the system to usually find nothing.
+    """
+    from .models import Relation as _Relation
+
+    out: dict[tuple[int, int], Recovery] = {}
+    rows = session.scalars(
+        select(_Relation).where(_Relation.reconsidered.is_(True))
+        .order_by(_Relation.generation.desc())
+    ).all()
+    for row in rows:
+        key = (min(row.claim_a_id, row.claim_b_id),
+               max(row.claim_a_id, row.claim_b_id))
+        if key in out or not row.recovery_axis:
+            continue  # the newest generation's reading wins
+        out[key] = Recovery(
+            axis=row.recovery_axis,
+            a_value=row.recovery_a_value,
+            b_value=row.recovery_b_value,
+            method=row.recovery_method or "remembered",
+            confidence=row.recovery_confidence or 0.0,
+            reason=row.recovery_reason or "",
+            grounding=row.recovery_confidence or 0.0,
+        )
+    return out
+
+
+def _prior_recovery(session: Session, cache: dict, a_id: int,
+                    b_id: int) -> Recovery | None:
+    """The remembered recovery for this pair, oriented to this pair's order.
+
+    Relations are stored with whichever claim the block iteration reached
+    first, and a later run can reach them in the other order. Swapping the two
+    values when that happens is not a nicety: applying the wrong side's
+    qualifier to each claim would leave them looking identical on the recovered
+    axis, and the contradiction would come back explained by nothing.
+    """
+    recovery = cache.get((min(a_id, b_id), max(a_id, b_id)))
+    if recovery is None:
+        return None
+    if a_id <= b_id:
+        return recovery
+    return Recovery(
+        axis=recovery.axis,
+        a_value=recovery.b_value,
+        b_value=recovery.a_value,
+        method=recovery.method,
+        confidence=recovery.confidence,
+        reason=recovery.reason,
+        grounding=recovery.grounding,
+    )
 
 def _page_text(session: Session, cache: dict, claim: Claim) -> str:
     """The laid-out reading of a claim's page, loaded once and reused.

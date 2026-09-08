@@ -52,6 +52,11 @@ CONCURRENT = "CONCURRENT"  # cardinality-N, both valid; emitted for visibility
 CORROBORATES = "CORROBORATES"
 CONTRADICTS = "CONTRADICTS"
 CONTEXTUAL = "CONTEXTUAL"
+# Shared with the comparability gate, and deliberately the same string: an
+# undetermined validity period is the same kind of answer as an undetermined
+# consolidation basis, and the interface should not need to learn a second name
+# for it.
+INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
 
 # Two intervals whose gap is at most this are treated as a clean handover. One
 # day, because a role ending on 31 May and the next beginning on 1 June is a
@@ -244,6 +249,28 @@ def relate_holdings(
             a.ref, b.ref, cardinality=1, notes=notes,
         )
 
+    # One side dated, the other not. This is the "absent is not equal" rule
+    # arriving on the time axis, and it had to be written after an upload
+    # found it: a cover page listing "Madhulika Rawat — Company Secretary &
+    # Compliance Officer" with no dates was read as a claim spanning all of
+    # time, and it duly overlapped the two people who had held the seat before
+    # her. Three contradictions, none of them asserted by any document.
+    #
+    # An undated holding is not a claim that the person held the post forever.
+    # It is a claim whose validity period the page did not state, and a
+    # material axis nobody determined blocks the comparison — the same answer
+    # the gate gives for an undetermined consolidation basis.
+    if _no_interval(a) != _no_interval(b):
+        undated, dated = (a, b) if _no_interval(a) else (b, a)
+        return TemporalVerdict(
+            INSUFFICIENT_EVIDENCE, "valid_time",
+            f"{undated.scope} records {undated.filler!r} as {a.predicate} with "
+            f"no validity period, and {dated.filler!r} over "
+            f"{_interval_text(dated)}. Whether these overlap cannot be decided "
+            f"from what either document states",
+            a.ref, b.ref, cardinality=1, notes=notes,
+        )
+
     if a.overlaps(b):
         return TemporalVerdict(
             CONTRADICTS, "valid_time",
@@ -383,6 +410,15 @@ def _no_interval(holding: Holding) -> bool:
     return holding.valid_from is None and holding.valid_to is None
 
 
+def _interval_text(holding: Holding) -> str:
+    """A holding's validity window, written the way the timeline shows it."""
+    start = holding.valid_from.isoformat() if holding.valid_from else "an unstated start"
+    if holding.is_open:
+        return f"{start} onwards"
+    end = holding.valid_to.isoformat() if holding.valid_to else "an unstated end"
+    return f"{start} to {end}"
+
+
 def succession_pairs(holdings: list[Holding]) -> list[tuple[Holding, Holding]]:
     """The pairs in a single-holder slot that are worth comparing.
 
@@ -402,14 +438,25 @@ def succession_pairs(holdings: list[Holding]) -> list[tuple[Holding, Holding]]:
     """
     ordered = sorted(holdings, key=lambda h: (h.valid_from or date.min,
                                               h.valid_to or date.max))
+    # The chain is built from the holdings that state an interval. An undated
+    # assertion sorts to the front — ``date.min`` is the only place it can go —
+    # and from there it displaces the first real handover out of the neighbour
+    # set: a cover page naming the current Company Secretary with no dates cost
+    # the Bansal-to-Vivek succession, which the pages state plainly, and put two
+    # undecidable pairs in its place. An undated holding has no position in a
+    # sequence, so it is not allowed to take one; it is still compared against
+    # every dated holding, and the engine says what it can say about that.
+    dated = [h for h in ordered if not _no_interval(h)]
     neighbours = {
         (id(a), id(b))
-        for a, b in zip(ordered, ordered[1:])
+        for a, b in zip(dated, dated[1:])
     }
     pairs: list[tuple[Holding, Holding]] = []
     for i, a in enumerate(ordered):
         for b in ordered[i + 1:]:
-            if a.filler == b.filler or a.overlaps(b) or (id(a), id(b)) in neighbours:
+            undated_against_dated = _no_interval(a) != _no_interval(b)
+            if (a.filler == b.filler or undated_against_dated
+                    or a.overlaps(b) or (id(a), id(b)) in neighbours):
                 pairs.append((a, b))
     return pairs
 

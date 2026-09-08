@@ -112,6 +112,19 @@ def record_axes(session: Session, generation: int) -> dict[str, int]:
             if recovered not in example and relation.recovery_reason:
                 example[recovered] = (relation.id, relation.recovery_reason)
 
+    # An axis that named pairs in an earlier run and names none in this one has
+    # to say so. Leaving its old counts in place is the worst of both: the
+    # panel reports `scenario` dissolving two disagreements when the current
+    # corpus has no such pair, and a reader checking the claim finds nothing
+    # behind it. The row stays — a hypothesis the corpus stopped supporting is
+    # worth seeing — with its counts zeroed and its status saying why.
+    for row in session.scalars(select(Axis)):
+        if row.origin != "seeded" and row.name not in occurrences:
+            row.occurrences = 0
+            row.resolves = 0
+            row.status = "lapsed"
+            row.updated_at = _now()
+
     out: dict[str, int] = {}
     for name, count in occurrences.items():
         row = _upsert(session, name, origin.get(name, "discovered"))

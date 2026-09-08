@@ -184,11 +184,19 @@ def render(
             box = found[0]
             for rect in found[1:]:
                 box |= rect
+            # Vertically only, and across the whole page width. Cropping
+            # horizontally to the span plus a margin looks tidier in isolation
+            # and reads badly: on a two-column page the margin runs into the
+            # next column and cuts it mid-word, so the reader is shown a
+            # fragment of an unrelated sentence beside their evidence. The
+            # height is where the saving is anyway — a full page reduces the
+            # line under discussion to a few pixels; a full-width band does
+            # not.
             clip = fitz.Rect(
-                max(page.rect.x0, box.x0 - PAD * 3),
-                max(page.rect.y0, box.y0 - PAD),
-                min(page.rect.x1, box.x1 + PAD * 3),
-                min(page.rect.y1, box.y1 + PAD),
+                page.rect.x0,
+                max(page.rect.y0, box.y0 - PAD * 2),
+                page.rect.x1,
+                min(page.rect.y1, box.y1 + PAD * 2),
             )
 
         pixmap = page.get_pixmap(dpi=min(dpi, MAX_DPI), clip=clip)

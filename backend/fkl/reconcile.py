@@ -664,6 +664,46 @@ def reconsider(a: Comparable, b: Comparable, recovery: Recovery) -> Verdict:
     return verdict
 
 
+def reapply(a: Comparable, b: Comparable, recovery: Recovery,
+            min_confidence: float = MIN_CONFIDENCE) -> tuple[Verdict, Recovery | None]:
+    """Re-decide a pair using context an earlier run recovered.
+
+    The split here is the whole safety of remembering, and it was learned the
+    expensive way. The first version of this trusted a stored recovery wholesale
+    on the reasoning that claims and pages are immutable, so anything grounded
+    once is grounded still. That is true, and it is not the only thing a
+    recovery has to survive.
+
+    ``_is_circular`` is not a fact about the document; it is a *judgement about
+    what counts as a label*, and it was added after the investigator proposed
+    ``scenario = "2025-26 is projected at 6.5 per cent, with risks"`` to explain
+    away the RBI/IMF disagreement — the claim's own sentence, dressed as a
+    description. Replaying a recovery from before that rule skipped the rule,
+    and the corpus's one genuine cross-institution contradiction disappeared
+    again, silently, with no model call to blame.
+
+    So: **remember what was verified against the document; re-run what was a
+    judgement.** The evidence spans were checked against pages that cannot have
+    changed. Everything the code decides is decided again, now.
+    """
+    if recovery.confidence < min_confidence:
+        return compare(a, b), None
+    if _is_circular(recovery.a_value, a) or _is_circular(recovery.b_value, b):
+        log.debug("remembered recovery rejected: a label quoting its own figure")
+        return compare(a, b), None
+    if not (recovery.a_value or recovery.b_value):
+        return compare(a, b), None
+
+    verdict = reconsider(a, b, recovery)
+    if verdict.verdict == CONTRADICTS:
+        return verdict, None
+    verdict.notes = list(verdict.notes) + [
+        f"recovered on an earlier review and re-checked: {recovery.axis} "
+        f"({recovery.method}, {recovery.reason})"
+    ]
+    return verdict, recovery
+
+
 @dataclass
 class Reconciliation:
     """What the second look concluded about one pair."""

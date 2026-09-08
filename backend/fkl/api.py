@@ -405,6 +405,36 @@ class CompareRequest(BaseModel):
     maskedAxes: list[str] = Field(default_factory=list)
 
 
+def _answer_label(claim: Claim, fact: dict, primary: dict) -> str:
+    """What actually answers the question for this claim.
+
+    For a measurement it is the figure. For a *role* it is the person, and
+    that distinction cost a round: "who is on the board" came back listing
+    "Chairman and Non-Executive - Independent Director", which restates the
+    question with more words. The value of a role claim is the post; the answer
+    is the subject holding it.
+
+    The test is the one ``_is_role`` makes — the subject is not the
+    organisation the document is about — minus the requirement for dates,
+    because a board table often prints no dates and its members are still the
+    answer. An address under "Registered Office" has the organisation as its
+    subject, so it answers as itself.
+    """
+    if fact.get("holder"):
+        return fact["holder"]
+    value = (fact.get("display") or "").strip()
+    if claim.claim_type != "state":
+        return value
+    org = claim.org_scope or primary.get(claim.document_id) or claim.subject
+    if (claim.subject or "").strip().lower() != (org or "").strip().lower():
+        # The registry's name for the person, not the page's. Two pages writing
+        # "Deepak Kapoor" and "Mr. Deepak Kapoor" are one director, and the
+        # entity registry has already decided that; using the raw subject
+        # would list him twice and make the resolution work invisible.
+        return fact.get("entity") or claim.subject
+    return value
+
+
 def _ask_note(answers: list[dict], axes: list[str]) -> str:
     """One sentence saying what shape the answer has, and why.
 
@@ -418,8 +448,10 @@ def _ask_note(answers: list[dict], axes: list[str]) -> str:
                 "metric or entity no document has asserted.")
     flagged = sum(1 for a in answers if a.get("unresolved"))
     caveat = ("" if not flagged else
-              f" {flagged} of them hold claims that disagree with nothing "
-              "recorded to distinguish them, and are marked unresolved.")
+              f" {flagged} of them {'holds' if flagged == 1 else 'hold'} claims "
+              "that disagree with each other and nothing recorded distinguishes "
+              "them — marked unresolved rather than settled by picking the more "
+              "confident one.")
     if len(answers) == 1:
         n = answers[0]["agreeing"]
         head = ("One answer, asserted once." if n == 1 else
@@ -1006,6 +1038,8 @@ def create_app() -> FastAPI:
 
             metric_names = {
                 m.id: m.canonical_name for m in session.scalars(select(Metric))}
+            primary = {d.id: d.primary_entity
+                       for d in session.scalars(select(Document))}
             claims = ask.find_claims(session, spec)
             groups = ask.split_by_context(claims, metric_names)[:ask.MAX_ANSWERS]
             index = facts_index(session)
@@ -1017,21 +1051,16 @@ def create_app() -> FastAPI:
                 head = members[0]
                 unresolved = ask.incoherent(members)
                 shown = [index[f"f-{m.id}"] for m in members]
-                # A role's answer is the person, not the role. `display` for a
-                # tenure claim is the post - "Company Secretary and Compliance
-                # Officer" - which restates the question instead of answering
-                # it; `holder` is the name the reader asked for.
-                def label(fact: dict) -> str:
-                    return fact.get("holder") or fact["display"]
-
+                pairs = list(zip(members, shown))
                 answers.append({
-                    "value": label(shown[0]),
+                    "value": _answer_label(*pairs[0], primary),
                     # Every distinct value in the group. One entry is the
                     # ordinary case; two means claims that share a context are
                     # disagreeing, and hiding the second behind the more
                     # confident one is the exact move this system exists not to
                     # make.
-                    "values": list(dict.fromkeys(label(f) for f in shown)),
+                    "values": list(dict.fromkeys(
+                        _answer_label(c, f, primary) for c, f in pairs)),
                     "period": head.period_label or head.period_raw,
                     "context": {CORPUS_AXIS.get(k, k): v
                                 for k, v in context.items()},

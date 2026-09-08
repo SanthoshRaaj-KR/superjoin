@@ -111,7 +111,18 @@ def parse_question(question: str) -> QuerySpec:
 
 
 def _tokens(text: str) -> set[str]:
-    return {t for t in re.findall(r"[a-z0-9]+", (text or "").lower()) if len(t) > 2}
+    """Words, crudely singularised.
+
+    A question says "directors" and the registry says "Director", and without
+    this they do not match - which sounds like a small thing until a question
+    about the board returns nothing while the answer sits in the store three
+    times over. Trimming a trailing "s" is wrong as linguistics ("gross" loses
+    one too) but right as matching, because both sides are trimmed identically
+    and the comparison is only ever between two treated strings.
+    """
+    words = re.findall(r"[a-z0-9]+", (text or "").lower())
+    return {w[:-1] if len(w) > 3 and w.endswith("s") and not w.endswith("ss") else w
+            for w in words if len(w) > 2}
 
 
 def parse_question_offline(session: Session, question: str) -> QuerySpec:
@@ -284,6 +295,14 @@ def find_claims(session: Session, spec: QuerySpec) -> list[Claim]:
         org = org.lower()
         return any(org == name or _tokens(name) & _tokens(org)
                    for name in wanted_names)
+
+    # A question that pinned neither an entity nor a metric has not been
+    # understood, and answering it with every claim in the store is worse than
+    # saying so: the reader gets eight confident answers to a question nobody
+    # parsed. A period alone is not a question either — "in FY24" is a filter
+    # looking for something to filter.
+    if not spec.entity and not spec.metric:
+        return []
 
     stmt = select(Claim)
     if spec.metric:

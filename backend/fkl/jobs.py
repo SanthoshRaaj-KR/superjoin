@@ -154,10 +154,19 @@ def _ingest_and_extract(job_id: int, paths: list[str], max_pages: int) -> None:
                 job.files_done += 1
             continue
 
+        # Announced in its own transaction, before the work starts. Setting the
+        # stage inside the same scope as the extraction meant it was not
+        # committed until the extraction finished, so the panel said "ingest"
+        # for the ten minutes it was actually reading pages — the one stretch
+        # where a reader most wants to know what is happening.
+        pages = list(range(min(max_pages, n_pages)))
         with session_scope() as session:
             job = session.get(Job, job_id)
             job.stage = "extract"
-            pages = list(range(min(max_pages, n_pages)))
+            job.detail = f"{Path(path).name} — reading {len(pages)} page(s)"
+
+        with session_scope() as session:
+            job = session.get(Job, job_id)
             run = extract_document_claims(session, document_id, pages=pages)
             job.pages_done += run.pages_attempted
             job.claims += run.claims
@@ -192,6 +201,8 @@ def _relate(job_id: int, review: bool) -> None:
         job.stage = "relate"
         job.detail = "comparing every comparable pair across the corpus"
 
+    with session_scope() as session:
+        job = session.get(Job, job_id)
         run = relate_corpus(session, investigator=investigator)
         states = relate_states(session, generation=run.generation)
 

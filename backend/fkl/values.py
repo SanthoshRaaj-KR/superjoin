@@ -209,8 +209,16 @@ _WORD = re.compile(r"[a-z0-9]+")
 
 
 def normalize_text_value(value: str | None) -> list[str]:
-    """A text value as comparable tokens: lowercase, punctuation dropped."""
-    return _WORD.findall((value or "").lower())
+    """A text value as comparable tokens: lowercase, punctuation dropped.
+
+    ``&`` becomes the word it stands for before anything else happens.
+    Dropping it as punctuation is what made "Company Secretary & Compliance
+    Officer" disagree with "Company Secretary and Compliance Officer" — the
+    same post, written two ways by two pages of the same company, reported as
+    a contradiction. An ampersand is a spelling of a word, not a mark between
+    words, and this is the only place in the pipeline that can know that.
+    """
+    return _WORD.findall((value or "").lower().replace("&", " and "))
 
 
 def _is_acronym_of(token: str, words: list[str]) -> bool:

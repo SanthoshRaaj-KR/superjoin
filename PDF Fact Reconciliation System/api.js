@@ -241,11 +241,63 @@ export const api = {
   corpus: () => call("/corpus"),
   documents: () => call("/documents"),
   facts: () => call("/facts"),
+  fact: (id) => call("/facts/" + encodeURIComponent(id)),
   pairs: () => call("/pairs"),
   quarantine: () => call("/quarantine"),
   compare: (a, b, maskedAxes) =>
     call("/compare", { method: "POST", body: JSON.stringify({ a, b, maskedAxes }) }),
+
+  // The registries the corpus built for itself. Kept separate from /corpus
+  // because they are the answer to "where did this vocabulary come from",
+  // which is a different question from "how big is the corpus".
+  axes: () => call("/axes"),
+  predicates: () => call("/predicates"),
+  metrics: () => call("/metrics"),
+  relations: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return call("/relations" + (q ? "?" + q : ""));
+  },
+
+  ask: (q) => call("/ask?q=" + encodeURIComponent(q)),
+  asOf: (date) => call("/as-of?date=" + encodeURIComponent(date)),
+
+  // Upload is the one call that is not JSON. FormData sets its own multipart
+  // boundary, so the content-type header `call` adds must not be sent here —
+  // naming a boundary that does not exist makes the server parse zero files
+  // and return "no PDF files in the upload" for a folder that plainly had some.
+  upload: async (files, { maxPages = 40, review = true } = {}) => {
+    const body = new FormData();
+    for (const f of files) body.append("files", f, f.name);
+    const res = await fetch(
+      `${BASE}/documents?maxPages=${maxPages}&review=${review}`,
+      { method: "POST", body },
+    );
+    if (!res.ok) throw new Error((await res.text()) || res.status);
+    return res.json();
+  },
+  job: (id) => call("/jobs/" + id),
+  jobs: () => call("/jobs"),
 };
+
+/* --------------------------- source page images ---------------------------- */
+
+// The page as the document printed it, with the evidence highlighted on it.
+// Fetched rather than pointed at with a bare <img src>, for two reasons: the
+// response carries a header saying whether the quote was actually located, so
+// the caption can be honest about what the reader is looking at; and a database
+// browsed without its source PDFs is a normal state, which should fall back to
+// the quote rather than render a broken image icon.
+export async function pageImage(doc, page, { quote = "", value = "", crop = true } = {}) {
+  const q = new URLSearchParams({ quote, value, crop: String(crop) });
+  try {
+    const res = await fetch(`${BASE}/pages/${doc}/${page}/image?${q}`);
+    if (!res.ok) return null;
+    const located = res.headers.get("X-Evidence-Located") === "1";
+    return { url: URL.createObjectURL(await res.blob()), located };
+  } catch {
+    return null;
+  }
+}
 
 export function fmt(f) {
   if (f.kind === "tenure") return f.holder;
