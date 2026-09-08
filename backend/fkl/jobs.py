@@ -47,6 +47,17 @@ UPLOAD_ROOT = REPO_ROOT / "data" / "uploads"
 _pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="fkl-job")
 _lock = threading.Lock()
 
+# What the running job is doing right now, held in memory rather than written
+# down. Extraction can report through the table because it holds no write
+# transaction while the model calls are in flight; the relate pass writes each
+# block's relations as it finishes them, so a second connection trying to
+# record "block 4 of 9" would sit on the SQLite write lock until it timed out.
+# A progress line is not worth blocking the work for, and it is not worth
+# keeping either: it means nothing once the job has moved on, and the log the
+# job does write is the durable record. The API and the worker share a process,
+# so a dict is the whole mechanism.
+_live: dict[int, str] = {}
+
 # A ceiling on how much of a long document one upload will read. Extraction is
 # the only part of this system that costs money, and an unattended upload of a
 # 400-page filing should not be able to spend without anyone having chosen to.
@@ -107,6 +118,7 @@ def _run(job_id: int, paths: list[str], max_pages: int, review: bool) -> None:
             _relate(job_id, review)
         except Exception as exc:  # pragma: no cover - defensive
             log.exception("job %s failed", job_id)
+            _live.pop(job_id, None)
             with session_scope() as session:
                 job = session.get(Job, job_id)
                 if job is not None:
@@ -141,7 +153,11 @@ def _ingest_and_extract(job_id: int, paths: list[str], max_pages: int) -> None:
             document_id = result.document_id
             n_pages = result.n_pages
             job.document_ids = sorted(set((job.document_ids or []) + [document_id]))
-            job.pages_total += n_pages
+            # Pages this job will *read*, not pages the document has. The
+            # difference is the page cap, and it is the difference between a
+            # progress bar that fills and one that stops at 40 of 511 and looks
+            # broken.
+            job.pages_total += min(max_pages, n_pages) if use_llm else 0
             verb = "reused" if result.reused else "ingested"
             _append(job, f"{verb} {result.filename}: {n_pages} pages, "
                          f"{result.n_chars:,} chars")
@@ -160,15 +176,40 @@ def _ingest_and_extract(job_id: int, paths: list[str], max_pages: int) -> None:
         # for the ten minutes it was actually reading pages — the one stretch
         # where a reader most wants to know what is happening.
         pages = list(range(min(max_pages, n_pages)))
+        name = Path(path).name
         with session_scope() as session:
             job = session.get(Job, job_id)
             job.stage = "extract"
-            job.detail = f"{Path(path).name} — reading {len(pages)} page(s)"
+            job.detail = f"{name} — reading {len(pages)} page(s)"
+            base_pages = job.pages_done
+
+        # The same fix one level down. Announcing the stage separately stopped
+        # the panel saying "ingest" for ten minutes; it then said "extract" for
+        # ten minutes instead, with every counter frozen, which is the same
+        # non-answer in a different word. Pages are read concurrently and come
+        # back over minutes, so each one that lands is committed on its own —
+        # a poll two seconds later sees a number that moved.
+        #
+        # Its own session, deliberately. The extraction session is holding
+        # results in memory and does not write until every page is back, so
+        # there is no write transaction to collide with here; and if a write
+        # ever did collide, a lost progress line is not worth failing a run
+        # over, which is what the `try` is for.
+        def progress(done: int, total: int) -> None:
+            try:
+                with session_scope() as s:
+                    row = s.get(Job, job_id)
+                    if row is not None:
+                        row.pages_done = base_pages + done
+                        row.detail = f"{name} — read {done}/{total} page(s)"
+            except Exception:  # noqa: BLE001 - progress is not the work
+                log.warning("could not record page progress", exc_info=True)
 
         with session_scope() as session:
             job = session.get(Job, job_id)
-            run = extract_document_claims(session, document_id, pages=pages)
-            job.pages_done += run.pages_attempted
+            run = extract_document_claims(session, document_id, pages=pages,
+                                          on_page=progress)
+            job.pages_done = base_pages + run.pages_attempted
             job.claims += run.claims
             job.files_done += 1
             _append(
@@ -201,9 +242,13 @@ def _relate(job_id: int, review: bool) -> None:
         job.stage = "relate"
         job.detail = "comparing every comparable pair across the corpus"
 
+    def progress(done: int, total: int) -> None:
+        _live[job_id] = f"compared {done}/{total} block(s)"
+
     with session_scope() as session:
         job = session.get(Job, job_id)
-        run = relate_corpus(session, investigator=investigator)
+        run = relate_corpus(session, investigator=investigator,
+                            on_block=progress)
         states = relate_states(session, generation=run.generation)
 
         job.relations = run.pairs + states.pairs
@@ -227,21 +272,38 @@ def _relate(job_id: int, review: bool) -> None:
         job.stage = "done"
         job.detail = None
         job.finished_at = _now()
+    _live.pop(job_id, None)
 
 
 def job_json(job: Job) -> dict:
     total = max(job.files_total, 1)
+    # Files are the coarse unit and pages are the fine one. A single-file upload
+    # has exactly two file-level progress values, 0 and 1, so a bar drawn from
+    # them is a bar that does not move for the entire run. Once ingest has said
+    # how many pages will be read, that is the honest denominator; the relate
+    # pass at the end is a step nothing here can subdivide, so the bar holds at
+    # full while `stage` carries the news.
+    if job.status == "done":
+        # A finished job is finished. Pages can come in under the estimate — a
+        # document shorter than the cap, a scan skipped — and a completed run
+        # reporting 82% describes the estimate rather than the work.
+        fraction = 1.0
+    elif job.pages_total:
+        fraction = min(job.pages_done / job.pages_total, 1.0)
+    else:
+        fraction = job.files_done / total
     return {
         "id": job.id,
         "status": job.status,
         "stage": job.stage,
-        "detail": job.detail,
+        "detail": _live.get(job.id) or job.detail,
         "files": job.filenames or [],
         "documents": [f"D-{d:02d}" for d in (job.document_ids or [])],
         "filesTotal": job.files_total,
         "filesDone": job.files_done,
-        "progress": round(job.files_done / total, 3),
+        "progress": round(fraction, 3),
         "pagesRead": job.pages_done,
+        "pagesTotal": job.pages_total,
         "claims": job.claims,
         "quarantined": job.quarantined,
         "relations": job.relations,

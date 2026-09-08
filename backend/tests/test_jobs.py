@@ -128,3 +128,80 @@ def test_a_scanned_pdf_is_named_and_skipped_rather_than_failing_the_batch(
         job = s.get(Job, 60)
         assert job.files_done == 1
         assert any("skipped" in line for line in (job.log or "").splitlines())
+
+
+def test_page_progress_is_committed_while_the_extraction_is_still_running(
+        client, tmp_path, monkeypatch):
+    """The bug this exists to stop coming back.
+
+    Extraction held one session open for the whole document, so nothing it
+    counted reached the table until the last page returned. The panel polled
+    every two seconds for ten minutes and was told the same thing every time —
+    stage "extract", zero pages, zero claims — which from the outside is
+    indistinguishable from a hung process. Progress is only progress if a
+    reader can see it happen.
+
+    So the assertion is made from a *different* session, mid-run: what the
+    poller would see, at the moment it would see it.
+    """
+    from fkl.pipeline import ExtractionRun
+
+    seen = []
+
+    def fake_ingest(session, path, **kwargs):
+        session.add(Document(id=1, sha256="c" * 64, filename="a.pdf",
+                             source_path=path, n_pages=3, n_chars=99,
+                             as_of_date=date(2024, 3, 31)))
+        session.flush()
+        return type("R", (), {"document_id": 1, "n_pages": 3, "n_chars": 99,
+                              "filename": "a.pdf", "reused": False})()
+
+    def fake_extract(session, document_id, *, pages, on_page=None, **kwargs):
+        for done in (1, 2, 3):
+            on_page(done, len(pages))
+            # A reader's view, not the worker's.
+            with session_scope() as other:
+                row = other.get(Job, 70)
+                seen.append((row.pages_done, row.detail))
+        return ExtractionRun(document_id=document_id, pages_attempted=3,
+                             measurements=5, proposed=6, refused=1)
+
+    monkeypatch.setattr("fkl.ingest.ingest_pdf", fake_ingest)
+    monkeypatch.setattr("fkl.pipeline.extract_document_claims", fake_extract)
+    monkeypatch.setattr(jobs, "SETTINGS", type("S", (), {"has_llm": True})())
+
+    with session_scope() as s:
+        s.add(Job(id=70, status="queued", stage="queued",
+                  filenames=["a.pdf"], files_total=1))
+        s.flush()
+
+    jobs._ingest_and_extract(70, [str(tmp_path / "a.pdf")], 3)
+
+    assert [n for n, _ in seen] == [1, 2, 3]
+    assert "1/3" in seen[0][1] and "3/3" in seen[2][1]
+
+    with session_scope() as s:
+        job = s.get(Job, 70)
+        assert job.pages_done == 3      # not 6: the final write sets, not adds
+        assert job.claims == 5
+        assert job.pages_total == 3     # pages this job reads, not pages it has
+
+
+def test_the_progress_bar_measures_pages_once_ingest_knows_how_many(client):
+    """Files are the coarse unit and a one-file upload has exactly two
+    file-level progress values, 0 and 1. A bar drawn from those does not move
+    for the entire run, which is the same failure as not drawing one."""
+    job = Job(id=80, status="running", stage="extract", filenames=["a.pdf"],
+              files_total=1, files_done=0, pages_total=40, pages_done=10)
+    assert jobs.job_json(job)["progress"] == 0.25
+
+    # Before ingest has said how many pages there are, files are all there is.
+    job.pages_total = 0
+    assert jobs.job_json(job)["progress"] == 0.0
+
+    # And a finished job is finished. Pages can come in under the estimate — a
+    # document shorter than the cap, a scan skipped, pages already extracted on
+    # an earlier run — and a completed run reporting 82% is describing the
+    # estimate rather than the work.
+    job.pages_total, job.pages_done, job.status = 40, 33, "done"
+    assert jobs.job_json(job)["progress"] == 1.0

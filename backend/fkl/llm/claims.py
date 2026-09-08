@@ -84,6 +84,11 @@ up, when a value sits far from its label, or when the text order looks \
 scrambled. Flagging a doubtful read is more useful than a confident wrong one.
 - Skip page furniture: running headers and footers, page numbers, contents \
 lists, and marketing statements with nothing measurable in them.
+- A measurement needs a number printed on the page. "Firms reported improved \
+demand conditions" and "expectations were better for order books" are \
+directional, not measured: there is no value to compare them against, so they \
+are not claims here and null is not an answer. Drop them. Take the numbered \
+sentence beside them instead.
 
 DATES IN ROLE AND STATUS CLAIMS
 

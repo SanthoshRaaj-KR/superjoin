@@ -182,11 +182,17 @@
             <div style="margin-top:16px; display:flex; gap:9px; justify-content:center; flex-wrap:wrap">
               <label style="padding:9px 16px; border:1px solid #C8C6BC; border-radius:3px; background:#F6F5F1; cursor:pointer; font:500 11px/1 'IBM Plex Mono',monospace; letter-spacing:0.06em; color:#3A3F36" style-hover="border-color:#191C16">
                 CHOOSE FOLDER
-                <input type="file" webkitdirectory="" directory="" multiple="" onChange="{{ onPick }}" style="display:none" />
+                <!-- multiple="multiple", not multiple="". The empty string is
+                     valid HTML but it reaches React as a falsy value for a prop
+                     React knows is boolean, so the attribute never lands on the
+                     element. Folder picking survived that because
+                     webkitdirectory implies it; CHOOSE FILES below did not, and
+                     was silently picking exactly one file. -->
+                <input type="file" webkitdirectory="" directory="" multiple="multiple" onChange="{{ onPick }}" style="display:none" />
               </label>
               <label style="padding:9px 16px; border:1px solid #C8C6BC; border-radius:3px; background:#F6F5F1; cursor:pointer; font:500 11px/1 'IBM Plex Mono',monospace; letter-spacing:0.06em; color:#3A3F36" style-hover="border-color:#191C16">
                 CHOOSE FILES
-                <input type="file" accept="application/pdf" multiple="" onChange="{{ onPick }}" style="display:none" />
+                <input type="file" accept="application/pdf" multiple="multiple" onChange="{{ onPick }}" style="display:none" />
               </label>
             </div>
           </div>
@@ -993,7 +999,11 @@ class Component extends DCLogic {
         return;
       }
     } catch { /* a transient failure is not a reason to stop watching */ }
-    setTimeout(() => this.pollJob(id), 2000);
+    // Pages are read six at a time and land every few seconds, so a two-second
+    // poll was showing every second or third one. One second costs a request
+    // against a local process and buys a counter that moves the way the work
+    // does.
+    setTimeout(() => this.pollJob(id), 1000);
   };
 
   // Everything the corpus panels read, after an upload changed the corpus.
@@ -1400,7 +1410,7 @@ class Component extends DCLogic {
       detail: job.detail || "",
       pct: Math.round((job.progress || 0) * 100),
       pctWidth: Math.max(2, Math.round((job.progress || 0) * 100)) + "%",
-      summary: `${job.filesDone}/${job.filesTotal} files · ${job.pagesRead} pages read · ${job.claims} claims · ${job.relations} pairs`,
+      summary: `${job.filesDone}/${job.filesTotal} files · ${job.pagesRead}${job.pagesTotal ? "/" + job.pagesTotal : ""} pages read · ${job.claims} claims · ${job.relations} pairs`,
       log: job.log,
       error: job.error || "",
       hasError: !!job.error,

@@ -20,7 +20,8 @@ table stays append-only and holds only claims that proved themselves.
 from __future__ import annotations
 
 import logging
-from concurrent.futures import ThreadPoolExecutor
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 
 from sqlalchemy import or_, select
@@ -159,6 +160,7 @@ def extract_document_claims(
     use_figures: bool = False,
     adjudicate: bool = True,
     force: bool = False,
+    on_page: Callable[[int, int], None] | None = None,
 ) -> ExtractionRun:
     """Extract, ground and persist claims for a document.
 
@@ -180,6 +182,13 @@ def extract_document_claims(
 
     ``pages`` restricts the run to specific page numbers, which keeps iterating
     on prompts cheap and makes a targeted re-run possible after a change.
+
+    ``on_page(done, total)`` is called as each page's model call returns. Pages
+    are read concurrently, so this reports *how many have come back*, not which
+    one is in flight — there are several. It exists because the caller holding
+    the write session cannot see inside this function, and a forty-page
+    extraction is several minutes during which a progress bar that only moves
+    per *document* is indistinguishable from a hung process.
     """
     document = session.get(Document, document_id)
     if document is None:
@@ -260,8 +269,21 @@ def extract_document_claims(
             log.warning("page %s failed: %s", page.page_no, exc)
             return page, None, f"{type(exc).__name__}: {exc}"
 
+    # `as_completed`, not `map`. Both run the same calls on the same pool; the
+    # difference is that `map` yields nothing until every page has returned, so
+    # a caller watching progress learns the answer exactly once, at the end.
+    # Results arrive out of order, which costs nothing: the persist loop below
+    # walks `page_rows` and looks each page up by number.
+    results = []
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        results = list(pool.map(work, page_rows))
+        futures = [pool.submit(work, page) for page in page_rows]
+        for done, future in enumerate(as_completed(futures), start=1):
+            results.append(future.result())
+            if on_page is not None:
+                try:
+                    on_page(done, len(page_rows))
+                except Exception:  # noqa: BLE001 - progress must not fail a run
+                    log.warning("progress callback failed", exc_info=True)
 
     for page, extraction, error in results:
         if error is not None:

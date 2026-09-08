@@ -30,6 +30,7 @@ from __future__ import annotations
 import itertools
 import logging
 from collections import defaultdict
+from collections.abc import Callable
 from datetime import date
 from dataclasses import dataclass, field, replace
 
@@ -179,6 +180,7 @@ def relate_corpus(
     investigator=None,
     reconcile_signs: bool = True,
     budget: bool = False,
+    on_block: Callable[[int, int], None] | None = None,
 ) -> RelateRun:
     """Compare every comparable pair of claims and store the verdicts.
 
@@ -190,6 +192,11 @@ def relate_corpus(
 
     ``reconcile_signs`` runs only the deterministic sign-convention scout, which
     needs no model and no key. It is on by default for that reason.
+
+    ``on_block(done, total)`` reports how many blocks have been compared. The
+    investigations are what make this slow — one model call per surviving
+    contradiction — and they happen block by block, so this is the only place
+    a caller can be told the pass is progressing rather than stuck.
 
     ``budget`` lets ContextRank decide which contradictions are worth a model
     call. Off by default, and that is a measured decision rather than caution:
@@ -420,6 +427,12 @@ def relate_corpus(
             )
 
 
+    # Blocks of one cannot produce a pair, and an oversized block is declined
+    # rather than compared. Neither is work, so neither belongs in a
+    # denominator a reader is watching tick upwards.
+    total_blocks = sum(1 for m in blocks.values() if 2 <= len(m) <= MAX_BLOCK)
+    done_blocks = 0
+
     for (entity_id, metric_id), members in blocks.items():
         if len(members) < 2:
             continue
@@ -475,6 +488,13 @@ def relate_corpus(
             tally = replayed
         _merge(run, tally)
         session.add_all(rows)
+
+        done_blocks += 1
+        if on_block is not None:
+            try:
+                on_block(done_blocks, total_blocks)
+            except Exception:  # noqa: BLE001 - progress must not fail a run
+                log.warning("progress callback failed", exc_info=True)
 
     session.flush()
     _finish(session, run, generation)
