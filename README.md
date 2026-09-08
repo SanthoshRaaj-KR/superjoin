@@ -93,12 +93,12 @@ python -m fkl.cli relate
 ```
 
 Runs the gate over every comparable pair of stored claims and reports the
-reduction. Over all five documents (276 claims, 444 pairs):
+reduction. Over all six documents (319 claims, 451 pairs):
 
 ```
-  391 pairs whose raw values disagree
-    272 explained by a named context axis
-    117 blocked — a material axis was undetermined
+  382 pairs whose raw values disagree
+    263 explained by a named context axis
+    115 blocked — a material axis was undetermined
       4 genuinely unresolved
   reduction: 69% of apparent disagreements dissolved by context
 ```
@@ -136,6 +136,11 @@ reporting it:
   second look: 7 contradiction(s) sent back to the page, 3 withdrawn
     context recovered on review: sign_convention 1 · measure_basis 1 · definition 1
 ```
+
+Over six documents: 319 claims, 451 relations, 3 quarantined. The four
+survivors are one real disagreement and three traceable defects — the RBI/IMF
+projection below, one core-inflation pair whose two labels each quoted their
+own figure, and two from a single EBITDA extraction error.
 
 **The survivor that matters is the one it did not withdraw.** The RBI projects
 6.5% real GDP growth for 2025-26; the IMF projects 6.6% for the same year. Two
