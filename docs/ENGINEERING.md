@@ -398,6 +398,274 @@ it is more informative than a panel that only ever agreed with the verdict.
 Every relation stores its certificate in `context_rank`, whether or not
 anything came of it. A suggestion that led nowhere is part of the reasoning.
 
+#### The full mechanics: the graph, the walk, and the formulas
+
+This is the exact machinery behind everything above — kept here rather than in
+the README so that document stays readable end to end, while nothing about how
+this actually works is left undocumented. Two structures matter: the tree a
+PDF gets turned into on the way in, and the graph plus algorithm that decide
+what a model should look at before a contradiction is reported.
+
+##### The document hierarchy: a PDF becomes a tree that remembers
+
+A PDF has no headings, no notes, no tables as far as the file format is
+concerned — it has positioned glyphs. Turning that into a structure worth
+reasoning over happens entirely **locally**, before any model ever sees the
+page, in four passes:
+
+**1. Lines become rows, rows become regions.** PyMuPDF gives back individual
+text runs with a font size, a bounding box and a bold flag. Runs on the same
+baseline are merged into a `Row`; rows are grouped by vertical proximity and
+column alignment into a `Region` — this is what turns three separately-drawn
+columns of numbers back into one logical table row, in reading order, before
+anything downstream ever sees them as text.
+
+**2. Font sizes become a heading hierarchy — relative to the document, not to
+a fixed number.** Every size that appears meaningfully larger than the page's
+own body-text size gets ranked, largest first:
+
+```python
+def heading_levels(body_size, sizes):
+    distinct = sorted({s for s in sizes if s > body_size + 0.4}, reverse=True)
+    return {size: i + 1 for i, size in enumerate(distinct)}
+```
+
+That word *"relative"* is the entire point: a corporate annual report and an
+IMF policy report have completely different body sizes, and a hard-coded
+threshold like "16pt is a heading" would misread one of the two documents
+guaranteed. There's also a guard against the opposite failure — a bare number
+is never treated as a heading no matter what size it's set in, because the Q4
+earnings deck sets chart labels in 8pt against 6pt body text, and a purely
+size-based rule would promote every number on a chart page into a section
+heading and then inherit context *from* it.
+
+**3. A stack walks the page in reading order, and headings push and pop it like
+scopes in a program.** A heading of level *L* stays open until the next heading
+of level *L or shallower* — exactly the ordinary rule for a document outline.
+Anything that isn't a heading is either page furniture (detected by
+**position**, not by matching known header text — a one- or two-row block
+pinned to the top or bottom 8% of the page) or a **note**, which attaches to
+whichever heading is currently on top of the stack. This is why a currency
+declaration printed once, directly under a page title, still governs a number
+four subheadings later: the frame in force at any row is every declaration
+still open on the stack, nearest scope wins on conflict, and popping a heading
+only discards what that heading itself introduced.
+
+**4. Every line is scanned for a context declaration, by shape — never by
+matching a specific document's wording.** A parenthetical containing a
+currency symbol or a scale word (`crore`, `million`, `lakh`, `Rs.`, `₹`) is a
+unit declaration wherever it appears, in any document; a heading naming
+`consolidated` or `standalone` narrows reporting scope from that point down.
+The one deliberately tricky guard: a sentence mentioning **both** words is
+*discussing* the distinction, not declaring one — the annual report opens a
+paragraph with exactly that sentence, immediately above two other paragraphs
+that each pick a different basis, and without the guard the whole page would
+be stamped with whichever basis the discussion happened to mention first. A
+declaration is also capped at 140 characters: past that length, a line is
+prose that merely *contains* the word, not a declaration of it — the
+difference between `(Consolidated, ₹ in million)` and three sentences that
+happen to use the word "consolidated" in a footnote about accounting policy.
+
+**A worked example.** A page under the heading `Consolidated Balance Sheet as
+at March 31, 2024`, with a note directly beneath it reading `(All amounts in
+Indian Rupees in million)`, reaches a bare table cell — `81,415.38` — three
+subheadings deeper with a context frame already carrying:
+
+```
+consolidation = consolidated   (from the heading)
+currency      = INR            (from the note)
+scale         = million        (from the note)
+period        = FY2024         (from the document profile, if nothing closer overrides it)
+```
+
+None of those four words are anywhere near the number `81,415.38` on the
+page. **That inherited frame is what the extractor sees**, printed inline
+above the raw text as `[CONTEXT IN FORCE]` lines — presented as *evidence it
+can override*, never as ground truth stamped onto the claim, because the
+ordinary outline rule sometimes reaches further than a human reader would
+extend a heading's scope by eye. And when an axis has no declaration in force
+anywhere on the stack, that absence is recorded and handed to the extractor by
+name — the mechanical origin of `unknown_qualifiers`, and the reason
+"nobody said" and "it's standalone" are never allowed to collapse into the
+same thing.
+
+##### The claim-context graph and the Personalized PageRank that walks it
+
+This is the mechanism behind stage ⑥. Two things need explaining: what the
+graph is actually built from, and exactly how the algorithm decides what to
+rank.
+
+###### What's a node, and what's an edge
+
+Nothing here is computed specially for this purpose — every edge is a
+relationship the pipeline already recorded on its way past. For every claim, a
+node `claim:<id>` is linked to:
+
+| Target | Base weight | What it represents |
+|---|---|---|
+| `doc:<id>` | 0.3 | the document it came from |
+| `metric:<name>` | 1.0 | the canonical metric it resolved to |
+| `period:<label>` | 0.8 | the canonical period it resolved to |
+| `sect:<doc>:<heading path>` | 0.9 | the section frame governing its page |
+| `qual:<axis>=<value>` | 1.0 | one specific qualifier binding it carries |
+| `axis:<name>` (via unknown) | 0.4 | an axis the extractor explicitly could **not** determine |
+| `term:<word>` | 0.5 | a distinctive word from its own evidence quote |
+
+A qualifier binding is itself linked onward to its axis node
+(`qual:consolidation=standalone` → `axis:consolidation`), which is what
+creates the multi-hop path that makes this worth building at all:
+`claim → section → sibling claim → qualifier → axis` reaches an axis that
+**neither claim in the pair ever mentions**, because a *different* claim in the
+same section carried it. Reading two isolated pages can never find that path;
+walking the graph does.
+
+Every one of those base weights above is then **multiplied by the inverse
+frequency of what it connects to** — and this multiplication is not an
+optimisation, it's the difference between the algorithm working and being
+actively wrong. The very first version weighted every edge equally, and it was
+useless: `consolidation` is recorded, or explicitly flagged as undetermined, on
+**366 of this corpus's 666 claims**, so at equal weight it's structurally
+adjacent to more than half the graph and it won *every* ranking it competed
+in — including for a pair the two source pages actually distinguish by sign
+convention, nothing to do with consolidation at all. Weighting by
+`log(N / n)` — the number of claims in the corpus over the number that touch
+this particular node — turns that around: a node touching 366 of 666 claims
+scores a weight of about **0.60**; a node touching only 2 claims scores about
+**5.81**, nearly **ten times** as much say in the outcome. That ratio is the
+whole mechanism, stated as one number: *a node connected to most of the corpus
+is not meaningfully **about** any one pair of claims it happens to touch.*
+
+###### The walk itself: Personalized PageRank, restart-based
+
+Plain PageRank answers *"what is generally important in this graph"* — which
+is precisely the popularity signal that must never decide anything here.
+**Personalized** PageRank answers a different question: *"what is important
+specifically near this one claim"* — by injecting the restart probability back
+at a single seed node instead of spreading it uniformly across the whole
+graph. This is standard power iteration, restarting at the seed with
+probability `1 − d`:
+
+```python
+rank = {seed: 1.0}                         # all mass starts at the seed
+for _ in range(40):                        # ITERATIONS
+    nxt = {seed: 1 - DAMPING}              # restart mass, injected every step
+    for node, mass in rank.items():
+        edges = {n: w for n, w in graph[node].items() if n in neighbourhood}
+        if not edges:
+            nxt[seed] += DAMPING * mass    # a dead end returns fully to the seed
+            continue
+        share = DAMPING * mass / sum(edges.values())
+        for neighbour, weight in edges.items():
+            nxt[neighbour] += share * weight
+    rank = nxt
+    if total_change < 1e-7: break          # TOLERANCE — usually converges early
+```
+
+`DAMPING = 0.85`, so a unit of mass restarts back at the seed roughly every
+seven steps on average — which over a graph this shallow means the fourth hop
+out still carries a usable amount of signal and the tenth essentially doesn't.
+The walk is restricted first to a **4-hop neighbourhood** around the two
+claims being compared (a plain breadth-first search, `RADIUS = 4`), because
+that's exactly the path length of `claim → section → sibling → qualifier →
+axis`. Measured, and worth stating plainly because the tidy version of this
+claim would be false: **the radius turns out not to be what keeps this local
+on this corpus.** Three hops already reach 933 of the graph's 1,611 nodes, and
+four, five and six hops reach exactly the same set — the graph is small-world
+enough that the radius stops mattering almost immediately. What actually keeps
+each walk personal to its seed is the **restart probability**: mass that
+wanders off always finds its way back to the claim that seeded it, never to
+the graph's overall centre of gravity, regardless of how far the neighbourhood
+technically extends.
+
+###### Two walks, not one — and reading two answers instead of one
+
+A single walk seeded on **both** claims at once would rank whatever is most
+central to the pair — and what's central to a pair of claims being compared is
+almost always what they **already have in common**, which by definition cannot
+be what separates them. Two claims are both about FY2026 GDP growth precisely
+*because* that's why they were placed in the same comparison; that fact
+explains nothing about why their values differ. So two independent walks run,
+one seeded on each claim (`r_a`, `r_b`), and two different quantities get read
+off every node either walk touches:
+
+```
+connection(n)  =  min( r_a[n], r_b[n] )          n sits near BOTH claims
+divergence(n)  =  |r_a[n] − r_b[n]| / (r_a[n] + r_b[n])    n sits near ONE, not the other
+```
+
+An axis is only a real candidate when it scores on **both** properties at
+once: connected (the concept is genuinely alive in this neighbourhood — other
+claims nearby carry it) *and* divergent (its actual recorded values split
+across the two sides of the pair, rather than both claims agreeing on it).
+Concretely, each candidate axis is scored as:
+
+```
+score(axis) = connection(axis) × (0.25 + 0.75 × spread)
+```
+
+where `spread` is the sharpest divergence found among *that axis's own
+qualifier bindings* — `consolidation=standalone` versus `consolidation=consolidated`
+scores very differently from an axis whose one recorded value both claims
+happen to share. An axis both sides already agree on is fully connected and
+has zero spread, so it scores near the floor of that range **however central
+it looks to the pair** — which is precisely the guard against the walk
+confidently ranking `period` first on every single pair in the corpus, since
+period is connected to almost everything.
+
+###### The vocabulary sidecar, and why "attention" deliberately isn't the axis score
+
+Words from each claim's own evidence quote are indexed into the graph as
+`term:` nodes the same way axes are, and ranked by the same divergence
+formula — this is what finds a **new** distinction the corpus has never named
+as an axis before, since a word can appear in the evidence long before anyone
+has promoted a concept into the registry. There's also a second, independent
+pass — `local_terms` — run directly over the two claims' raw page-text windows
+at the moment of ranking, for the case where the distinguishing phrase was
+never captured inside the extracted evidence quote at all (the IMF separates
+two deficit figures with *"per the authorities' definition"*, sitting in the
+sentence around the number rather than inside either quote). The two
+vocabularies are merged with corpus structure ranked ahead of the local
+reading, since a word the graph independently confirms as rare *and*
+divergent is a stronger signal than one only found in this one instance.
+
+The **attention score** — the number that decides whether a pair is even worth
+a model call under `relate --budget` — is deliberately computed from this
+**vocabulary mass**, not from the axis score, and getting this backwards would
+have been the single worst bug this module could contain: an axis the corpus
+has genuinely never seen before scores **zero**, by construction, simply
+because no node exists for a concept nobody has recorded yet. Ranking
+attention by known-axis score and skipping whatever scores low would silently
+skip *every future genuine discovery* while confidently re-investigating
+whatever the system had already solved. Attention low enough to fall below
+`ATTENTION_FLOOR = 0.004` is recorded as *not investigated* rather than *no
+context found* — a deliberately different and more honest claim.
+
+###### What this cost, and what it measurably bought
+
+The whole walk — both directions, over a graph with roughly 1,600 nodes — runs
+in about **120 milliseconds, with no model call and no API key**, and it runs
+*before* the investigator is asked anything, which is what makes it a
+mechanism that shapes the question rather than a statistic computed about an
+answer already given. Scored the only honest way — a cold run with no
+remembered recoveries, so every contradiction is investigated from a blank
+slate, same corpus, same twelve candidate pairs, same number of model calls
+either way:
+
+| | contradictions withdrawn | left unresolved | reduction |
+|---|---|---|---|
+| without this stage | 5 | 5 | 78.7% |
+| **with this stage** | **8** | **2** | **79.0%** |
+
+Three more genuine disagreements correctly explained, for the identical cost.
+And on the one contradiction that still survives review in this corpus, the
+ranking surfaces `scenario` as its top suggestion — which is precisely the
+axis an earlier model investigation once proposed to explain the disagreement
+away, and which a separate circularity check rejected because that proposed
+distinction quoted the very figure it was supposed to be explaining. **The
+ranking layer suggests. The deterministic layer still has the only vote that
+counts**, and the two are left visibly disagreeing in the stored record rather
+than quietly reconciled.
+
 ### Time, and the difference between not knowing and being wrong
 
 State claims — who holds a role, what the CIN is — assert intervals, and they
