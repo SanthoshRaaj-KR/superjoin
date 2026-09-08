@@ -148,6 +148,13 @@ def fact_json(claim: Claim, *, entities: dict, metrics: dict,
             "normalization": round(claim.conf_normalization or 0.0, 2),
             "entity_match": round(claim.conf_entity_match or 0.0, 2),
         },
+        # The figure as the page printed it, with its unit — "(224.10)" and
+        # not "-224.1". Formatting a float client-side loses the document's own
+        # convention, and these documents are consistent about it: a negative
+        # is parenthesised. Showing a third notation invented in the interface
+        # makes the number harder to find on the source page, which is the one
+        # thing a reader checking evidence needs to do.
+        "display": _display(claim, display, unit, tenure),
         "quote": claim.evidence_quote or "",
         "claim": _one_liner(claim, entity, metric, display, tenure),
         "section": sections.get((claim.document_id, claim.page_no), ""),
@@ -165,6 +172,61 @@ def fact_json(claim: Claim, *, entities: dict, metrics: dict,
         })
     return fact
 
+
+
+_UNIT_SUFFIX = {
+    "INR_M": ("\u20b9", "M"), "INR_CR": ("\u20b9", " Cr"),
+    "USD_M": ("$", "M"), "USD_BN": ("$", "Bn"),
+    "PCT": ("", "%"), "PP": ("", " pp"),
+}
+
+
+def _display(claim: Claim, printed: str, unit: str, tenure: bool) -> str:
+    """The figure as it appears on the page, wearing its unit.
+
+    ``value_raw`` is the document's own notation, so the sign convention comes
+    for free: a negative arrives already parenthesised. Two things still have
+    to be handled, and both were wrong on the first attempt.
+
+    The parentheses belong *outside* the unit. "\u20b9(224.10)M" is not a notation
+    anyone uses; "(\u20b9224.10M)" is.
+
+    And the unit is often already there. Percentages are written "(6.3%)" on
+    the page, and appending the sign again gives "(6.3%)%".
+    """
+    printed = (printed or "").strip()
+    if tenure or claim.claim_type == "state" or not printed:
+        return printed
+
+    # Financial tables write nil as a dash. Dressing that in a currency and a
+    # scale gives "₹-M", which reads as a number that is missing rather than a
+    # figure that is zero.
+    if printed.strip("-–— ") == "":
+        return "—"
+
+    negative = printed.startswith("(") and printed.endswith(")")
+    core = printed[1:-1].strip() if negative else printed
+
+    if unit in _UNIT_SUFFIX:
+        prefix, suffix = _UNIT_SUFFIX[unit]
+        # The page often wrote the unit itself — "8,142 Cr", "(6.3%)" — and
+        # adding it again gives "₹8,142 Cr inr cr". Which branch to take is
+        # decided by whether the unit is one we know how to write, not by
+        # whether anything survived the stripping.
+        if suffix and core.lower().rstrip().endswith(suffix.strip().lower()):
+            suffix = ""
+        if prefix and core.startswith(prefix):
+            prefix = ""
+        body = f"{prefix}{core}{suffix}"
+    else:
+        label = unit.replace("_", " ").lower()
+        known = label not in ("unknown", "tenure")
+        # "7.1 million shipments per day" already says its unit; the label
+        # is "days", so the check has to reach the singular stem too.
+        stem = label.split()[0].rstrip("s") if label else ""
+        already = bool(stem) and stem in core.lower()
+        body = f"{core} {label}" if known and label and not already else core
+    return f"({body})" if negative else body
 
 def _interval_label(claim: Claim) -> str:
     start = claim.valid_from.isoformat() if claim.valid_from else "?"
@@ -266,10 +328,17 @@ def _pair_label(relation: Relation, facts: dict) -> str:
     b = facts.get(f"f-{relation.claim_b_id}")
     if not a or not b:
         return f"claims {relation.claim_a_id} / {relation.claim_b_id}"
-    if a["kind"] == "tenure":
-        return f"{a['role']} · {a['holder']} → {b['holder']}"
     where = (f"{a['doc']} vs {b['doc']}" if a["doc"] != b["doc"]
              else f"{a['doc']} p.{a['page']} vs p.{b['page']}")
+
+    # Both sides, not just the first. One document can record a role with dates
+    # and another record the same role without any, so a pair is routinely half
+    # tenure and half plain state — and reading the second side's holder off a
+    # fact that has none is a 500 on the whole listing.
+    if a["kind"] == "tenure" and b["kind"] == "tenure":
+        return f"{a['role']} · {a['holder']} → {b['holder']}"
+    if a["kind"] == "tenure":
+        return f"{a['role']} · {a['holder']} · {where}"
     return f"{a['metric']} {a['period']} · {where}"
 
 
@@ -590,6 +659,25 @@ def create_app() -> FastAPI:
             ]
 
     if FRONTEND.is_dir():
+        @app.middleware("http")
+        async def revalidate_ui(request, call_next):
+            """Make the browser check before reusing the interface.
+
+            An ES module is cached hard and for a long time, and the cache is
+            keyed on the URL, so editing `api.js` and reloading gets you the
+            old module — silently, with the API returning new data into old
+            code. `no-cache` does not mean "do not store", it means "ask
+            first": the browser still gets a 304 and the file still comes from
+            disk when nothing changed. The cost is one conditional request per
+            asset; the alternative is debugging a page that is running code you
+            have already deleted.
+            """
+            response = await call_next(request)
+            path = request.url.path
+            if path == "/" or path.endswith((".js", ".css", ".html")):
+                response.headers["Cache-Control"] = "no-cache, must-revalidate"
+            return response
+
         @app.get("/")
         def index():
             return FileResponse(FRONTEND / "Reconcile.dc.html")
@@ -693,12 +781,29 @@ def verdict_json(verdict, left: Claim, right: Claim, a, b,
 
 
 def _normalized(comparable) -> dict | None:
+    """The value in base units, labelled by what those units are.
+
+    ``Unit.describe`` names the unit *as the document wrote it* — "INR million"
+    — which is the wrong label for a canonical value, because canonicalising
+    is precisely what removed the scale. Reporting 2,241,000,000 as "INR
+    million" is off by a factor of a million, and the fallback for a scaleless
+    currency read as "INR units", which is not a unit at all.
+    """
     if comparable.value_canonical is None:
         return None
+    unit = comparable.unit
+    if not unit.known:
+        label = "—"
+    elif unit.dimension == "currency":
+        label = unit.currency or "currency"
+    elif unit.dimension == "percent":
+        label = "percent"
+    else:
+        label = unit.dimension
     return {
-        "dim": comparable.unit.dimension or "?",
+        "dim": unit.dimension or "?",
         "value": comparable.value_canonical,
-        "unit": comparable.unit.describe() if comparable.unit.known else "—",
+        "unit": label,
     }
 
 

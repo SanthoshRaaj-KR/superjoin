@@ -262,3 +262,28 @@ def test_an_unknown_claim_is_a_404_not_a_crash(client):
                        json={"a": "f-999", "b": "f-1"}).status_code == 404
     assert client.post("/api/v1/compare",
                        json={"a": "nonsense", "b": "f-1"}).status_code == 404
+
+
+def test_a_pair_that_is_half_tenure_does_not_break_the_listing(client):
+    """One document records a role with dates, another records the same role
+    with none, so a pair is routinely half tenure and half plain state.
+    Reading the second side's holder off a fact that has none took out the
+    whole listing with a 500 — and it only appeared when a document the system
+    had not seen was ingested."""
+    with session_scope() as s:
+        s.add(Claim(
+            id=4, document_id=2, page_no=29, claim_type="state",
+            subject="Mr. Sunil Kumar Bansal", predicate="Company Secretary",
+            value_text="Company Secretary", entity_id=2, metric_id=2,
+            evidence_quote="q", qualifiers={}, unknown_qualifiers=[],
+            confidence_reasons=[], modality="actual", valid_to_is_open=True,
+        ))
+        s.add(Relation(claim_a_id=3, claim_b_id=4, verdict="CORROBORATES",
+                       axis=None, explanation="…", differing_axes=[],
+                       missing_axes=[], values_differ=False, generation=1))
+        s.flush()
+
+    rows = client.get("/api/v1/pairs")
+    assert rows.status_code == 200
+    labels = [p["label"] for p in rows.json()]
+    assert any("Company Secretary" in l for l in labels)

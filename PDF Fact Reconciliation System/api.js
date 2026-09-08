@@ -249,7 +249,17 @@ export const api = {
 
 export function fmt(f) {
   if (f.kind === "tenure") return f.holder;
+  // The server sends the figure as the source page printed it, unit included.
+  // Prefer that over reformatting the float: "(224.10)" is what the reader
+  // will be looking for when they check the evidence span, and "-224.1" is
+  // not on the page anywhere.
+  if (f.display) return f.display;
   const n = f.value;
+  // Financial statements print a negative as (224.10), not as -224.10, and
+  // certainly not as the sign wedged between the currency symbol and the
+  // figure. These documents use parentheses throughout; the interface reading
+  // them should not invent a third convention.
+  if (n < 0) return "(" + fmt({ ...f, value: -n }) + ")";
   switch (f.unit) {
     case "INR_M": return "₹" + n.toLocaleString("en-IN") + "M";
     case "INR_CR": return "₹" + n.toLocaleString("en-IN") + " Cr";
