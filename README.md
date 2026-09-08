@@ -303,7 +303,11 @@ measured by how many conflicts it finds. It's measured by how many fake
 conflicts it correctly throws out.**
 
 ---
+
 ## Getting started
+
+*(This is the setup section — everything needed to install it, run it, and
+see it working, with or without an API key.)*
 
 ### 1. Requirements
 
@@ -584,6 +588,63 @@ runs the gate against every hand-labelled relation and scores it.
 
 ---
 
+## Approach and trade-offs
+
+The approach, in one line: **push every hard, fuzzy decision onto the AI
+model, and let plain, boring, predictable code make the actual verdict.**
+Everything else in this project follows from that one choice — and every
+choice like that comes with something given up in exchange. Stated honestly,
+not hidden:
+
+- **Predictable code decides, instead of an AI model.**
+  *Gain:* the same two facts always get the same verdict, and every verdict
+  can be explained in one sentence naming the exact reason.
+  *Cost:* if two facts disagree for a reason the rulebook has no name for
+  yet, that one case can get called a contradiction wrongly — until that same
+  reason shows up often enough, on independent pairs, to be learned as a real
+  category the rulebook can name from then on.
+
+- **A fact that can't be double-checked is set aside, not kept.**
+  *Gain:* nothing in the finished results is a guess — every fact shown has
+  proof.
+  *Cost:* some real facts get lost this way, when the page layout was messy
+  enough to confuse the check. That loss is shown openly, as a list of
+  set-aside facts with reasons, instead of being hidden.
+
+- **No currency conversion, ever.**
+  *Gain:* no invented exchange rate ever silently makes two numbers look
+  like they match when they don't.
+  *Cost:* a dollar figure and a rupee figure about the same thing are simply
+  marked "can't compare" rather than being reconciled — less convenient,
+  never wrong.
+
+- **How many people can hold a role at once is a guess, corrected by
+  evidence.**
+  *Gain:* the system doesn't need to be told in advance which jobs are
+  "one person only" — it works this out from grammar and then double-checks
+  itself against what the documents actually show.
+  *Cost:* the starting guess is sometimes wrong, and until it's corrected it
+  can call an ordinary situation — like one person listed for several
+  companies — a false conflict. Every guess is shown on screen, so this is
+  easy to spot and check.
+
+- **One simple database file, not a fleet of specialized ones.**
+  *Gain:* the whole project runs from a single file, with no servers to set
+  up — anyone can download it and run it in minutes.
+  *Cost:* this is the right choice for hundreds of pages. At tens of
+  thousands of pages, the file would need to become a proper database server
+  — a planned change, not a surprise, because facts are already grouped
+  in a way that makes that upgrade straightforward later.
+
+- **People are never automatically merged, even when they probably match.**
+  *Gain:* two different people are never mistaken for one — which would be a
+  much worse mistake than the alternative.
+  *Cost:* the same person can appear more than once under slightly different
+  spellings until something more solid — like an ID number — ties the
+  records together.
+
+---
+
 ## What this deliberately does not build
 
 Restraint is a design decision, so it's stated:
@@ -621,6 +682,34 @@ Stated up front rather than discovered:
 
 The full reasoning behind each of these, plus the experiments that produced the
 numbers above, is in **[docs/ENGINEERING.md](docs/ENGINEERING.md)**.
+
+---
+
+## Next steps
+
+In the order they'd actually get done:
+
+1. **Stop the rare duplicate facts.** About 6 in every 1,000 facts are the
+   same real-world fact, read twice off one page with two different time
+   periods attached. The fix is a check that looks at the exact sentence and
+   decides which reading is correct.
+2. **Make a "we changed our mind" decision easier to double-check later.**
+   Right now, when the system takes back an earlier contradiction, it
+   remembers *why* — but not the exact spot on the page that proved it. Saving
+   that spot means a later reviewer could re-verify the reasoning instead of
+   just trusting it.
+3. **Read job titles inside biography paragraphs more carefully**, so a
+   sentence listing someone's other jobs at *other* companies doesn't get
+   mistaken for two people holding the same job at *this* company.
+4. **Handle half-year time periods properly**, instead of rounding them up to
+   the full year they sit inside.
+5. **Recognise company ID formats from outside India** — right now only
+   Indian identifiers get the strongest form of automatic matching.
+6. **Add OCR**, so scanned documents — currently just named and skipped — can
+   be read too.
+7. **Run the PageRank experiment on a bigger set of documents.** The 5-to-8
+   result above is real, but it's from twelve test cases on one set of
+   documents — worth confirming at a larger scale before trusting it fully.
 
 ---
 
