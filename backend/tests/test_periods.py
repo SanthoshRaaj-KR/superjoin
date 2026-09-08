@@ -155,3 +155,62 @@ def test_an_iso_date_is_not_read_as_a_year_pair():
     day = parse_period("2023-06-01")
     assert day.granularity == "instant"
     assert day.start == date(2023, 6, 1)
+
+
+# --- fiscal calendars other than this corpus's ------------------------------
+#
+# The Indian April-March year is the default because every document here uses
+# it. It is a *parameter* because getting it wrong is silent: a September filer
+# read as an April one yields intervals confidently off by six months, and
+# `Q3` means October-December on one calendar and July-September on another
+# with nothing in the output to tell them apart.
+
+
+def test_a_fiscal_calendar_is_read_from_the_documents_own_wording():
+    from fkl.periods import infer_fy_start_month
+
+    assert infer_fy_start_month("for the year ended March 31, 2024") == 4
+    assert infer_fy_start_month("year ended December 31, 2023") == 1
+    assert infer_fy_start_month("year ending September 30, 2024") == 10
+    # Silence keeps the default rather than guessing, which would be the same
+    # silent error with better cover.
+    assert infer_fy_start_month("Consolidated Balance Sheet") == 4
+    assert infer_fy_start_month(None) == 4
+
+
+def test_a_calendar_year_filer_is_not_read_as_an_april_one():
+    p = parse_period("FY2024", fy_start_month=1)
+    assert (p.start, p.end) == (date(2024, 1, 1), date(2024, 12, 31))
+
+    # The quarter is the one that fails quietly: Q3 is October-December on an
+    # April year and July-September on a calendar one.
+    q = parse_period("Q3 2024", fy_start_month=1)
+    assert (q.start, q.end) == (date(2024, 7, 1), date(2024, 9, 30))
+    assert parse_period("Q3 FY24").start == date(2023, 10, 1)
+
+
+def test_a_september_filer_gets_its_own_year():
+    p = parse_period("FY2024", fy_start_month=10)
+    assert (p.start, p.end) == (date(2023, 10, 1), date(2024, 9, 30))
+
+
+def test_a_year_end_date_names_its_own_year_on_every_calendar():
+    """The shortcut — "before the start month, so it is this year" — is right
+    for April and wrong for January, where the year end is December and every
+    date is on or after the start month."""
+    cases = [
+        ("year ended March 31, 2024", 4, "FY2024"),
+        ("year ended December 31, 2024", 1, "FY2024"),
+        ("year ended September 30, 2024", 10, "FY2024"),
+    ]
+    for raw, month, label in cases:
+        p = parse_period(raw, raw, fy_start_month=month)
+        assert p.label == label, f"{raw} on a month-{month} calendar"
+        assert p.end.year == 2024
+
+
+def test_the_default_is_unchanged_for_every_document_in_this_corpus():
+    """The parameterisation must not move a single existing reading."""
+    for raw, hint in [("FY2023-24", ""), ("Q4 FY24", ""), ("2023-24", ""),
+                      ("March 31, 2024", "for the year ended March 31, 2024")]:
+        assert parse_period(raw, hint) == parse_period(raw, hint, fy_start_month=4)

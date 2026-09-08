@@ -522,31 +522,49 @@ _TRIVIAL_LABEL = re.compile(
 
 
 def _is_circular(value: str | None, claim: Comparable) -> bool:
-    """Whether a proposed axis value is just the figure restated.
+    """Whether a proposed axis value quotes the figure it is supposed to label.
 
-    The loophole this closes was found in the corpus, not imagined. Asked what
-    distinguished "Core inflation increased to 4.6 percent (from 3.5 percent
-    FY2024/25 average)", the investigator answered `time_reference`, with
-    ``a_value="4.6 percent"`` and ``b_value="3.5 percent FY2024/25 average"``.
-    The second is a real label. The first is the number wearing a label's
-    clothes, and it passes a naive "the value must appear on the page" check
-    perfectly, because of course it does — it *is* the value.
+    **A label never contains the number it labels.** `July WEO`, `Current`,
+    `urban areas`, `Adj. EBITDA margin`, `first advance estimate` — not one of
+    them names its own value, because a label says which *kind* of measurement
+    this is, and the measurement is the other half of the pair.
 
-    An axis whose value for one side is that side's own figure explains
-    nothing: it says these two numbers differ because one of them is the first
-    number. Stripping the figure and the unit words should leave something that
-    is actually a description; when it does not, the side is treated as
-    unlabelled, which correctly turns the pair into INSUFFICIENT_EVIDENCE
-    rather than a false explanation.
+    Both versions of this guard were written against real damage. The first was
+    a proposal of ``a_value="4.6 percent"`` for the figure 4.6: the number
+    wearing a label's clothes, and one that satisfies "the value must appear on
+    the page" perfectly, because of course it does.
+
+    That version stripped the figure and asked whether anything substantive
+    remained, and it was not enough. Asked what separated the RBI's *"real GDP
+    growth for 2025-26 is projected at 6.5 per cent"* from the IMF's 6.6 per
+    cent for the same year, the investigator proposed a `scenario` axis with
+    ``a_value="2025-26 is projected at 6.5 per cent, with risks"`` — the claim's
+    own sentence, padded with enough words to look like a description once the
+    figure was removed. It grounded, because the sentence really is on the page.
+    And it dissolved the one genuine cross-institution disagreement in the
+    corpus, which is the single worst thing this layer can do.
+
+    So the test is containment, not residue. A side whose proposed label quotes
+    its own figure is treated as unlabelled — which blocks the pair, or leaves
+    the contradiction standing, and both are recoverable by a reader in a way
+    that a false explanation is not.
     """
     if not value:
         return False
-    residue = _norm(value)
-    for token in filter(None, [claim.value_raw, claim.value_text,
-                               str(claim.value_canonical or "")]):
-        residue = residue.replace(_norm(token), " ")
-        # The page may print 6.3 where the canonical form is -6.3 or 0.063.
-        residue = residue.replace(_norm(token).lstrip("-(").rstrip(")"), " ")
+    label = _norm(value)
+    if not label:
+        return True
+    figures = {
+        _norm(token).strip("()")
+        for token in (claim.value_raw, claim.value_text)
+        if token and _norm(token).strip("()")
+    }
+    if any(figure in label for figure in figures):
+        return True
+    # Nothing left but the figure and its unit is not a label either.
+    residue = label
+    for figure in figures:
+        residue = residue.replace(figure, " ")
     return bool(_TRIVIAL_LABEL.match(residue.strip()))
 
 
@@ -563,14 +581,20 @@ def ground(recovery: Recovery, a: Comparable, b: Comparable,
     if recovery.method.startswith("scout:"):
         return recovery  # deterministic, derived from the page rather than proposed
 
-    # A side whose "label" is only its own figure is not labelled at all.
-    # Dropping it rather than the whole proposal is deliberate: the other side
-    # may carry a real label, and one real label plus one absence is exactly the
-    # undetermined-axis case.
-    if _is_circular(recovery.a_value, a):
-        recovery.a_value, recovery.a_evidence = None, None
-    if _is_circular(recovery.b_value, b):
-        recovery.b_value, recovery.b_evidence = None, None
+    # A rejected label is not the same thing as an absent one, and collapsing
+    # the two is how the RBI/IMF disagreement nearly escaped: the investigator
+    # proposed a circular label for the RBI side and a real one for the IMF
+    # side, and dropping only the bad half left a one-sided recovery — which
+    # blocks the pair on an "undetermined" axis and takes it out of the
+    # residual set just as effectively as explaining it.
+    #
+    # A one-sided recovery is legitimate only when the model *declined* to
+    # label a side, which is evidence that the page labels one figure and not
+    # the other. A side we deleted is evidence the model was reaching, and the
+    # whole proposal goes with it.
+    if _is_circular(recovery.a_value, a) or _is_circular(recovery.b_value, b):
+        log.debug("recovery rejected: a label quoting its own figure")
+        return None
     if not (recovery.a_value or recovery.b_value):
         return None
 

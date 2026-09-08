@@ -29,7 +29,7 @@ from sqlalchemy.orm import Session
 from .entities import find_identifiers, resolve_entity
 from .metrics import resolve_metric
 from .models import Claim
-from .periods import parse_period
+from .periods import infer_fy_start_month, parse_period
 from .units import parse_unit
 
 log = logging.getLogger(__name__)
@@ -62,6 +62,7 @@ def canonicalize(
     *,
     hint: str = "",
     adjudicate: bool = True,
+    fy_start_month: int | None = None,
 ) -> None:
     """Fill a claim's canonical fields in place. Never raises for bad input."""
     # --- unit, and the value it places -------------------------------------
@@ -72,7 +73,16 @@ def canonicalize(
     claim.value_canonical = unit.canonical(claim.value_num)
 
     # --- period -------------------------------------------------------------
-    period = parse_period(claim.period_raw, hint)
+    # The document's own fiscal calendar, not ours. Read from its wording
+    # when the caller has not worked it out already; April when it never
+    # says. Passing a constant here is the silent kind of wrong: a filer
+    # whose year ends in September, read as April-March, yields intervals
+    # confidently off by six months and comparisons that all look fine.
+    if fy_start_month is None:
+        fy_start_month = infer_fy_start_month(
+            " ".join(filter(None, [hint, claim.period_raw]))
+        )
+    period = parse_period(claim.period_raw, hint, fy_start_month=fy_start_month)
     if period.known:
         claim.period_start = period.start
         claim.period_end = period.end

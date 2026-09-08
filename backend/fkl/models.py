@@ -307,6 +307,11 @@ class EntityAlias(Base):
     # How the link was made, so a wrong merge can be traced to its cause.
     method: Mapped[str] = mapped_column(String(32), default="exact")
     confidence: Mapped[float] = mapped_column(Float, default=1.0)
+    # Kept distinct from `confidence`, which is the adjudicator's certainty that
+    # the two names denote one entity. This is how *close* the names looked —
+    # the reason the pair was put to the adjudicator at all. Recording only the
+    # first hides whether a bad merge came from a bad candidate or a bad call.
+    similarity: Mapped[float | None] = mapped_column(Float)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
     entity: Mapped[Entity] = relationship(back_populates="aliases")

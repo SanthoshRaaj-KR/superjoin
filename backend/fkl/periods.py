@@ -38,7 +38,14 @@ from datetime import date, timedelta
 
 # The Indian fiscal year starts in April and is named for the calendar year it
 # ends in. Every document in this corpus follows it, including the IMF's
-# `FY2024/25` notation.
+# `FY2024/25` notation — so it is the default, not a law.
+#
+# It is a *default* and a parameter rather than a constant because getting this
+# wrong is silent. A filer whose year ends in September, read as April-March,
+# produces intervals that are confidently wrong by six months, and every
+# comparison against them looks fine. `Q3` is worse: on an April year it is
+# October-December and on a calendar year it is July-September, and nothing in
+# the output distinguishes the two readings.
 FY_START_MONTH = 4
 
 # Quarter n of a fiscal year, as an offset in months from the fiscal year start.
@@ -51,6 +58,30 @@ _MONTHS = {
     if m
 }
 _MONTHS.update({m.lower(): i for i, m in enumerate(calendar.month_abbr) if m})
+
+# A year-end declaration in the document's own words. "year ended March 31"
+# says the fiscal year opens in April; "year ended December 31" says January.
+_YEAR_END = re.compile(
+    r"\b(?:year|period)\s+end(?:ed|ing)\s+"
+    r"(?:the\s+)?(?:\d{1,2}\s+)?"
+    r"(january|february|march|april|may|june|july|august|september|october|"
+    r"november|december)",
+    re.I,
+)
+
+
+def infer_fy_start_month(text: str | None, default: int = FY_START_MONTH) -> int:
+    """The month a document's fiscal year starts in, read from its own wording.
+
+    "year ended March 31" means the year opened in April; "year ended
+    December 31" means it opened in January. Falls back to the default when
+    the document never says, which is the honest behaviour — guessing from
+    silence would be the same silent error, just better hidden.
+    """
+    m = _YEAR_END.search(text or "")
+    if not m:
+        return default
+    return _MONTHS[m.group(1).lower()] % 12 + 1
 
 _DATE = re.compile(
     r"\b(" + "|".join(sorted(_MONTHS, key=len, reverse=True)) + r")\.?\s+"
@@ -87,11 +118,18 @@ def _expand_year(token: str, anchor: int | None = None) -> int:
     return 2000 + value if value <= 50 else 1900 + value
 
 
-def fiscal_year_bounds(end_year: int) -> tuple[date, date]:
-    """The interval of the fiscal year *named* for ``end_year``."""
+def fiscal_year_bounds(end_year: int,
+                       fy_start_month: int = FY_START_MONTH) -> tuple[date, date]:
+    """The interval of the fiscal year *named* for ``end_year``.
+
+    A fiscal year starting in January is the calendar year of the same name;
+    any other start month means the year opens in the preceding calendar year.
+    """
+    if fy_start_month == 1:
+        return (date(end_year, 1, 1), date(end_year, 12, 31))
     return (
-        date(end_year - 1, FY_START_MONTH, 1),
-        date(end_year, FY_START_MONTH, 1) - timedelta(days=1),
+        date(end_year - 1, fy_start_month, 1),
+        date(end_year, fy_start_month, 1) - timedelta(days=1),
     )
 
 
@@ -121,20 +159,48 @@ class Period:
 UNKNOWN = Period(None, None, "unknown", "unknown", confidence=0.0)
 
 
+
+def _fy_naming(day: date, fy_start_month: int = FY_START_MONTH) -> int:
+    """Which fiscal year a date belongs to, by the year the fiscal year ends in.
+
+    A date that *is* the year end names its own year: 31 March 2024 is FY2024 on
+    an April calendar, 31 December 2024 is FY2024 on a January one, 30 September
+    2024 is FY2024 on an October one. Any other date names the year its own
+    fiscal year closes in.
+
+    Written out because the shortcut — "before the start month, so it is this
+    year" — is right for April and wrong for January, where the year end is
+    December and every date is on or after the start month.
+    """
+    close_month = (fy_start_month - 2) % 12 + 1
+    if day.month == close_month:
+        return day.year
+    return day.year + 1 if day.month >= fy_start_month else day.year
+
 def _fy(end_year: int, raw: str, confidence: float = 1.0, ambiguous: bool = False,
-        notes: tuple[str, ...] = ()) -> Period:
-    start, end = fiscal_year_bounds(end_year)
+        notes: tuple[str, ...] = (),
+        fy_start_month: int = FY_START_MONTH) -> Period:
+    start, end = fiscal_year_bounds(end_year, fy_start_month)
     return Period(start, end, "fiscal_year", f"FY{end_year}", raw, confidence,
                   ambiguous, notes)
 
 
-def parse_period(raw: str | None, hint: str | None = None) -> Period:
+def parse_period(raw: str | None, hint: str | None = None, *,
+                 fy_start_month: int = FY_START_MONTH) -> Period:
     """Parse a period string into an interval.
 
     ``hint`` is the surrounding wording — the section declaration a period was
     inherited from, or the sentence it sits in. It exists for exactly one job:
     deciding whether ``March 31, 2024`` names the year that ended then or the
     instant itself. Nothing else needs it.
+
+    ``fy_start_month`` is the document's own fiscal calendar, inferred by
+    ``infer_fy_start_month`` from wording like "year ended December 31" and
+    defaulting to April. It is a parameter rather than a constant because a
+    wrong fiscal calendar fails silently: a September filer read as an April
+    one produces intervals confidently wrong by six months, and `Q3` means
+    October-December on one calendar and July-September on another with
+    nothing in the output to tell them apart.
     """
     text = (raw or "").strip()
     if not text:
@@ -149,7 +215,7 @@ def parse_period(raw: str | None, hint: str | None = None) -> Period:
         quarter = int(m.group(1))
         end_year = _expand_year(m.group(3) or m.group(2),
                                 _expand_year(m.group(2)) if m.group(3) else None)
-        fy_start, _ = fiscal_year_bounds(end_year)
+        fy_start, _ = fiscal_year_bounds(end_year, fy_start_month)
         offset = (quarter - 1) * _QUARTER_MONTHS
         month = (fy_start.month - 1 + offset) % 12 + 1
         year = fy_start.year + (fy_start.month - 1 + offset) // 12
@@ -171,7 +237,7 @@ def parse_period(raw: str | None, hint: str | None = None) -> Period:
             end_year = _expand_year(m.group(2), _expand_year(first))
         else:
             end_year = _expand_year(first)
-        return _fy(end_year, text)
+        return _fy(end_year, text, fy_start_month=fy_start_month)
 
     m = _ISO_DATE.search(text) or _DATE.search(text)
     if m:
@@ -182,9 +248,9 @@ def parse_period(raw: str | None, hint: str | None = None) -> Period:
 
         if _SPANS.search(hint_text):
             return _fy(
-                day_date.year if day_date.month <= FY_START_MONTH else day_date.year + 1,
-                text,
+                _fy_naming(day_date, fy_start_month), text,
                 notes=("resolved to a year by the section declaration",),
+                fy_start_month=fy_start_month,
             )
         if _INSTANTS.search(hint_text):
             return Period(day_date, day_date, "instant", day_date.isoformat(), text, 1.0)
@@ -194,13 +260,23 @@ def parse_period(raw: str | None, hint: str | None = None) -> Period:
         # year on one page and the instant on another. Return the year, because
         # that is what a period column on a measurement almost always labels,
         # but say plainly that it was not resolved.
-        year_end = day_date.month == 3 and day_date.day == 31
+        # Whether this date falls on the document's own year end — the last
+        # day of the month before its fiscal year opens. Hardcoding 31 March
+        # made this test true only for April filers, so a December filer's
+        # year-end column was read as an instant rather than a year.
+        close_month = (fy_start_month - 2) % 12 + 1
+        year_end = (
+            day_date.month == close_month
+            and day_date.day == calendar.monthrange(day_date.year, close_month)[1]
+        )
         if year_end:
             return _fy(
-                day_date.year, text, confidence=0.6, ambiguous=True,
+                _fy_naming(day_date, fy_start_month),
+                text, confidence=0.6, ambiguous=True,
                 notes=("a bare fiscal year-end date: read as the year ending then, "
                        "but the document did not say whether it means the year or "
                        "the balance at that instant",),
+                fy_start_month=fy_start_month,
             )
         return Period(day_date, day_date, "instant", day_date.isoformat(), text, 0.9,
                       notes=("a bare date, read as an instant",))
@@ -213,7 +289,7 @@ def parse_period(raw: str | None, hint: str | None = None) -> Period:
         first = int(m.group(1))
         second = _expand_year(m.group(2), first)
         if second - first == 1:
-            return _fy(second, text)
+            return _fy(second, text, fy_start_month=fy_start_month)
         if second > first:
             return Period(
                 date(first, 1, 1), date(second, 12, 31), "multi_year",

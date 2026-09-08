@@ -99,7 +99,7 @@ reduction. Over all five documents (276 claims, 444 pairs):
   391 pairs whose raw values disagree
     272 explained by a named context axis
     117 blocked — a material axis was undetermined
-      2 genuinely unresolved
+      4 genuinely unresolved
   reduction: 69% of apparent disagreements dissolved by context
 ```
 
@@ -133,22 +133,48 @@ So `relate --review` sends every contradiction back to its pages before
 reporting it:
 
 ```
-  second look: 8 contradiction(s) sent back to the page, 6 withdrawn
-    context recovered on review: estimate_vintage 2 · sign_convention 1
-                                 measure_basis 1 · time_reference 1 · area 1
+  second look: 7 contradiction(s) sent back to the page, 3 withdrawn
+    context recovered on review: sign_convention 1 · measure_basis 1 · definition 1
 ```
 
-Five of the six became CONTEXTUAL with the axis named. The sixth became
-INSUFFICIENT_EVIDENCE, and it is the most interesting of them. Asked what
-separated *"Core inflation increased to 4.6 percent (from 3.5 percent FY2024/25
-average)"*, the investigator answered `time_reference`, labelling one side
-`"3.5 percent FY2024/25 average"` — a real label, printed — and the other
-`"4.6 percent"`, which is the figure wearing a label's clothes. That passes a
-naive "the value must appear on the page" check perfectly, because of course it
-does; it *is* the value. The circular half is dropped, which leaves one real
-label and one absence — an undetermined axis, so the pair is blocked rather
-than explained. Explaining a disagreement by restating one of the two numbers is
-not an explanation.
+**The survivor that matters is the one it did not withdraw.** The RBI projects
+6.5% real GDP growth for 2025-26; the IMF projects 6.6% for the same year. Two
+institutions disagreeing about the same future is the corpus's one genuine
+contradiction, and the second look was asked about it and left it standing:
+
+```
+claims 394 vs 420: same real GDP growth for India in FY2026, comparable on every
+stated axis, and the values are 0.1 apart — the smallest gap two figures printed
+at this precision can have. Adjacent, and still not the same value.
+```
+
+That took three fixes to become visible at all, and it was invisible in three
+independent ways: the RBI sentence was never extracted, `Indian economy` and
+`India` were separate entities, and the IMF's forecasts were stored as `actual`
+so modality separated them anyway. Each one alone was enough to hide it.
+
+**A label never contains the number it labels**, and learning that took two
+attempts. The first guard stripped the figure from a proposed label and asked
+whether anything substantive remained — enough to catch `"4.6 percent"` offered
+as a label for the figure 4.6, which passes "the value must appear on the page"
+perfectly because it *is* the value.
+
+It was not enough. Asked what separated the RBI's *"real GDP growth for 2025-26
+is projected at 6.5 per cent"* from the IMF's 6.6%, the investigator proposed a
+`scenario` axis with the value `"2025-26 is projected at 6.5 per cent, with
+risks"` — the claim's own sentence, padded with enough words to look like a
+description once the figure was removed. It grounded, because the sentence
+really is on the page. And it dissolved the one genuine disagreement in the
+corpus, which is the worst thing this layer can do.
+
+So the test is containment, not residue: `July WEO`, `urban areas`, `Adj. EBITDA
+margin`, `first advance estimate` — not one names its own value, because a label
+says which *kind* of measurement this is and the measurement is the other half
+of the pair. And a *rejected* label is not an *absent* one: dropping only the
+bad half left a one-sided recovery, which blocks the pair on an "undetermined"
+axis and takes it out of the residual set just as effectively as explaining it.
+A side we deleted is evidence the model was reaching, and the whole proposal
+goes with it.
 
 **The investigator recovers context. It never issues a verdict.** It is asked
 one question — is there a qualifier on this page these two claims differ on? —
@@ -331,6 +357,64 @@ python -m pytest tests/ -q
 ```
 
 Fuller instructions land with the API in a later phase.
+
+### Does this generalise, and where exactly does it stop?
+
+Worth answering with an audit rather than a claim, because "no document-specific
+logic" is easy to say and easy to get wrong.
+
+**What is genuinely open.** There is no metric whitelist and no entity
+whitelist anywhere in the codebase — `grep` finds zero. `qualifiers` is an open
+dict, and `AXIS_PRIORITY` in the gate is only a tie-break ordering for naming a
+primary axis; an axis missing from it still works, it just sorts last. The
+proof is in the store: five axes now in use appear in no list anywhere —
+`sign_convention`, `measure_basis`, `scenario`, `time_reference`, `definition`
+— all recovered from the documents themselves.
+
+The corpus already spans two domains that share nothing structurally: a
+company's annual report, prospectus and earnings deck, and macroeconomic
+reports from three different institutions. The same pipeline reads both, and
+the discovered axes come from both halves.
+
+**Where the vocabulary is tuned, and it is worth being precise.** Parsers
+probed with inputs this corpus does not contain:
+
+```
+US$ million   -> USD million       ✓      FY2023-24                -> 2023-04-01..2024-03-31  ✓
+$bn           -> USD billion       ✓      year ended March 31 2024 -> 2023-04-01..2024-03-31  ✓
+EUR thousand  -> EUR thousand      ✓      calendar year 2023       -> 2023-01-01..2023-12-31  ✓
+GBP million   -> GBP million       ✓      FY2024 (Oct-Sep)         -> 2023-04-01..2024-03-31  ✗
+bps           -> percent           ✓      Q3 2024                  -> 2023-10-01..2023-12-31  ✗
+million tonnes-> mass_tonnes       ✓      H1 2024                  -> the whole year          ✗
+JPY billion   -> UNKNOWN           ✗
+```
+
+Three real limits, stated rather than discovered later:
+
+- **The fiscal calendar is now the document's, not ours.** It used to be a
+  module constant, which is the *quiet* kind of wrong: a September filer read as
+  April–March gives intervals confidently off by six months and comparisons that
+  all look fine. `infer_fy_start_month` reads it from the document's own wording
+  — "year ended December 31" says the year opened in January — and it is
+  threaded through as a parameter, defaulting to April when a document never
+  says. Quarters follow: `Q3` is October–December on an April year and
+  July–September on a calendar one, and that was the reading that differed
+  silently.
+
+  ```
+  FY2024, calendar filer      -> 2024-01-01 .. 2024-12-31
+  Q3 2024, calendar filer     -> 2024-07-01 .. 2024-09-30
+  FY2024, September filer     -> 2023-10-01 .. 2024-09-30
+  Q3 FY24, April filer        -> 2023-10-01 .. 2023-12-31   (unchanged)
+  ```
+- **Half-years are still not modelled.** `H1 2024` widens to the full year.
+- **Identifiers are Indian.** CIN, DIN and ISIN are recognised; a US filing's
+  CIK and EIN are not. This one degrades safely rather than failing: no
+  identifier means resolution falls back to names and adjudication, which is
+  the path everything without a registration number already takes.
+
+Legal-form stripping is not India-specific — `Acme Corporation`, `Acme Corp.`
+and `Acme Inc` all normalise to `acme`.
 
 ## Approach
 

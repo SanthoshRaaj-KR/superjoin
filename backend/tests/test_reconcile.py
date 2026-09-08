@@ -328,8 +328,10 @@ def test_a_label_that_is_only_the_figure_restated_is_not_an_explanation():
     it does, it *is* the value.
 
     Left alone this explains the disagreement by restating it: these differ
-    because one of them is 4.6. Dropping the circular side leaves one real
-    label and one absence, which is an undetermined axis and blocks.
+    because one of them is 4.6. Both sides here quote their own figure, so
+    nothing was learned about the page and the whole proposal is discarded —
+    a visible contradiction a reader can inspect, rather than a block on an
+    axis the model was reaching for.
     """
     page = ("Core inflation increased to 4.6 percent (from 3.5 percent "
             "FY2024/25 average), in part due to rising gold and silver prices.")
@@ -345,10 +347,8 @@ def test_a_label_that_is_only_the_figure_restated_is_not_an_explanation():
             b_evidence="from 3.5 percent FY2024/25 average",
         ),
     )
-    assert result.verdict.verdict == INSUFFICIENT_EVIDENCE
-    assert result.verdict.axis == "time_reference"
-    assert result.recovery.a_value is None
-    assert result.recovery.b_value == "3.5 percent FY2024/25 average"
+    assert not result.changed
+    assert result.verdict.verdict == CONTRADICTS
 
 
 def test_a_proposal_that_is_circular_on_both_sides_is_discarded_entirely():
@@ -380,3 +380,59 @@ def test_a_real_label_containing_a_number_still_counts():
     )
     assert result.changed
     assert result.verdict.axis == "price_base"
+
+
+def test_a_sentence_dressed_up_as_a_label_cannot_dissolve_a_real_disagreement():
+    """The worst thing this layer can do, caught doing it.
+
+    The RBI projects 6.5% real GDP growth for 2025-26; the IMF projects 6.6%
+    for the same year. Two institutions disagreeing is the one genuine
+    contradiction in the corpus and the whole reason the residual set is worth
+    looking at. Asked what separated them, the investigator proposed a
+    `scenario` axis with a_value "2025-26 is projected at 6.5 per cent, with
+    risks" — the claim's own sentence, padded with enough words to survive a
+    guard that only stripped the figure and asked whether anything substantive
+    remained. It grounded, because the sentence really is on the page.
+
+    A label never contains the number it labels.
+    """
+    rbi = ("Taking into account these factors, real GDP growth for 2025-26 is "
+           "projected at 6.5 per cent, with risks evenly balanced.")
+    imf = "Current | 6.6 | 6.2"
+    a = claim("a", "6.5", quote=rbi, page=16)
+    b = claim("b", "6.6", quote=imf, page=12)
+
+    result = reconcile(
+        a, b, a_page=rbi, b_page=imf,
+        investigator=proposing(
+            axis="scenario",
+            a_value="2025-26 is projected at 6.5 per cent, with risks",
+            b_value="Current",
+            a_evidence=rbi,
+            b_evidence=imf,
+        ),
+    )
+    assert not result.changed
+    assert result.verdict.verdict == CONTRADICTS
+
+
+def test_a_label_that_merely_sits_near_its_figure_is_still_a_label():
+    """The guard is containment, not proximity. "percent of GDP per the
+    authorities' definition" labels a deficit figure without naming it, and
+    that pair really is explained by the page."""
+    page = ("its deficit declined further to 4.9 percent of GDP (4.8 percent "
+            "of GDP per the authorities\u2019 definition).")
+    a = claim("a", "4.9", metric="deficit", period="FY25", quote=page)
+    b = claim("b", "4.8", metric="deficit", period="FY25", quote=page)
+
+    result = reconcile(
+        a, b, a_page=page, b_page=page,
+        investigator=proposing(
+            axis="definition", a_value="percent of GDP",
+            b_value="percent of GDP per the authorities\u2019 definition",
+            a_evidence="declined further to 4.9 percent of GDP",
+            b_evidence="percent of GDP per the authorities\u2019 definition",
+        ),
+    )
+    assert result.changed
+    assert result.verdict.axis == "definition"

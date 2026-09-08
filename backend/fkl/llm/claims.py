@@ -100,9 +100,34 @@ gives three state claims with value_text "Company Secretary" and:
     valid_from 2023-06-01, valid_to 2024-03-27, valid_to_is_open false
     valid_from 2024-05-17, valid_to null,       valid_to_is_open true
 
-Read together those say one person succeeded another cleanly, and that the role then sat vacant for 51 days. A resignation date left inside value_text cannot close an interval, so every succession and every vacancy in the document becomes invisible. "w.e.f." means with effect from; "till", "upto" and "ceased" mark an ending.
+Read together those say one person succeeded another cleanly, and that the role then sat vacant for 50 days. A resignation date left inside value_text cannot close an interval, so every succession and every vacancy in the document becomes invisible. "w.e.f." means with effect from; "till", "upto" and "ceased" mark an ending.
 
 Give the role as printed but WITHOUT the dates. Where one line records two roles ("Head - New Ventures (w.e.f. August 02 2021) and Chief People Officer (w.e.f. January 15, 2024)"), emit one claim per role with its own dates.
+
+FORECASTS AND ESTIMATES ARE FACTS TOO
+
+A forward-looking figure is a checkable assertion about what a named body expects, and it is often the most contested number on the page. Extract it, and set `modality` to say what kind of number it is:
+
+    actual      a realised, historical figure
+    estimate    an estimate of a past or current period
+    projection  a figure for a future period
+    target      a stated goal or policy objective
+    restated    a figure explicitly labelled restated
+
+This paragraph carries two claims, not one, and they are the same shape:
+
+    Taking into account these factors, real GDP growth for 2025-26 is
+    projected at 6.5 per cent. ... CPI inflation for 2025-26 is projected
+    at 4.0 per cent.
+
+    -> India | real GDP growth | 6.5 | per cent | 2025-26 | projection
+    -> India | CPI inflation   | 4.0 | per cent | 2025-26 | projection
+
+Take BOTH. Two adjacent sentences with the same construction are two facts, and stopping after the first is the most common way a page is half-read.
+
+Note also what the predicate is NOT. The period belongs in period_raw, never in the predicate: "CPI inflation for 2025-26" is wrong; the predicate is "CPI inflation" and the period is "2025-26". A predicate carrying its own period cannot match the same metric in another document, and the comparison never happens.
+
+Getting modality wrong is not cosmetic. Two institutions projecting different growth for the same year is a real disagreement worth reporting; a projection labelled `actual` sitting beside a genuine actual is a fabricated one.
 
 THE MISTAKE THAT MATTERS MOST
 

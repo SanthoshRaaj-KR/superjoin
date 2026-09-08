@@ -23,7 +23,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from .canonical import canonicalize, context_hint
@@ -31,7 +31,7 @@ from .grounding import GroundingResult, validate
 from .llm.claims import extract_page
 from .llm.figures import extract_figures, should_run
 from .llm.profile import parse_iso_date
-from .models import Claim, Document, Page, Quarantine
+from .models import Claim, Document, Page, Quarantine, Relation
 from .schemas import MeasurementClaim, PageExtraction, StateClaim
 
 log = logging.getLogger(__name__)
@@ -219,6 +219,19 @@ def extract_document_claims(
         # to prevent, arriving through the flag that bypasses it.
         skipped = []
         page_numbers = [p.page_no for p in page_rows]
+
+        # Verdicts about these claims go first, or the delete below fails on a
+        # foreign key. Relations are derived — every one of them is recomputed
+        # by the next `relate` run — so dropping them is not a loss of
+        # evidence, and keeping verdicts about claims that no longer exist
+        # would be worse than one.
+        doomed = select(Claim.id).where(
+            Claim.document_id == document_id, Claim.page_no.in_(page_numbers)
+        )
+        session.query(Relation).filter(
+            or_(Relation.claim_a_id.in_(doomed), Relation.claim_b_id.in_(doomed))
+        ).delete(synchronize_session=False)
+
         replaced = session.query(Claim).filter(
             Claim.document_id == document_id, Claim.page_no.in_(page_numbers)
         ).delete(synchronize_session=False)
