@@ -315,6 +315,15 @@ def relate_corpus(
             )
 
     session.flush()
+
+    # The axes this run named, written down and counted. Done here rather than
+    # in the API because discovery is a property of the run: an axis is
+    # believed because several independent pairs produced it, and only the code
+    # that made those pairs knows how many there were.
+    from .registry import record_axes
+
+    record_axes(session, generation)
+
     log.info("compared %s pairs across %s blocks", run.pairs, run.blocks)
     return run
 
@@ -471,6 +480,7 @@ def relate_states(
 ) -> RelateRun:
     """Run the interval engine over every stored state claim."""
     from .models import Document
+    from .registry import record_predicate
     from .temporal import (group_slots, infer_cardinality, observe_cardinality,
                            relate_holdings, succession_pairs)
 
@@ -500,6 +510,20 @@ def relate_states(
         run.blocks += 1
         seeded = infer_cardinality(members[0].predicate)
         cardinality, note = observe_cardinality(members, seeded)
+
+        # Store what was inferred and what was observed, separately. A wrongly
+        # inferred 1 is the failure mode that manufactures contradictions out
+        # of two people holding genuinely different posts, and it can only be
+        # argued with if the reader can see the grammar's guess beside the
+        # corpus's evidence.
+        record_predicate(
+            session,
+            members[0].predicate,
+            inferred=1 if seeded == 1 else 0,
+            observed=None if cardinality == seeded else (1 if cardinality == 1 else 0),
+            evidence=note,
+            holders=len({m.filler for m in members}),
+        )
 
         candidates = (
             succession_pairs(members) if cardinality == 1

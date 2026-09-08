@@ -456,3 +456,114 @@ class Relation(Base):
     # view and disagree with its own stored verdict.
     recovery_a_value: Mapped[str | None] = mapped_column(Text)
     recovery_b_value: Mapped[str | None] = mapped_column(Text)
+
+
+class Axis(Base):
+    """The discovered-axis registry (L5b).
+
+    An axis arrives here in one of two ways, and the distinction is the whole
+    point of keeping a table rather than a list. A *seeded* axis is one the
+    system was born knowing — ``consolidation``, ``period``, ``modality``. A
+    *discovered* axis is a phrase the corpus itself supplied: the second look
+    at a contradiction found a distinction printed on the page and named it,
+    and that name was not in any vocabulary beforehand.
+
+    ``occurrences`` is what makes promotion meaningful. A candidate seen once
+    is an anecdote — it may be a mis-reading of a single page. The same
+    candidate recurring across independent pairs is a property of the corpus,
+    and at ``PROMOTION_THRESHOLD`` it stops being a hypothesis and becomes part
+    of the vocabulary the gate reasons with.
+    """
+
+    __tablename__ = "axes"
+    __table_args__ = (UniqueConstraint("name", name="uq_axis_name"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(64), index=True)
+    origin: Mapped[str] = mapped_column(String(16), default="discovered")
+    status: Mapped[str] = mapped_column(String(16), default="candidate")
+
+    # How many independent pairs produced this axis, and how many disagreements
+    # naming it were dissolved rather than upheld. An axis that recurs but never
+    # resolves anything is noise worth seeing.
+    occurrences: Mapped[int] = mapped_column(Integer, default=0)
+    resolves: Mapped[int] = mapped_column(Integer, default=0)
+
+    values_seen: Mapped[list] = mapped_column(JSON, default=list)
+    first_seen_relation_id: Mapped[int | None] = mapped_column(Integer)
+    example: Mapped[str | None] = mapped_column(Text)
+
+    promoted_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+
+class Predicate(Base):
+    """Cardinality per canonical predicate, made auditable (L5c).
+
+    Cardinality was always inferred — a plural head noun means many holders, a
+    singular one means a slot — but inferring it on every call made it
+    invisible. A wrongly-inferred ``1`` manufactures a contradiction out of two
+    people who genuinely held different posts, and the plan's own trade-off
+    note says the inferred value has to be *shown* for that to be auditable.
+
+    So it is stored, with how it was arrived at. ``inferred`` is the grammar
+    rule's answer; ``observed`` is what the corpus proved by showing two
+    holders overlapping inside a single document. Observation wins, because a
+    document asserting both at once is stronger evidence than a head noun.
+    """
+
+    __tablename__ = "predicates"
+    __table_args__ = (UniqueConstraint("name", name="uq_predicate_name"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(512), index=True)
+    cardinality: Mapped[int] = mapped_column(Integer, default=1)
+    inferred: Mapped[int | None] = mapped_column(Integer)
+    observed: Mapped[int | None] = mapped_column(Integer)
+    basis: Mapped[str] = mapped_column(String(32), default="grammar")
+    holders: Mapped[int] = mapped_column(Integer, default=0)
+    evidence: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+
+class Job(Base):
+    """One upload's passage through the pipeline.
+
+    Uploading a folder is not a request that can be answered inside an HTTP
+    round trip — ingest, extraction and comparison take minutes, and the model
+    calls dominate. So the upload returns a job id immediately and the work
+    happens on a worker thread, which is why this is a table rather than a
+    dictionary: a job that is still running when the process restarts should
+    come back as *failed*, visibly, instead of vanishing and leaving a document
+    half-extracted with nothing to explain it.
+
+    ``log`` is append-only text, and it is the honest part of the design. A
+    percentage tells a reader that something is happening; the log tells them
+    which page failed and why.
+    """
+
+    __tablename__ = "jobs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    status: Mapped[str] = mapped_column(String(16), default="queued", index=True)
+    stage: Mapped[str] = mapped_column(String(32), default="queued")
+    detail: Mapped[str | None] = mapped_column(Text)
+
+    filenames: Mapped[list] = mapped_column(JSON, default=list)
+    document_ids: Mapped[list] = mapped_column(JSON, default=list)
+
+    files_total: Mapped[int] = mapped_column(Integer, default=0)
+    files_done: Mapped[int] = mapped_column(Integer, default=0)
+    pages_total: Mapped[int] = mapped_column(Integer, default=0)
+    pages_done: Mapped[int] = mapped_column(Integer, default=0)
+    claims: Mapped[int] = mapped_column(Integer, default=0)
+    quarantined: Mapped[int] = mapped_column(Integer, default=0)
+    relations: Mapped[int] = mapped_column(Integer, default=0)
+
+    log: Mapped[str] = mapped_column(Text, default="")
+    error: Mapped[str | None] = mapped_column(Text)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime)

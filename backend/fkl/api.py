@@ -27,16 +27,19 @@ import logging
 from collections import Counter
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
+from . import ask, jobs, registry
+from . import crop as crop_module
 from .compare import compare
 from .db import init_db, session_scope
-from .models import Claim, Document, Entity, Metric, Page, Quarantine, Relation
+from .models import (Axis, Claim, Document, Entity, Job, Metric, MetricAlias,
+                     Page, Predicate, Quarantine, Relation)
 from .relate import to_comparable
 
 log = logging.getLogger(__name__)
@@ -402,6 +405,35 @@ class CompareRequest(BaseModel):
     maskedAxes: list[str] = Field(default_factory=list)
 
 
+def _ask_note(answers: list[dict], axes: list[str]) -> str:
+    """One sentence saying what shape the answer has, and why.
+
+    Written from the grouping rather than by a model, for the same reason every
+    other explanation in this system is templated: a sentence generated about
+    the numbers could say something the store does not contain, and this is the
+    one place a reader is most likely to take the prose at face value.
+    """
+    if not answers:
+        return ("Nothing in the corpus answers this. The question parsed to a "
+                "metric or entity no document has asserted.")
+    flagged = sum(1 for a in answers if a.get("unresolved"))
+    caveat = ("" if not flagged else
+              f" {flagged} of them hold claims that disagree with nothing "
+              "recorded to distinguish them, and are marked unresolved.")
+    if len(answers) == 1:
+        n = answers[0]["agreeing"]
+        head = ("One answer, asserted once." if n == 1 else
+                f"One answer, asserted {n} times.")
+        return head + caveat
+    if not axes:
+        return (f"{len(answers)} readings, none of which differ on any axis the "
+                "extractor recorded — the same fact restated." + caveat)
+    named = ", ".join(CORPUS_AXIS.get(a, a) for a in axes)
+    return (f"{len(answers)} answers, and each is correct in its own context. "
+            f"They differ on {named}, so a single figure would have had to "
+            f"discard the rest." + caveat)
+
+
 # --- the app -----------------------------------------------------------------
 
 
@@ -418,6 +450,15 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     init_db()
+    with session_scope() as session:
+        # A job row outlives the thread that was running it. Anything still
+        # "running" at startup belongs to a process that is gone, and leaving
+        # it that way means the interface reports progress on work that stopped
+        # happening whenever the server last died.
+        stale = jobs.reap_stale(session)
+        registry.seed_axes(session)
+    if stale:
+        log.warning("marked %s interrupted job(s) as failed", stale)
 
     def facts_index(session) -> dict:
         entities = {e.id: e.canonical_name for e in session.scalars(select(Entity))}
@@ -634,6 +675,389 @@ def create_app() -> FastAPI:
                                    request.maskedAxes, entities, metrics)
             payload["recovered"] = recovery
             return payload
+
+    # --- upload: hand it a folder, get a job -------------------------------
+
+    @app.post("/api/v1/documents")
+    async def upload(
+        files: list[UploadFile] = File(...),
+        maxPages: int = Query(jobs.DEFAULT_MAX_PAGES, ge=1, le=500),
+        review: bool = Query(True),
+    ):
+        """Accept a folder of PDFs and run the whole pipeline behind a job id.
+
+        A browser folder picker sends every file it finds, including the
+        `.DS_Store` and the spreadsheet that happened to be sitting next to the
+        reports. Filtering to PDFs here rather than failing the upload is the
+        difference between "drag your folder in" and "drag your folder in after
+        tidying it".
+        """
+        pdfs = [
+            (f.filename or "upload.pdf", await f.read())
+            for f in files
+            if (f.filename or "").lower().endswith(".pdf")
+        ]
+        if not pdfs:
+            raise HTTPException(400, "no PDF files in the upload")
+
+        job_id = jobs.create_job([name for name, _ in pdfs])
+        paths = jobs.save_uploads(job_id, pdfs)
+        jobs.submit(job_id, paths, max_pages=maxPages, review=review)
+        with session_scope() as session:
+            return jobs.job_json(session.get(Job, job_id))
+
+    @app.get("/api/v1/jobs")
+    def job_list(limit: int = Query(20, ge=1, le=200)):
+        with session_scope() as session:
+            rows = session.scalars(
+                select(Job).order_by(Job.id.desc()).limit(limit)).all()
+            return [jobs.job_json(j) for j in rows]
+
+    @app.get("/api/v1/jobs/{job_id}")
+    def job_detail(job_id: int):
+        with session_scope() as session:
+            job = session.get(Job, job_id)
+            if job is None:
+                raise HTTPException(404, f"no job {job_id}")
+            return jobs.job_json(job)
+
+    # --- one fact, and everything said about it ----------------------------
+
+    @app.get("/api/v1/facts/{fact_id}")
+    def fact_detail(fact_id: str):
+        """One claim with its evidence, its confidence breakdown, and its pairs.
+
+        The list endpoint returns what a table row needs. This returns what a
+        reader needs to decide whether to believe the claim: which stage of the
+        pipeline was least sure of it, what it was compared against, and what
+        each of those comparisons concluded.
+        """
+        with session_scope() as session:
+            index = facts_index(session)
+            key = fact_id if fact_id.startswith("f-") else f"f-{fact_id}"
+            fact = index.get(key)
+            if fact is None:
+                raise HTTPException(404, f"no fact {fact_id}")
+
+            claim = session.get(Claim, int(key.removeprefix("f-")))
+            generation = latest_generation(session)
+            related = session.scalars(
+                select(Relation).where(
+                    Relation.generation == generation,
+                    (Relation.claim_a_id == claim.id)
+                    | (Relation.claim_b_id == claim.id),
+                )).all()
+
+            document = session.get(Document, claim.document_id)
+            return {
+                **fact,
+                "documentTitle": _title(document) if document else "",
+                "unknownQualifiers": claim.unknown_qualifiers or [],
+                "confidenceReasons": claim.confidence_reasons or [],
+                "groundingMethod": claim.grounding_method,
+                "assertionTime": claim.assertion_time.isoformat()
+                if claim.assertion_time else None,
+                "modality": claim.modality,
+                "source": claim.source,
+                "periodRaw": claim.period_raw,
+                "unitRaw": claim.unit_raw,
+                "canonical": _normalized(
+                    to_comparable(claim, None, None)) if claim.value_num is not None
+                else None,
+                "relations": [
+                    {
+                        "id": f"r-{r.id}",
+                        "other": f"f-{r.claim_b_id if r.claim_a_id == claim.id else r.claim_a_id}",
+                        "verdict": r.verdict,
+                        "axis": r.axis,
+                        "explanation": r.explanation,
+                        "reconsidered": bool(r.reconsidered),
+                        "recoveryAxis": r.recovery_axis,
+                    }
+                    for r in related
+                ],
+            }
+
+    # --- every relation, filterable ----------------------------------------
+
+    @app.get("/api/v1/relations")
+    def relations(
+        type: str | None = Query(None, description="verdict to filter on"),
+        axis: str | None = None,
+        crossDocument: bool | None = None,
+        generation: int | None = None,
+        limit: int = Query(200, ge=1, le=2000),
+    ):
+        """The relation set as stored, unspread and unsorted for display.
+
+        ``/pairs`` is the UI's feed: curated, capped, and deliberately spread
+        across metrics so one busy line item cannot fill the list. This is the
+        underlying data, which is what you want when the question is "show me
+        every contradiction" rather than "show me something interesting".
+        """
+        with session_scope() as session:
+            gen = generation or latest_generation(session)
+            stmt = select(Relation).where(Relation.generation == gen)
+            if type:
+                stmt = stmt.where(Relation.verdict == type.upper())
+            if axis:
+                stmt = stmt.where(Relation.axis == axis)
+            if crossDocument is not None:
+                stmt = stmt.where(Relation.cross_document == crossDocument)
+
+            rows = session.scalars(stmt.limit(limit)).all()
+            return [
+                {
+                    "id": f"r-{r.id}",
+                    "a": f"f-{r.claim_a_id}",
+                    "b": f"f-{r.claim_b_id}",
+                    "verdict": r.verdict,
+                    "axis": r.axis,
+                    "explanation": r.explanation,
+                    "differingAxes": r.differing_axes or [],
+                    "missingAxes": r.missing_axes or [],
+                    "valuesDiffer": bool(r.values_differ),
+                    "relativeDifference": r.value_relative,
+                    "periodRelation": r.period_relation,
+                    "crossDocument": bool(r.cross_document),
+                    "generation": r.generation,
+                    "reconsidered": bool(r.reconsidered),
+                    "originalVerdict": r.original_verdict,
+                    "recoveryAxis": r.recovery_axis,
+                    "recoveryReason": r.recovery_reason,
+                }
+                for r in rows
+            ]
+
+    # --- the registries the corpus built -----------------------------------
+
+    @app.get("/api/v1/metrics")
+    def metrics_route():
+        """The metric registry with its alias sets and how each was learned.
+
+        ``method`` is the interesting column. An alias matched exactly is
+        bookkeeping; one matched by embedding similarity and confirmed by an
+        adjudication call is the schema growing, and the two should not be
+        presented as though they carry the same weight.
+        """
+        with session_scope() as session:
+            counts = dict(session.execute(
+                select(Claim.metric_id, func.count(Claim.id))
+                .group_by(Claim.metric_id)).all())
+            aliases: dict[int, list] = {}
+            for alias in session.scalars(select(MetricAlias)):
+                aliases.setdefault(alias.metric_id, []).append({
+                    "alias": alias.alias,
+                    "method": alias.method,
+                    "similarity": alias.similarity,
+                })
+            return [
+                {
+                    "id": m.id,
+                    "name": m.canonical_name,
+                    "dimension": m.dimension,
+                    "claims": counts.get(m.id, 0),
+                    "aliases": sorted(aliases.get(m.id, []),
+                                      key=lambda a: a["alias"]),
+                }
+                for m in sorted(session.scalars(select(Metric)),
+                                key=lambda m: -counts.get(m.id, 0))
+            ]
+
+    @app.get("/api/v1/axes")
+    def axes_route():
+        """The axis registry: what this system compares on, and where it learned it.
+
+        ``origin`` separates the axes the system was born knowing from the ones
+        the corpus supplied, and ``status`` says whether a supplied one has
+        recurred often enough to be believed. A candidate seen once is still
+        listed - suppressing it would hide the more interesting half of the
+        mechanism, which is that discovery produces hypotheses and most of them
+        are still hypotheses.
+        """
+        with session_scope() as session:
+            values: dict[str, set] = {}
+            for c in session.scalars(select(Claim)):
+                for key, value in (c.qualifiers or {}).items():
+                    values.setdefault(key, set()).add(str(value))
+            return [
+                {
+                    "axis": CORPUS_AXIS.get(a.name, a.name),
+                    "corpusName": a.name,
+                    "origin": a.origin,
+                    "status": a.status,
+                    "occurrences": a.occurrences,
+                    "resolves": a.resolves,
+                    "threshold": registry.PROMOTION_THRESHOLD,
+                    "values": sorted(values.get(a.name, set()))[:6]
+                    or (a.values_seen or []),
+                    "example": a.example,
+                    "promotedAt": a.promoted_at.isoformat() if a.promoted_at else None,
+                }
+                for a in sorted(
+                    session.scalars(select(Axis)),
+                    key=lambda a: (a.origin != "discovered", -a.occurrences, a.name),
+                )
+            ]
+
+    @app.get("/api/v1/predicates")
+    def predicates_route():
+        """Inferred cardinality, made auditable.
+
+        The plan's own trade-off note says a wrongly-inferred cardinality of 1
+        manufactures a false contradiction, and that the inferred value has to
+        be shown for that to be checkable. ``inferred`` is the grammar rule's
+        answer, ``observed`` is what a single document proved by listing two
+        concurrent holders, and ``basis`` says which one is in force.
+        """
+        with session_scope() as session:
+            return [
+                {
+                    "predicate": p.name,
+                    "cardinality": "one" if p.cardinality == 1 else "many",
+                    "inferred": "one" if p.inferred == 1 else "many",
+                    "observed": None if p.observed is None
+                    else ("one" if p.observed == 1 else "many"),
+                    "basis": p.basis,
+                    "holders": p.holders,
+                    "evidence": p.evidence,
+                    "corrected": p.observed is not None and p.observed != p.inferred,
+                }
+                for p in sorted(session.scalars(select(Predicate)),
+                                key=lambda p: (p.cardinality, p.name))
+            ]
+
+    # --- the page itself, with the evidence marked on it -------------------
+
+    @app.get("/api/v1/pages/{document_ref}/{page_no}/image")
+    def page_image(
+        document_ref: str,
+        page_no: int,
+        quote: str = "",
+        value: str = "",
+        crop: bool = False,
+        dpi: int = Query(crop_module.DEFAULT_DPI, ge=60, le=crop_module.MAX_DPI),
+    ):
+        """The source page as a PNG, with the evidence highlighted.
+
+        This is the half of the comparison view that was missing: the interface
+        could show the quote, which is something this system produced, but not
+        the page, which is what the document produced. A reader checking a fact
+        wants the second.
+
+        Returns 404 rather than a placeholder when the source PDF is not on
+        disk - a database browsed without its documents is a normal state, and
+        the interface falls back to the quote text rather than being handed a
+        blank image it would have to explain.
+        """
+        with session_scope() as session:
+            try:
+                document_id = int(str(document_ref).removeprefix("D-").lstrip("0") or 0)
+            except ValueError:
+                raise HTTPException(400, f"bad document ref {document_ref}")
+            document = session.get(Document, document_id)
+            if document is None:
+                raise HTTPException(404, f"no document {document_ref}")
+            source = document.source_path
+
+        rendered = crop_module.png_or_none(
+            source, page_no, quote=quote, value=value, dpi=dpi, crop=crop)
+        if rendered is None:
+            raise HTTPException(
+                404, f"the source PDF for {document_ref} is not on this machine")
+        blob, located = rendered
+        return Response(
+            content=blob,
+            media_type="image/png",
+            headers={
+                # Says whether the box in the picture is the evidence or
+                # whether the reader is looking at an unmarked page. The
+                # interface uses it to caption the image honestly.
+                "X-Evidence-Located": "1" if located else "0",
+                "Cache-Control": "public, max-age=3600",
+            },
+        )
+
+    # --- ask a question, get an answer that refuses to average -------------
+
+    @app.get("/api/v1/ask")
+    def ask_route(q: str = Query(..., min_length=2), limit: int = Query(6, ge=1, le=20)):
+        """Natural-language question, exact retrieval, context-split answer.
+
+        The model parses the question and stops. Everything after that is a SQL
+        query over typed claims and a grouping by the qualifier vectors the
+        extractor already attached, which is why the answer can be more than
+        one number without being a guess: the two figures are both in the
+        store, under contexts that differ, and the axis that differs is named.
+        """
+        from .llm.client import LLMUnavailable
+
+        with session_scope() as session:
+            parsed_by = "model"
+            try:
+                spec = ask.parse_question(q)
+            except LLMUnavailable:
+                parsed_by = "registry match (no API key configured)"
+                spec = ask.parse_question_offline(session, q)
+            except Exception as exc:  # pragma: no cover - network
+                log.warning("question parse failed, falling back: %s", exc)
+                parsed_by = "registry match (the model call failed)"
+                spec = ask.parse_question_offline(session, q)
+
+            metric_names = {
+                m.id: m.canonical_name for m in session.scalars(select(Metric))}
+            claims = ask.find_claims(session, spec)
+            groups = ask.split_by_context(claims, metric_names)[:ask.MAX_ANSWERS]
+            index = facts_index(session)
+            axes = ask.distinguishing_axes(groups)
+
+            answers = []
+            for context, members in groups:
+                members = sorted(members, key=confidence_of, reverse=True)
+                head = members[0]
+                unresolved = ask.incoherent(members)
+                shown = [index[f"f-{m.id}"] for m in members]
+                # A role's answer is the person, not the role. `display` for a
+                # tenure claim is the post - "Company Secretary and Compliance
+                # Officer" - which restates the question instead of answering
+                # it; `holder` is the name the reader asked for.
+                def label(fact: dict) -> str:
+                    return fact.get("holder") or fact["display"]
+
+                answers.append({
+                    "value": label(shown[0]),
+                    # Every distinct value in the group. One entry is the
+                    # ordinary case; two means claims that share a context are
+                    # disagreeing, and hiding the second behind the more
+                    # confident one is the exact move this system exists not to
+                    # make.
+                    "values": list(dict.fromkeys(label(f) for f in shown)),
+                    "period": head.period_label or head.period_raw,
+                    "context": {CORPUS_AXIS.get(k, k): v
+                                for k, v in context.items()},
+                    "confidence": round(confidence_of(head), 3),
+                    "support": [index[f"f-{m.id}"] for m in members[:ask.MAX_SUPPORT]],
+                    "agreeing": len(members),
+                    # Claims sharing one context that nonetheless disagree. The
+                    # answer is shown, flagged, rather than silently resolved
+                    # to whichever claim the pipeline was most sure of.
+                    "unresolved": unresolved,
+                })
+
+            return {
+                "question": q,
+                "parsedBy": parsed_by,
+                "query": {"entity": spec.entity, "metric": spec.metric,
+                          "period": spec.period},
+                "matched": len(claims),
+                "answers": answers,
+                # The axes on which the answers differ. An empty list with more
+                # than one answer means the corpus says the same thing several
+                # times; a populated one means the question had no single
+                # answer and this names what separates them.
+                "splitBy": [CORPUS_AXIS.get(a, a) for a in axes],
+                "note": _ask_note(answers, axes),
+            }
 
     @app.get("/api/v1/as-of")
     def as_of_route(date: str):
