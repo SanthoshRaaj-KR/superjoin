@@ -1,261 +1,306 @@
 # Fact Knowledge Layer
 
-## Two documents just told you two different numbers. Which one is lying?
+## Two documents just gave you two different numbers. Which one is lying?
 
-### Neither. You asked the wrong question.
+### Neither one. You asked the wrong question.
 
 > ## "Don't ask whether two facts contradict. Ask whether they are comparable at all."
 
-That's not a tagline. That's the entire architecture, compressed into one
-sentence, and every algorithm in this repository exists to make that sentence
-computable instead of just quotable.
+That single sentence is the whole idea. Everything in this project exists to
+turn that sentence into something a computer can actually check, step by
+step, instead of just something clever to say.
 
-**This system reads PDFs, pulls out every checkable fact, and — instead of
-asking a language model to referee a disagreement — runs each pair of facts
-through a graph algorithm most people have only ever heard of in the context
-of ranking websites.** PageRank. The one Google was built on. Repurposed here
-to do something it was never designed to do: decide **where a fact-checker
-should look**, and **which difference in two documents actually matters**,
-before anyone gets accused of contradicting anyone else.
+**In plain words: this system reads PDFs, pulls out every fact it can find,
+and then figures out whether two facts truly disagree — or whether they were
+just never answering the same question.** And to do the hardest part of that
+job, it uses **PageRank** — yes, the same algorithm Google used to rank
+websites — but pointed at a completely different problem than the one it was
+built for.
 
-No chunking. No "these two paragraphs are 87% similar, must be about the same
-thing." No LLM sitting in judgment, handing down verdicts it can't show its
-work for. Just facts, evidence, a graph, and a walk across that graph that
-decides what's worth investigating.
+No chopping documents into random chunks. No "these two sentences sound 87%
+similar, so they must mean the same thing." No AI model quietly deciding
+who's right. Just facts, proof, a graph, and an algorithm that knows where to
+look.
 
-<sub>Python 3.13 · FastAPI · SQLite · 272 tests · 16/16 on the hand-labelled gold set · 79% of raw disagreements dissolved by context</sub>
-
----
-
-## The problem, stated the way it actually shows up
-
-A company's annual report says revenue was **₹74,540.82 million**. Its
-earnings deck says **₹8,142 crore**. A regulator's report says GDP grew
-**6.5%**. The IMF says **6.6%**. Someone's board register says a director
-resigned in May 2023; someone else's says a different person held that same
-role starting June 2023.
-
-The lazy conclusion is that one of these is wrong. **Usually none of them
-are.** One revenue figure is standalone, the other consolidated. One GDP
-number is a first estimate, the other a second revision. The two director
-records aren't disagreeing — they're describing a **succession**, one person's
-term ending exactly where the next one's begins.
-
-Most systems that claim to catch "contradictions" chunk the document, embed
-the chunks, and ask a model to eyeball two retrieved passages for semantic
-similarity. That approach is broken at the root: **the information that tells
-two numbers apart almost never lives next to the numbers.** It's in a section
-heading two paragraphs up. It's in a footnote. It's in a column header. Chunk
-the document and that context is the first thing thrown away — and once it's
-gone, no model, however good, can put it back.
+<sub>Python 3.13 · FastAPI · SQLite · 272 tests passing · 16/16 correct on the hand-checked test set · 79% of apparent conflicts explained away</sub>
 
 ---
 
-## Every algorithm in this pipeline, briefly
+## The big picture, in one diagram
 
-Seven stages turn a folder of PDFs into a verdict. Here's what each one
-actually does, in a paragraph:
-
-**① Extraction.** The PDF is read **page by page, locally**, never dumped
-whole into one giant prompt — long contexts suffer from the well-known
-*lost-in-the-middle* problem, and 500 pages in one call is a fast way to get a
-confidently wrong answer. Before any model sees a page, a **document tree**
-is built from font sizes and layout — document → section → subsection → row —
-and every node inherits the unit, period and reporting basis declared above
-it. The model then returns typed claims, not prose: entity, metric, value,
-unit, period, and an open dictionary of *qualifiers* — the context that
-applies — plus a field for what it **couldn't** determine. That second field
-is the whole game: a system that admits what it doesn't know is trustworthy
-in a way one that guesses never is.
-
-**② Grounding.** Nothing the model says is trusted on its word. Every claim's
-quoted evidence has to actually exist, verbatim, on the source page, and the
-value has to actually appear inside that quote. Fail either check and the
-claim is quarantined with a reason code — never silently dropped, never
-silently kept. This is what catches a model that read a number correctly but
-**invented the citation** for it.
-
-**③ Canonicalization.** `Acme Ltd.` and `Acme Limited` become one entity.
-`crore`, `lakh`, `million` and `billion` become one comparable scale. `FY24`,
-`2023-24` and "year ended March 31, 2024" become one interval. Nothing gets
-compared until it's speaking the same language — and currencies are never
-converted at an invented exchange rate; cross-currency pairs are simply marked
-incomparable.
-
-**④ Blocking.** Comparing every fact against every other fact is O(n²) and
-almost entirely wasted work. Claims are grouped into buckets by
-**canonical entity + canonical metric** first, so a claim about Delhivery's
-revenue never gets anywhere near a claim about India's GDP.
-
-**⑤ The comparability gate.** The actual decision-maker, and it is **pure,
-boring, deterministic Python** — no model, no sampling, no prompt. It checks,
-in order: is a material axis undetermined on either side? Do the two claims'
-context vectors differ on anything? Is the time period the same, overlapping,
-or disjoint? Only after all of that does it compare the numbers. The output
-is never just `CONTRADICTS` or `CORROBORATES` — it's `CONTEXTUAL`, with the
-**exact axis named**, or `INSUFFICIENT_EVIDENCE`, naming what's missing.
-Nothing here is a language model's opinion.
-
-**⑥ ContextRank.** *(This is the one with no template to copy from — full
-explanation below, because it deserves one.)*
-
-**⑦ Temporal reasoning.** Facts about roles, addresses and identifiers aren't
-numbers — they're **states that hold over an interval**. The system tracks two
-independent clocks (when something was *true*, and when a document *asserted*
-it), and it tracks how many people a role can have at once, learned from
-observation rather than assumed. That's the difference between correctly
-spotting a **succession** and incorrectly screaming "contradiction" every time
-someone's job title changes.
-
----
-
-## 🔥 How PageRank solves two problems it was never built for
-
-Here's the part of this system that doesn't have an off-the-shelf answer.
-
-Once the pipeline above has extracted, grounded and canonicalized every fact,
-it's still left with two genuinely hard problems that a comparability gate
-*alone* cannot solve:
-
-### Problem 1 — The Comparison Problem: *"Out of everything these two facts could differ on, which difference is the one that actually matters?"*
-
-Two claims about the same metric can carry a dozen qualifiers each —
-consolidation, period, scale, currency, estimate vintage, price base, scope,
-and whatever else the extractor picked up. Most of those qualifiers are
-**shared** between the two claims, because that's *why* they were compared in
-the first place — two claims about "FY2026 GDP growth" are both, trivially,
-about FY2026 GDP growth. The question isn't what they have in common. It's
-**which one axis, out of all of them, is the one where the two claims
-actually split.**
-
-This is a ranking problem, and ranking problems are exactly what PageRank is
-built for — just never over *this* kind of graph before. The system builds a
-graph out of the facts it already extracted: every claim gets linked to its
-document, its section, its metric, its period, every qualifier it carries, and
-the distinctive words in its own evidence. Then it runs **two separate
-Personalized PageRank walks** — a "random surfer" that starts at one claim,
-wanders the graph, and keeps teleporting back to where it started — one walk
-seeded at claim A, one seeded at claim B.
-
-Where the magic happens is in what gets read off those two walks, side by
-side:
-
-```
-connection(node)  =  how strongly BOTH walks agree this node matters
-divergence(node)  =  how much the two walks DISAGREE about this node
+```mermaid
+flowchart TD
+    A[PDF document] --> B[1. Read it, page by page]
+    B --> C[2. Pull out facts + their context]
+    C --> D[3. Double-check every fact against the real page]
+    D --> E[4. Make different wordings speak one language]
+    E --> F[5. Group facts that could possibly be compared]
+    F --> G{6. Are these two facts even comparable?}
+    G -->|Missing info| H[INSUFFICIENT EVIDENCE]
+    G -->|Different context| I[CONTEXTUAL — not a real conflict]
+    G -->|Fully comparable| J{Do the numbers agree?}
+    J -->|Yes| K[CORROBORATES]
+    J -->|No| L[7. PageRank hunts for a missed reason]
+    L -->|Found one| I
+    L -->|Found nothing| M[CONTRADICTS]
 ```
 
-An axis is a serious suspect only when it's **both**: strongly connected (it's
-a live, relevant concept near this specific pair — not just central to the
-whole corpus) **and** strongly divergent (the two claims actually land on
-different values of it). An axis both claims already agree on lights up on
-connection and goes completely dark on divergence — correctly, because
-agreeing on something can't be what makes two facts disagree. That single
-piece of arithmetic is the entire trick: **it turns "what's this pair about"
-into "what's actually tearing this pair apart."**
-
-Measured, not asserted: on a genuine before/after — a cold run with no
-remembered recoveries, so every contradiction is investigated from scratch,
-same corpus, same twelve candidate pairs, same number of model calls either
-way — adding this ranking step took the count of contradictions correctly
-withdrawn from **5 to 8**, leaving only 2 genuinely unresolved instead of 5.
-Same cost. Three more real disagreements correctly resolved, purely because
-the system now asks about the right axis first instead of guessing.
-
-### Problem 2 — The Context-Fetching Problem: *"The document actually said the thing that would explain this — where on the page is it, and how do I find it without re-reading everything?"*
-
-Here's the uncomfortable truth this system had to confront: **most
-contradictions aren't real disagreements. They're extraction failures.**
-Auditing the very first set of contradictions this corpus produced, every
-single one turned out to be a distinction the document actually printed —
-in a row label, a footnote, a parenthetical — that simply didn't survive being
-turned into a typed claim.
-
-So before any contradiction gets reported, the system goes back to the
-document for a second look. But *"go re-read the whole page and see if you
-missed anything"* is exactly the kind of vague, expensive, easy-to-get-wrong
-instruction that makes LLM pipelines flaky. **A model works far better when
-it's told exactly what to hunt for.**
-
-That's the second job PageRank does here, using the *exact same walk* it just
-ran for Problem 1. The same two-vector reading — connection and divergence —
-doesn't just rank known *axes*. It also ranks **individual words** in each
-claim's evidence text, scoring highest the words that sit near one claim and
-not the other. So instead of handing an investigator two full pages and
-hoping, the system hands over a **shortlist**: *"Look for something to do with
-`adjusted`, `generated`, `operations` — these words are structurally rare and
-they only appear on one side of this pair."* That shortlist is what turns an
-open-ended "find the difference" task into a targeted lookup — the difference
-between asking someone to solve a crossword blind and pointing at the exact
-clue.
-
-**And this is the part that matters most, enforced by both the code and the
-tests, not just by good intentions: ranking never becomes deciding.**
-PageRank here can suggest an axis or a word is worth checking. It cannot
-change a value, cannot issue a verdict, and cannot withdraw a contradiction on
-its own — that decision always goes back through the exact same deterministic
-gate from Problem 1. A figure repeated across ten documents is not thereby
-correct, and a graph that scored *sources* by popularity would say it was.
-This graph never scores sources. It only ever scores *where to look next*.
-Get the ranking wrong, and the system wastes one model call. It can never,
-structurally, get a fact wrong because the ranking was wrong — there's a test
-that exists purely to guarantee the object this stage returns has no field
-that could ever be mistaken for an answer.
-
-**The full graph structure, every edge weight, the exact PageRank iteration
-and both scoring formulas — worked through against the real numbers from this
-corpus — are documented in [`docs/ENGINEERING.md`](docs/ENGINEERING.md) for
-anyone who wants to see precisely how the mechanism works, not just what it
-achieves.**
+Seven steps. The first five just get the facts ready. Step six is the actual
+brain of the system — a set of rules, not a guess. Step seven is where
+PageRank comes in, and it only gets called when something looks like a real
+fight between two documents.
 
 ---
 
-## What comes out
+## The problem, in plain terms
 
-Run over a six-document corpus of 511 pages, spanning corporate filings and
-macroeconomic reports:
+Say a company's annual report says its revenue was **₹74,540.82 million**.
+Its investor presentation says **₹8,142 crore**. A government report says the
+economy grew **6.5%**. The IMF says **6.6%** for the very same year.
+
+The lazy answer is "one of these must be wrong." Almost always, **neither
+is**. One revenue number is for the company alone; the other includes its
+subsidiaries. One growth number is an early estimate; the other came out
+later, after more data was in.
+
+Most "AI fact-checking" tools get this wrong at the very first step. They cut
+documents into small pieces, turn each piece into a number (an "embedding"),
+and ask an AI model whether two pieces "sound similar." That approach is
+broken from the start, because **the detail that tells two numbers apart is
+almost never sitting next to the number.** It's in a heading two lines above.
+It's in a footnote. It's in a column title. Chop the document into pieces and
+that detail is the first thing you throw away — and once it's gone, no AI
+model can guess it back.
+
+---
+
+## How it works, step by step
+
+**Step 1 — Read the page, not the whole book at once.**
+The PDF is read one page at a time, never all at once. Feeding an AI model
+500 pages in a single go is a well-known way to get a confident, wrong
+answer — models tend to "forget" things buried in the middle of a huge wall
+of text. So instead, the system first builds a simple map of the document —
+which section a page belongs to, what heading is above it, what note applies
+to it — and only then asks the model to read the page, **with that map
+attached.**
+
+```mermaid
+flowchart TD
+    DOC[The whole report] --> SEC[Section: Financial Statements]
+    SEC --> N1[Note: All amounts in INR million]
+    SEC --> N2[Heading: Consolidated Balance Sheet]
+    N1 --> ROW1[Number: Revenue = 81,415.38]
+    N2 --> ROW1
+    SEC --> N3[Heading: Standalone Balance Sheet]
+    N3 --> ROW2[Number: Revenue = 74,540.82]
+```
+
+The bare number `81,415.38` means nothing on its own. But by the time the
+system reaches it, it already knows the number is in millions of rupees and
+on a *consolidated* basis — because that's what the map above it says. That's
+the whole trick of this step: **the meaning travels down to the number, the
+number doesn't have to explain itself.**
+
+**Step 2 — Don't take the AI's word for it.**
+Every fact the model finds has to point to the *exact sentence* it came from.
+The system then checks: does that sentence really exist on that page? Does
+the number really appear inside it? If either check fails, the fact is set
+aside as "unverified" — never thrown away, never quietly kept either. This
+is what catches a model that read a number correctly but **made up where it
+found it.**
+
+**Step 3 — Get everyone speaking the same language.**
+`Acme Ltd.` and `Acme Limited` become the same company. `crore`, `lakh`,
+`million` and `billion` all convert to one common scale. `FY24`,
+`2023-24`, and "year ended March 31, 2024" all become the same time period.
+Nothing gets compared until both sides are speaking the same language — and
+one rule is never broken: **currencies are never converted using a guessed
+exchange rate.** A number in dollars and a number in rupees are simply marked
+"can't compare," rather than silently faked into agreement.
+
+**Step 4 — Don't compare everything to everything.**
+Checking every fact against every other fact would be painfully slow and
+mostly pointless. So facts are first grouped by "same company, same kind of
+number" — a fact about Delhivery's revenue never even gets near a fact about
+India's GDP.
+
+**Step 5 — The rulebook decides, not the AI.**
+This is the actual decision-maker, and it is **plain, boring, predictable
+code** — no AI model, no guessing, no "vibes." It checks, in order: is
+something important missing on either side? Do the two facts disagree on
+*any* relevant detail? Is the time period the same? Only after all of that
+does it even look at whether the numbers match. And the answer is never a
+flat "yes/no" — it's always one of:
+
+- ✅ **CORROBORATES** — same fact, same answer
+- 🔀 **CONTEXTUAL** — different answer, but for a good reason, *named exactly*
+- ⚠️ **INSUFFICIENT EVIDENCE** — can't tell, and here's what's missing
+- ❌ **CONTRADICTS** — genuinely disagree, no good reason found
+
+**Step 6 — PageRank, when a real fight breaks out.**
+*(This is the interesting part — its own section is coming up.)*
+
+**Step 7 — Time is not the same as truth.**
+Facts like "who holds this job" or "what's the company's address" aren't
+numbers — they're **true for a stretch of time, then they change**. The
+system keeps track of two separate clocks: when something was *actually
+true*, and when a document *said* it was true. That's what tells the
+difference between "these two documents contradict each other" and "this
+person's job simply ended and someone else's began" — a **handover**, not a
+conflict.
+
+---
+
+## 🔥 PageRank — an old algorithm, doing a brand-new job
+
+Here's the one part of this project that doesn't come from a textbook.
+
+**Quick refresher on the original idea:** Google ranked web pages by
+pretending a person is randomly clicking links forever. A page that keeps
+getting landed on — because lots of other important pages link to it — must
+be important. That's PageRank in one sentence.
+
+**This project asks a completely different question with the same trick:**
+instead of "which web page is important," it asks **"which piece of context
+actually explains why these two facts don't match?"**
+
+That single idea is used to solve **two separate hard problems.**
+
+### Problem 1: Out of everything these two facts could differ on, which ONE thing actually matters?
+
+Two facts about the same number can differ in a dozen small ways at once —
+time period, scope, currency, rounding, and so on. Most of those are things
+the two facts **agree on** — that's exactly *why* they were compared in the
+first place. The real question is: **which single detail is the one place
+they actually split?**
+
+Here's how PageRank answers that. The system builds a small map — a graph —
+connecting each fact to everything around it: its document, its section, its
+time period, every extra detail attached to it. Then it runs **two random
+walks** over that map at once — one starting from Fact A, one starting from
+Fact B — each one behaving like that same "random clicker" from Google's
+original idea, except this one always wanders back to where it started.
+
+```mermaid
+flowchart LR
+    subgraph What both facts have in common
+        DOC((Same report))
+        MET((Same number type:<br/>Revenue))
+        PER((Same year:<br/>FY2024))
+    end
+    A[Fact A: Standalone<br/>Rs 74,540.82 million]
+    B[Fact B: Consolidated<br/>Rs 81,415.38 million]
+    A --- DOC
+    A --- MET
+    A --- PER
+    B --- DOC
+    B --- MET
+    B --- PER
+    A -.->|this is where they split| AX{{Reporting basis:<br/>Consolidation}}
+    B -.->|this is where they split| AX
+```
+
+Both walks agree strongly on "same report," "same number type" and "same
+year" — which makes sense, since that's why the two facts were even placed
+side by side. But only **one** thing splits them: whether the number is
+*standalone* or *consolidated*. The system measures two things for every
+piece of context:
+
+- **How much both walks agree it matters** (called *connection*)
+- **How much the two walks disagree about it** (called *divergence*)
+
+Something is only flagged as the real reason for a mismatch when it scores
+high on **both** — strongly connected *and* strongly divergent. A detail both
+facts already agree on can be as central as you like; it still can't be the
+reason they disagree, and the math says so automatically.
+
+**Does it actually work? Yes — measured, not guessed.** Tested on the same
+twelve tricky cases, comparing runs with and without this step, using the
+exact same number of AI calls either way: **without it, 5 apparent conflicts
+got correctly explained away and 5 stayed as unresolved contradictions. With
+it, 8 got explained away and only 2 stayed unresolved.** Same cost. Just
+smarter about what gets checked first.
+
+### Problem 2: The document actually explained this — where on the page do I even look?
+
+Here's an uncomfortable finding from testing this on real documents:
+**almost every "contradiction" the system first found wasn't a real
+disagreement at all.** The explanation was sitting right there on the page —
+in a footnote, a row label, a small note — and the AI simply missed it while
+reading.
+
+So before the system ever reports a real contradiction, it goes back for a
+second look. But telling an AI "go re-read this whole page and see if you
+missed something" is vague, slow, and easy to get wrong. **AI models do
+much better when told exactly what to look for.**
+
+This is PageRank's second job — using the exact same walk from Problem 1.
+Instead of only ranking *known categories* of context, it also ranks
+**individual words** from the evidence — scoring highest the words that
+appear near one fact and not the other. So instead of handing the AI two
+entire pages and hoping for the best, the system hands it a short list:
+*"Check for anything related to `adjusted`, `generated`, `operations` — these
+words only show up on one side."* That turns a vague "find the difference"
+task into pointing directly at the clue.
+
+**And here's the one rule that never gets broken:** PageRank is only ever
+allowed to **suggest where to look.** It can never change a number, never
+decide a verdict, and never make a contradiction disappear on its own. The
+final decision always goes back through the same plain rulebook from Step 5.
+If PageRank points at the wrong thing, the system just wastes one extra
+check — it can **never** produce a wrong answer because of a bad ranking.
+That guarantee isn't just a promise in this document — it's an actual
+automated test in the codebase that fails the build if it's ever broken.
+
+**Want the full math?** Every formula, every weight, and the exact algorithm
+are written out in **[`docs/ENGINEERING.md`](docs/ENGINEERING.md)** for anyone
+who wants to see precisely how it works under the hood.
+
+---
+
+## What actually came out of this
+
+Run across six real documents — company filings and government economic
+reports:
+
+```mermaid
+flowchart TD
+    R[1,373 things that LOOK like disagreements] --> E["1,084 explained by context<br/>(different scope, time period, or definition)"]
+    R --> BL["287 blocked<br/>(not enough information to judge — never guessed)"]
+    R --> C["2 real contradictions<br/>(genuinely different numbers, nothing explains it)"]
+```
 
 | | |
 |---|---|
-| Facts extracted and grounded | **666** of 797 proposed (**83.6%**) |
-| Claims quarantined, with reasons | 131 |
-| Comparable blocks | 129 |
-| Pairs compared by the gate | 1,505 (297 cross-document) |
-| **Raw disagreements** (what a context-blind system would flag) | **1,373** |
-| → explained by a named context axis | **1,084** |
-| → blocked: a material axis was undetermined | 287 |
-| → **genuinely unresolved** | **2** |
-| **Reduction** | **79%** of apparent disagreements dissolved by context |
-| Contradictions raised and then withdrawn on review (PageRank-assisted) | 8 |
-| Context axes the system **learned** (not built in) | 11 discovered, 7 promoted |
-| Hand-labelled gold set | **16 / 16** |
+| Facts pulled out and double-checked | **666** out of 797 tried (**83.6%**) |
+| Facts set aside as unverified, each with a reason | 131 |
+| Pairs of facts actually compared | 1,505 |
+| **Things that looked like a disagreement** | **1,373** |
+| → explained away by a named, real reason | **1,084** |
+| → blocked — too little information to judge | 287 |
+| → **left as a genuine, unexplained contradiction** | **2** |
+| **Bottom line: how many "conflicts" turned out to be fake** | **79%** |
+| Contradictions raised, then correctly taken back on a second look | 8 |
+| New categories of "reason for disagreement" the system figured out on its own | 11 found, 7 confirmed as real |
+| Score on the hand-checked answer key | **16 / 16** |
 
-Every one of those numbers is one command away, against the database that
-ships with this repository and with no API key:
+Every number above is one command away, using the finished example database
+that ships with this project — no account, no API key needed:
 
 ```bash
 cd backend
 FKL_DB_URL=sqlite:///data/snapshot.sqlite python -m fkl.cli relate
 ```
 
-<sub>Both serving and re-relating write to the file — a new generation of
-verdicts, a startup housekeeping row. The store is append-only, so nothing is
-overwritten and every earlier run is still there, but `git status` will show
-the file as modified. `git checkout data/snapshot.sqlite` puts it back.</sub>
+<sub>Running this writes a fresh copy of the results into that file, so
+`git status` may show it as changed afterward — nothing is lost or
+overwritten, and `git checkout data/snapshot.sqlite` puts it back exactly as
+it was.</sub>
 
-<sub>**Why the Overview screen shows 1,516 and not 1,505.** The interval engine
-runs beside the gate and writes 11 more relations — the successions, the
-vacancy, the interval closures. They are relations between *states*, not
-between values, so they belong in the store and in the corpus totals, but not
-in a reduction measured over numbers that disagree. The table above is the
-gate's own slice; the screen shows everything stored.</sub>
-
-The denominator is chosen deliberately: it's what a system with no notion of
-context would have flagged — same entity, same metric, values differ. That's
-the baseline this design is arguing against.
-
-**The measure of success here is how many apparent disagreements the system
-dissolves, not how many it flags.**
+**The whole point of this project can be summed up in one line: success isn't
+measured by how many conflicts it finds. It's measured by how many fake
+conflicts it correctly throws out.**
 
 ---
 ## Getting started
