@@ -296,7 +296,7 @@ macroeconomic reports:
 | Facts extracted and grounded | **666** of 797 proposed (**83.6%**) |
 | Claims quarantined, with reasons | 131 |
 | Comparable blocks | 129 |
-| Pairs compared | 1,505 (297 cross-document) |
+| Pairs compared by the gate | 1,505 (297 cross-document) |
 | **Raw disagreements** (what a context-blind system would flag) | **1,373** |
 | → explained by a named context axis | **1,084** |
 | → blocked: a material axis was undetermined | 287 |
@@ -314,10 +314,17 @@ cd backend
 FKL_DB_URL=sqlite:///data/snapshot.sqlite python -m fkl.cli relate
 ```
 
-<sub>That writes a new generation of verdicts into the store. It is append-only,
-so nothing is overwritten and every earlier run is still there —
-`git checkout data/snapshot.sqlite` puts the file back if you'd rather it
-stayed untouched.</sub>
+<sub>Both serving and re-relating write to the file — a new generation of
+verdicts, a startup housekeeping row. The store is append-only, so nothing is
+overwritten and every earlier run is still there, but `git status` will show
+the file as modified. `git checkout data/snapshot.sqlite` puts it back.</sub>
+
+<sub>**Why the Overview screen shows 1,516 and not 1,505.** The interval engine
+runs beside the gate and writes 11 more relations — the successions, the
+vacancy, the interval closures. They are relations between *states*, not
+between values, so they belong in the store and in the corpus totals, but not
+in a reduction measured over numbers that disagree. The table above is the
+gate's own slice; the screen shows everything stored.</sub>
 
 The denominator is chosen deliberately: it's what a system with no notion of
 context would have flagged — same entity, same metric, values differ. That's the
@@ -330,31 +337,69 @@ dissolves, not how many it flags.**
 
 ## Getting started
 
-### Requirements
+### 1. Requirements
 
-Python 3.11+ (developed on 3.13). No database server, no vector store, no
-external services.
+Python **3.11+** (developed on 3.13). That's the whole list.
 
-### Install
+No database server, no vector store, no message queue, no Node, no build step
+for the interface. The store is a single SQLite file and the interface is plain
+HTML and JavaScript served by the same process as the API.
+
+### 2. Install
 
 ```bash
 git clone <this-repo>
 cd SuperJoin
+
+python -m venv .venv
+source .venv/bin/activate           # Windows: .venv\Scripts\activate
+
 pip install -r backend/requirements.txt
 ```
 
-### Try it with no API key at all
+### 3. Start the service
 
-A pre-computed database ships with the repository, so the whole system can be
-explored — every screen, every verdict, every piece of evidence — without
-credentials and without spending anything:
+The API and the interface are **one process on one port**. There is nothing to
+build, nothing to serve separately, and no CORS to configure:
+
+```bash
+cd backend
+python -m fkl.cli serve
+```
+
+```
+  UI   http://127.0.0.1:8000/
+  API  http://127.0.0.1:8000/api/v1/corpus
+  docs http://127.0.0.1:8000/docs
+```
+
+Open **http://127.0.0.1:8000/** and the interface is there.
+
+| Flag | Default | |
+|---|---|---|
+| `--host` | `127.0.0.1` | bind address — use `0.0.0.0` to reach it from another machine |
+| `--port` | `8000` | |
+| `--reload` | off | restart on code changes, for development |
+
+<sub>**How the interface gets served.** `fkl serve` mounts the folder
+`PDF Fact Reconciliation System/` at `/` and serves `Reconcile.dc.html` as the
+index. It's a single-page app with two plain script files beside it — no npm
+install, no bundler, no dist folder. The only requirement is that the folder
+stays next to `backend/` where it is in the repository; if it's missing, the
+server logs a warning and serves the API alone.</sub>
+
+### 4. See it working — with no API key at all
+
+A pre-computed database ships with the repository, so you can explore the whole
+system — every screen, every verdict, every piece of evidence — before setting
+up any credentials and without spending anything:
 
 ```bash
 cd backend
 FKL_DB_URL=sqlite:///data/snapshot.sqlite python -m fkl.cli serve
 ```
 
-Open **http://127.0.0.1:8000/**.
+Open **http://127.0.0.1:8000/** and every screen is populated.
 
 This is a *live* database, not a set of screenshots. The page text is kept, so
 the comparability gate, the interval engine and the deterministic scouts all
@@ -364,32 +409,65 @@ re-run against it and produce the same numbers with no key:
 FKL_DB_URL=sqlite:///data/snapshot.sqlite python -m fkl.cli relate
 ```
 
-### Run it on your own PDFs
+**Start here.** It's the fastest way to understand what the system does, and it
+costs nothing.
 
-Add your API key:
+### 5. Add your API key
+
+Only extraction needs a model. Everything else — the gate, the interval engine,
+canonicalization, the deterministic scouts — runs without one.
 
 ```bash
-cp .env.example .env      # then fill in OPENAI_API_KEY
+cp .env.example .env
 ```
 
-Then start the server and use the interface:
+Then open `.env` and fill in:
+
+```ini
+OPENAI_API_KEY=sk-...
+
+FKL_MODEL_EXTRACT=gpt-4.1-mini              # one call per page: favour cost
+FKL_MODEL_REASON=gpt-4.1                    # rare calls: favour capability
+FKL_MODEL_EMBED=text-embedding-3-small      # alias and metric matching
+FKL_DB_URL=sqlite:///data/fkl.sqlite        # where the store lives
+```
+
+`.env` is gitignored and must never be committed. Check the key works:
 
 ```bash
 cd backend
-python -m fkl.cli serve   # UI and API together on http://127.0.0.1:8000/
+python -m fkl.cli models --prefix gpt
 ```
 
-Go to **Add documents**, drop in a folder of PDFs, and set how many pages per
-document to read. Ingest, extraction and a corpus-wide comparison run behind a
-job whose progress and log you can watch live.
+### 6. Run it on your own PDFs
 
-> **Note on cost and time.** Extraction is the only part of this system that
-> spends money — one structured model call per page, six pages in flight at a
-> time. Start with a small page cap. Everything else, including the entire
-> comparison layer, is free and deterministic.
+Restart the service so it picks up the key, then use the interface:
 
-The comparison at the end runs over the **whole corpus**, not just the upload —
-because the value of a new document is what it agrees and disagrees with.
+```bash
+cd backend
+python -m fkl.cli serve
+```
+
+Go to **Add documents** → drop in a folder of PDFs (or pick files) → set how
+many pages per document to read → **Ingest**.
+
+Ingest, extraction and a corpus-wide comparison then run behind a job whose
+progress bar, live page counter and log you can watch as it happens. When it
+finishes, every other screen refreshes with the new corpus.
+
+> **A note on cost and time.** Extraction is the only part of this system that
+> spends money: one structured model call per page, six pages in flight at a
+> time. **Start with a small page cap** — 10 or 20 — to see the whole pipeline
+> run in a couple of minutes. The page cap exists so an unattended upload of a
+> 400-page filing can't spend on its own.
+
+The comparison at the end runs over the **whole corpus**, not just what you
+uploaded — because the value of a new document is what it agrees and disagrees
+with.
+
+Re-uploading a PDF already in the store is recognised by content hash and
+reused rather than re-ingested. A scanned PDF with no text layer is named and
+skipped rather than failing the batch.
 
 ### Or use the command line
 
@@ -505,11 +583,19 @@ backend/
     ask.py         api.py     question answering, HTTP
   tests/                      272 tests
 PDF Fact Reconciliation System/
-                              the single-page interface
+  Reconcile.dc.html           the interface — this is what `fkl serve` mounts
+  api.js  support.js          its two script files; no build step
+ui/                           an earlier React build of the same design,
+                              standalone on mock data — see ui/README.md
 gold/                         the hand-labelled evaluation set
+starter-datasets/             the PDFs the shipped corpus was built from
 data/snapshot.sqlite          a pre-computed corpus, so this runs with no key
 docs/ENGINEERING.md           the long version: every decision and what it cost
 ```
+
+The served interface is `PDF Fact Reconciliation System/`. `ui/` is a separate
+React implementation of the same screens that runs against an in-memory mock;
+it needs `npm install` and is not part of the running service.
 
 ## Testing
 
