@@ -35,6 +35,7 @@ Under construction, phase by phase. This README is filled in as each layer lands
 | 5 | Reconciliation review, API, UI wired to it | done |
 | 6 | Macro corpus, zero code changes | done |
 | 7 | Axis registry, `/ask`, upload-a-folder, evidence page images | done |
+| 7.5 | ContextRank: personalized PageRank over the claim-context graph | done |
 
 ## Setup and Run Instructions
 
@@ -275,6 +276,115 @@ Withdrawn contradictions are stored beside their original verdict rather than
 replacing it, so the record shows what the first pass concluded, what the
 second found, and on what evidence. A contradiction the system raised and then
 took back is a more interesting object than one it never raised.
+
+### ContextRank: ranking where to look, never what is true
+
+A contradiction is sent back to its pages before it is reported. The question
+this layer answers is *where on those pages to look*, and until now the answer
+was three hand-set constants — 0.9 for a shared span, 0.8 for a row label, 0.3
+for a neighbourhood. Those numbers ranked the scouts. Nothing ranked the axes.
+
+ContextRank is a Personalized PageRank over a graph the pipeline has already
+built without meaning to: claims, and the things claims share — documents,
+sections, metrics, periods, the qualifier bindings the extractor read off the
+text, the axes earlier reviews recovered, and the distinctive words in each
+evidence span. Seeded on the two claims in a suspicious pair, it returns a
+ranked shortlist of what might separate them.
+
+**The boundary is the whole point, and it is enforced structurally.** This
+ranks *contextual relevance*, never truthfulness. A figure repeated across ten
+documents is not thereby correct, and a graph that scored sources by centrality
+would say it was. So nothing here produces a verdict, nothing changes a value,
+and no score can withdraw a contradiction. The output is a list of axis names
+and words worth asking about; the model still has to find the values on the
+page, grounding still has to locate them, and the same deterministic
+`compare()` still decides. A wrong ranking costs a wasted suggestion. There is
+a test asserting that a `Ranking` carries no field that could be mistaken for
+an answer.
+
+#### Two vectors, not one
+
+A single walk seeded on both claims ranks what is central to the pair — and
+what is central to a pair is usually what they have in common, which by
+definition cannot distinguish them. Both claims are about FY2026 GDP growth;
+that is why they are being compared, not why they differ. So two walks are run,
+one per claim, and two quantities are read off them:
+
+```
+connection   min(r_a[n], r_b[n])            n sits near both claims
+divergence   |r_a[n] − r_b[n]| / (sum)      n sits near one and not the other
+```
+
+An **axis** is a candidate when it is connected — the concept is live in this
+neighbourhood. A **value** is a candidate when it diverges. An axis both claims
+already agree on scores on the first and not the second, and explains nothing.
+
+#### What it measurably does
+
+The honest experiment is a cold run — no remembered recoveries, so every
+contradiction is genuinely investigated — with the structural shortlist in the
+prompt and without it. Same corpus, same pairs, same number of model calls:
+
+| | contradictions withdrawn | left unresolved | reduction |
+|---|---|---|---|
+| without ContextRank | 5 | 5 | 78.7% |
+| with ContextRank | **8** | **2** | 79.0% |
+
+Same twelve investigations, same three axes in the recovered vocabulary,
+three more pairs correctly explained. One corpus and twelve pairs is
+suggestive, not conclusive, and it is the number this repository has.
+
+#### Two things that had to be measured before they could be believed
+
+**Inverse frequency is not an optimisation, it is the whole thing.** The first
+version weighted every edge equally and was useless: `consolidation` is
+recorded or declared undetermined on 366 of 666 claims, so on raw structure it
+is adjacent to everything and won every ranking — including for a pair the
+pages distinguish by sign convention. That is the popularity signal this module
+exists to avoid, arriving through the side door. Weighting each edge by
+`log(N / n)` is the statement that a node connected to most of the corpus is
+not *about* any particular pair of claims.
+
+**The axis ranker cannot discover an axis; the term ranker can.** Scored
+against the six recoveries this corpus already had, the axis ranking got 6 of 6
+— and held out, with each pair's own recovery removed from the graph, it got
+**0 of 6**. It was reading back its own answer key. The reason is structural
+and worth stating: an axis only exists as a node because something already
+recorded it, so ranking known axes can find a *recurrence* and never a
+discovery. What survives the holdout is the vocabulary: `less` ranked first for
+the sign-convention pair, `adjusted` second for the EBITDA pair, `generated`
+and `operations` first and second for the two cash-flow pairs — five of six,
+with no knowledge of the answer. So the shortlist handed to the investigator is
+words first and known axes second, and the two are labelled differently in the
+prompt.
+
+#### Attention allocation, and why it is off by default
+
+ContextRank scores how much structural signal a pair has, which makes it a
+natural way to decide where to spend model calls. `relate --budget` does
+exactly that. It is **off by default**, and that is measured rather than
+cautious: the pair the deck distinguishes as `EBITDA margin` against `Adj.
+EBITDA margin` scores **zero** on structural vocabulary, because both claims
+were read out of one sentence and share every word in it. A budgeted run skips
+a pair this system demonstrably explains. The flag exists for a corpus too
+large to investigate exhaustively, it trades recall for cost, and a pair it
+skips is recorded as *not investigated* rather than *unexplained* — which is a
+different and more honest thing to say.
+
+#### Where it shows up
+
+The comparison view carries a **ContextRank** panel under the verdict, headed
+*where to look, not what is true*: the ranked axes with their scores and a
+templated sentence each, and the words that sit near one claim and not the
+other. On the corpus's one surviving cross-institution contradiction it ranks
+`scenario` first — which is precisely the axis an investigator once proposed to
+explain that disagreement away, and which the circularity guard rejected
+because the proposed label quoted its own figure. The two layers disagree in
+public, and the deterministic one wins. That is the architecture working, and
+it is more informative than a panel that only ever agreed with the verdict.
+
+Every relation stores its certificate in `context_rank`, whether or not
+anything came of it. A suggestion that led nowhere is part of the reasoning.
 
 ### Time, and the difference between not knowing and being wrong
 
@@ -608,6 +718,14 @@ past it. At fifty thousand pages the store becomes Postgres and the embedding
 scan becomes an index; nothing above the storage layer changes, which is the
 point of blocking being a design decision rather than an optimisation.
 
+**ContextRank ranks recurrence, not discovery.** Held out, its axis ranking
+scores zero: an axis is only a node in the graph because something already
+recorded it, so the ranking can find an axis applying *again* and can never
+name one for the first time. The vocabulary ranking is what survives a holdout,
+and it is words rather than axes — turning a ranked word list into a proposed
+axis name is still the model's job. A/B'd over twelve pairs on one corpus it
+explains three more of them; that is one experiment, not a result.
+
 ### Next, in priority order
 
 1. Deduplicate within a page, and decide the period from the evidence span.
@@ -618,6 +736,8 @@ point of blocking being a design decision rather than an optimisation.
 4. Half-year period parsing.
 5. Non-Indian identifier kinds.
 6. OCR, for the scanned documents this system currently names and skips.
+7. A larger A/B for ContextRank, on a corpus where twelve pairs is not
+   the whole sample.
 
 ## Additional Notes
 

@@ -457,6 +457,12 @@ class Relation(Base):
     recovery_a_value: Mapped[str | None] = mapped_column(Text)
     recovery_b_value: Mapped[str | None] = mapped_column(Text)
 
+    # Why the system looked where it looked. ContextRank's shortlist for this
+    # pair, recorded whether or not anything came of it — a suggestion that led
+    # nowhere is as much a part of the reasoning as one that did, and a stored
+    # verdict that cannot say what was considered is not auditable.
+    context_rank: Mapped[str | None] = mapped_column(Text)
+
 
 class Axis(Base):
     """The discovered-axis registry (L5b).

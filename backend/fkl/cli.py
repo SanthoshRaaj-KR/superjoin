@@ -120,6 +120,7 @@ def cmd_relate(args) -> int:
             session,
             document_ids=[int(d) for d in args.documents] if args.documents else None,
             investigator=investigator,
+            budget=args.budget,
         )
         print(format_run(run))
         states = relate_states(
@@ -438,6 +439,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_relate.add_argument("--show", type=int, default=10,
                           help="how many surviving disagreements to print")
+    p_relate.add_argument(
+        "--budget", action="store_true",
+        help="let ContextRank decide which contradictions get a model call; "
+             "trades recall for cost and names the pairs it skipped")
     p_relate.set_defaults(func=cmd_relate)
 
     p_asof = sub.add_parser(

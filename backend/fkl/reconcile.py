@@ -336,12 +336,49 @@ def scout_neighbourhood(a: Comparable, b: Comparable,
     )
 
 
-def scout(a: Comparable, b: Comparable, a_page: str, b_page: str) -> list[Lead]:
+def scout_contextrank(a: Comparable, b: Comparable, a_page: str, b_page: str,
+                      ranking=None) -> Lead | None:
+    """What the corpus's own structure says distinguishes these two claims.
+
+    The other scouts read the two pages. This one reads the graph the whole
+    corpus makes — which section each claim sits in, which axes the claims
+    around them carry, which words are rare enough across six hundred claims to
+    mean something — and returns a ranked shortlist rather than another window
+    of text.
+
+    It is a *lead*, with everything that word carries here: it says where to
+    look and why, and it is wrong about as often as a scout is. The model still
+    has to find the values on the page and ``ground`` still has to locate them.
+    A shortlist that names the wrong axis costs one wasted suggestion.
+    """
+    if ranking is None or not (ranking.shortlist or ranking.candidates):
+        return None
+    words = ", ".join((ranking.shortlist or [])[:8])
+    top = ranking.candidates[0] if ranking.candidates else None
+    note = "structural ranking over the corpus graph"
+    if top:
+        note += f"; {top.why}"
+    return Lead(
+        scout="contextrank",
+        note=note,
+        axis_hint=top.axis if top else None,
+        a_context=f"words that sit near one of these claims and not the other, "
+                  f"rarest first: {words}" if words else "",
+        # Ranked between the shared span and the row label: it is more
+        # informative than a bare neighbourhood and less certain than two
+        # values read out of one sentence.
+        strength=0.82,
+    )
+
+
+def scout(a: Comparable, b: Comparable, a_page: str, b_page: str,
+          ranking=None) -> list[Lead]:
     """Every lead, strongest first."""
     leads = [
         s(a, b, a_page, b_page)
         for s in (scout_shared_span, scout_row_label, scout_neighbourhood)
     ]
+    leads.append(scout_contextrank(a, b, a_page, b_page, ranking))
     return sorted((x for x in leads if x), key=lambda l: -l.strength)
 
 
@@ -445,8 +482,11 @@ def _prompt(a: Comparable, b: Comparable, leads: list[Lead]) -> str:
         "",
         "What a first pass over the pages noticed:",
     ]
-    for lead in leads[:3]:
+    for lead in leads[:4]:
         parts.append(f"- [{lead.scout}] {lead.note}")
+        if lead.axis_hint:
+            parts.append(f"    an axis this corpus has used before, which may or "
+                         f"may not apply here: {lead.axis_hint}")
         if lead.a_context:
             parts.append(f"    near A: {lead.a_context[:400]}")
         if lead.b_context and _norm(lead.b_context) != _norm(lead.a_context):
@@ -712,6 +752,10 @@ class Reconciliation:
     recovery: Recovery | None
     leads: list[Lead]
     changed: bool
+    # The structural ranking that shaped the leads, kept so the stored relation
+    # can say *why the system looked where it looked* — which is the part of a
+    # reasoning certificate that a hand-set constant could never provide.
+    ranking: object | None = None
 
     @property
     def survived(self) -> bool:
@@ -721,6 +765,7 @@ class Reconciliation:
 def reconcile(
     a: Comparable, b: Comparable, *, a_page: str = "", b_page: str = "",
     investigator=investigate, min_confidence: float = MIN_CONFIDENCE,
+    ranking=None,
 ) -> Reconciliation:
     """The second look, end to end, for one contradicting pair.
 
@@ -730,10 +775,13 @@ def reconcile(
     """
     original = compare(a, b)
     if original.verdict != CONTRADICTS:
-        return Reconciliation(original, None, [], changed=False)
+        return Reconciliation(original, None, [], changed=False, ranking=ranking)
 
     sign = scout_sign_convention(a, b, a_page, b_page)
-    leads = scout(a, b, a_page, b_page)
+    if ranking is not None:
+        ranking.with_local(_window(a_page, a.evidence_quote),
+                           _window(b_page, b.evidence_quote))
+    leads = scout(a, b, a_page, b_page, ranking)
 
     recovery = sign
     if recovery is None and investigator is not None:
@@ -744,11 +792,13 @@ def reconcile(
             recovery = None
 
     if recovery is None or recovery.confidence < min_confidence:
-        return Reconciliation(original, None, leads, changed=False)
+        return Reconciliation(original, None, leads, changed=False,
+                              ranking=ranking)
 
     grounded = ground(recovery, a, b, a_page, b_page)
     if grounded is None:
-        return Reconciliation(original, None, leads, changed=False)
+        return Reconciliation(original, None, leads, changed=False,
+                              ranking=ranking)
 
     verdict = reconsider(a, b, grounded)
     verdict.notes = list(verdict.notes) + [
@@ -756,5 +806,6 @@ def reconcile(
         f"({grounded.method}, {grounded.reason})"
     ]
     return Reconciliation(
-        verdict, grounded, leads, changed=verdict.verdict != CONTRADICTS
+        verdict, grounded, leads, changed=verdict.verdict != CONTRADICTS,
+        ranking=ranking,
     )

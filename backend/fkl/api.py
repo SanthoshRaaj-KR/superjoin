@@ -435,6 +435,49 @@ def _answer_label(claim: Claim, fact: dict, primary: dict) -> str:
     return value
 
 
+
+def _context_rank_json(session, left: Claim, right: Claim,
+                       stored: str | None) -> dict:
+    """The structural ranking for one pair, in the shape the panel reads.
+
+    Deliberately labelled. Every field here is a *suggestion* — the axes the
+    corpus's own structure says are worth asking about, and the words that sit
+    near one claim and not the other. None of it is a verdict, none of it
+    changed a value, and the panel has to be able to say so, because a ranked
+    list beside a verdict reads as evidence for the verdict unless it is told
+    otherwise.
+    """
+    from .contextrank import build, rank_pair
+
+    try:
+        graph = build(session)
+        ranking = rank_pair(graph, left.id, right.id)
+    except Exception as exc:  # pragma: no cover - never worth a 500
+        log.warning("contextrank failed for %s/%s: %s", left.id, right.id, exc)
+        return {"available": False, "stored": stored}
+
+    return {
+        "available": bool(ranking.candidates or ranking.terms),
+        "stored": stored,
+        "attention": round(ranking.attention, 4),
+        "worthInvestigating": ranking.worth_investigating,
+        "nodes": ranking.nodes,
+        "axes": [
+            {
+                "axis": CORPUS_AXIS.get(c.axis, c.axis),
+                "score": round(c.score, 3),
+                "connection": round(c.connection, 4),
+                "divergence": round(c.divergence, 3),
+                "values": c.values,
+                "why": c.why,
+            }
+            for c in ranking.candidates[:4]
+        ],
+        "terms": [w for w, _ in ranking.terms[:8]],
+        "note": "ranks contextual relevance, never truthfulness — nothing here "
+                "decides the verdict",
+    }
+
 def _ask_note(answers: list[dict], axes: list[str]) -> str:
     """One sentence saying what shape the answer has, and why.
 
@@ -579,6 +622,7 @@ def create_app() -> FastAPI:
                     "originalVerdict": r.original_verdict,
                     "recoveryAxis": r.recovery_axis,
                     "recoveryReason": r.recovery_reason,
+                    "contextRank": r.context_rank,
                 }
                 for r in rows[:MAX_PAIRS]
             ]
@@ -706,6 +750,18 @@ def create_app() -> FastAPI:
             payload = verdict_json(verdict, left, right, a, b,
                                    request.maskedAxes, entities, metrics)
             payload["recovered"] = recovery
+
+            # Why the system looked where it looked. Computed live rather than
+            # read off the relation, because masking an axis changes which
+            # pair is being asked about — and a stored certificate would then
+            # be explaining a comparison nobody made.
+            stored = session.scalar(
+                select(Relation.context_rank).where(
+                    Relation.claim_a_id.in_([left.id, right.id]),
+                    Relation.claim_b_id.in_([left.id, right.id]),
+                    Relation.context_rank.is_not(None),
+                ).order_by(Relation.generation.desc()).limit(1))
+            payload["contextRank"] = _context_rank_json(session, left, right, stored)
             return payload
 
     # --- upload: hand it a folder, get a job -------------------------------
@@ -857,6 +913,7 @@ def create_app() -> FastAPI:
                     "originalVerdict": r.original_verdict,
                     "recoveryAxis": r.recovery_axis,
                     "recoveryReason": r.recovery_reason,
+                    "contextRank": r.context_rank,
                 }
                 for r in rows
             ]

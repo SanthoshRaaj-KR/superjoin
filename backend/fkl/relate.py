@@ -153,6 +153,15 @@ class RelateRun:
     # stays legible: these are the pairs that cost nothing.
     remembered: int = 0
     recovered_axes: dict[str, int] = field(default_factory=dict)
+    # What ContextRank put first, and how often it had nothing structural to
+    # offer. Reported apart from the recoveries because a ranking is a
+    # suggestion: the interesting comparison is between what it proposed and
+    # what actually grounded.
+    ranked_axes: dict[str, int] = field(default_factory=dict)
+    below_attention: int = 0
+    # Contradictions left uninvestigated because a budget was set. Counted so
+    # the headline can never quietly present them as "checked and unexplained".
+    skipped: int = 0
 
     @property
     def reduction(self) -> float:
@@ -169,6 +178,7 @@ def relate_corpus(
     generation: int | None = None,
     investigator=None,
     reconcile_signs: bool = True,
+    budget: bool = False,
 ) -> RelateRun:
     """Compare every comparable pair of claims and store the verdicts.
 
@@ -180,6 +190,14 @@ def relate_corpus(
 
     ``reconcile_signs`` runs only the deterministic sign-convention scout, which
     needs no model and no key. It is on by default for that reason.
+
+    ``budget`` lets ContextRank decide which contradictions are worth a model
+    call. Off by default, and that is a measured decision rather than caution:
+    the pair the deck distinguishes as `EBITDA margin` against `Adj. EBITDA
+    margin` scores zero on structural vocabulary — both claims were read out of
+    one sentence and share every word in it — so a budgeted run skips a pair
+    this system demonstrably explains. It trades recall for cost, and the trade
+    only makes sense on a corpus too large to investigate exhaustively.
     """
     stmt = select(Claim)
     if document_ids:
@@ -211,8 +229,17 @@ def relate_corpus(
     pages: dict = {}
     remembered_recoveries = _load_recoveries(session)
 
+    # One graph for the whole run. It is built from the store rather than
+    # accumulated as we go, so a pair's ranking does not depend on which pairs
+    # happened to be compared before it — a run has to be reproducible in the
+    # same way its verdicts are.
+    from .contextrank import build as build_graph
+    from .contextrank import rank_pair
+
+    graph = build_graph(session, document_ids=document_ids)
+
     def _block_pairs(members, comparables, run, rows, learned, found,
-                     replay=False):
+                     certificates, replay=False):
         """Compare every pair in one block, appending the relations to `rows`.
 
         `replay` marks the second pass over a block, made once anything was
@@ -230,6 +257,7 @@ def relate_corpus(
             # the extraction may have dropped. The gate is what re-decides;
             # this only supplies it with context it did not have.
             recovery = None
+            certificate = ""
             original = verdict.verdict
             if (verdict.verdict == CONTRADICTS and not replay
                     and (investigator or reconcile_signs)):
@@ -253,13 +281,45 @@ def relate_corpus(
 
                 if recovery is None:
                     run.investigated += 1
-                    result = reconcile(
+                    # Ranked before the model is called, not after. The
+                    # shortlist is what shapes the question; ranking the answer
+                    # afterwards would be a statistic rather than a mechanism.
+                    ranking = rank_pair(graph, left.id, right.id)
+                    ranking.with_local(
+                        _page_text(session, pages, left),
+                        _page_text(session, pages, right))
+                    skip = budget and not ranking.worth_investigating
+                    if skip:
+                        # Not "no context was found" — *not looked for*. The
+                        # distinction matters to a reader deciding whether to
+                        # trust the contradiction that gets reported, so it is
+                        # written onto the relation rather than left implicit.
+                        run.investigated -= 1
+                        run.skipped += 1
+                    result = None if skip else reconcile(
                         comparables[left.id], comparables[right.id],
                         a_page=_page_text(session, pages, left),
                         b_page=_page_text(session, pages, right),
                         investigator=investigator,
+                        ranking=ranking,
                     )
-                    if result.changed:
+                    certificate = ranking.certificate()
+                    if skip:
+                        certificate = ((certificate or "no structural candidate")
+                                       + " — not investigated (budget)")
+                    # Kept across the replay for the same reason the recovery
+                    # is: the second pass does not investigate, so anything
+                    # computed only in the first pass is lost by the row that
+                    # actually gets stored. A pair where the ranking led
+                    # nowhere still has a certificate worth keeping — "we
+                    # looked here and it did not hold up" is a finding.
+                    certificates[(left.id, right.id)] = certificate
+                    if ranking.candidates:
+                        run.ranked_axes[ranking.candidates[0].axis] = (
+                            run.ranked_axes.get(ranking.candidates[0].axis, 0) + 1)
+                    if not ranking.worth_investigating:
+                        run.below_attention += 1
+                    if result is not None and result.changed:
                         verdict, recovery = result.verdict, result.recovery
                         run.withdrawn += 1
                         run.recovered_axes[recovery.axis] = (
@@ -278,6 +338,7 @@ def relate_corpus(
                     found[(left.id, right.id)] = (original, recovery)
 
             if replay:
+                certificate = certificates.get((left.id, right.id), "")
                 # On the replay this pair may no longer reach CONTRADICTS at
                 # all — the recovered axis is now sitting in its qualifiers, so
                 # the gate explains it before the second look would be reached.
@@ -354,6 +415,7 @@ def relate_corpus(
                     recovery_confidence=recovery.confidence if recovery else None,
                     recovery_a_value=recovery.a_value if recovery else None,
                     recovery_b_value=recovery.b_value if recovery else None,
+                    context_rank=certificate or None,
                 )
             )
 
@@ -388,8 +450,10 @@ def relate_corpus(
         learned: dict[int, dict[str, str]] = {}
         rows: list[Relation] = []
         found: dict[tuple[int, int], tuple[str, Recovery]] = {}
+        certificates: dict[tuple[int, int], str] = {}
         tally = RelateRun()
-        _block_pairs(members, comparables, tally, rows, learned, found)
+        _block_pairs(members, comparables, tally, rows, learned, found,
+                     certificates)
         if any(c.id in learned for c in members):
             for claim_id, axes in learned.items():
                 if claim_id in comparables:
@@ -407,7 +471,7 @@ def relate_corpus(
                 recovered_axes=dict(tally.recovered_axes),
             )
             _block_pairs(members, comparables, replayed, rows, learned,
-                         found, replay=True)
+                         found, certificates, replay=True)
             tally = replayed
         _merge(run, tally)
         session.add_all(rows)
@@ -428,9 +492,10 @@ def _merge(run: RelateRun, block: RelateRun) -> None:
     """
     for name in ("pairs", "raw_disagreements", "explained", "unresolved",
                  "blocked", "cross_document", "investigated", "withdrawn",
-                 "remembered"):
+                 "remembered", "below_attention", "skipped"):
         setattr(run, name, getattr(run, name) + getattr(block, name))
-    for name in ("verdicts", "axes", "explaining_axes", "recovered_axes"):
+    for name in ("verdicts", "axes", "explaining_axes", "recovered_axes",
+                 "ranked_axes"):
         target = getattr(run, name)
         for key, count in getattr(block, name).items():
             target[key] = target.get(key, 0) + count
@@ -548,6 +613,15 @@ def format_run(run: RelateRun) -> str:
         f"    {run.blocked} blocked — a material axis was undetermined",
         f"    {run.unresolved} genuinely unresolved",
     ]
+    if run.ranked_axes or run.below_attention:
+        lines.append("")
+        top = " · ".join(f"{k} {v}" for k, v in sorted(
+            run.ranked_axes.items(), key=lambda kv: -kv[1]))
+        lines.append(f"  ContextRank ranked first: {top or 'nothing structural'}")
+        if run.below_attention:
+            lines.append(f"    {run.below_attention} pair(s) had no structural "
+                         f"candidate above the attention floor")
+
     if run.investigated:
         lines.append("")
         lines.append(

@@ -331,6 +331,39 @@
                   </div>
                 </sc-if>
 
+                <!-- why the system looked where it looked -->
+                <sc-if value="{{ cr.show }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:20px; padding-top:16px; border-top:1px solid #EFEDE6">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap">
+                      <div class="label" style="font-size:10px; line-height:1; color:#8A9083">CONTEXTRANK · WHERE TO LOOK, NOT WHAT IS TRUE</div>
+                      <div style="font:400 10px/1 'IBM Plex Mono',monospace; color:#A2A79A">{{ cr.nodes }} NODES</div>
+                    </div>
+
+                    <sc-for list="{{ cr.axes }}" as="x" hint-placeholder-count="3">
+                      <div style="margin-top:9px; display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:baseline">
+                        <span style="font:500 10px/1 'IBM Plex Mono',monospace; padding:4px 6px; border-radius:2px; background:{{ x.bg }}; color:{{ x.fg }}">{{ x.score }}</span>
+                        <div>
+                          <div style="font-size:12.5px; font-weight:500; color:#20241D">{{ x.axis }}</div>
+                          <div style="margin-top:2px; font-size:11.5px; line-height:1.5; color:#7C8276">{{ x.why }}</div>
+                        </div>
+                      </div>
+                    </sc-for>
+
+                    <sc-if value="{{ cr.hasTerms }}" hint-placeholder-val="{{ false }}">
+                      <div style="margin-top:11px">
+                        <div class="label" style="font-size:9.5px; color:#A2A79A">WORDS NEAR ONE CLAIM AND NOT THE OTHER</div>
+                        <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:5px">
+                          <sc-for list="{{ cr.terms }}" as="t" hint-placeholder-count="6">
+                            <span style="padding:3px 8px; border-radius:12px; background:#F1F4EF; border:1px solid #DCE3D8; font:400 11px/1.4 'IBM Plex Mono',monospace; color:#4E5449">{{ t }}</span>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-if>
+
+                    <div style="margin-top:11px; font-size:11px; line-height:1.55; color:#9AA093; text-wrap:pretty">{{ cr.note }}</div>
+                  </div>
+                </sc-if>
+
                 <!-- counterfactual -->
                 <div style="margin-top:20px; padding-top:16px; border-top:1px solid #EFEDE6">
                   <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap">
@@ -1231,6 +1264,30 @@ class Component extends DCLogic {
     const quarantine = s.quarantine.map((q) => ({ reason: q.reason.replace(/_/g, " ").toUpperCase(),
       ref: `${q.doc} · p.${q.page}`, claim: q.claim, note: q.note, conf: q.confidence.toFixed(2) }));
 
+    // ── ContextRank, for the open pair
+    //
+    // Shown next to the verdict and labelled so it cannot be read as evidence
+    // for it. A ranked list beside a conclusion looks like support unless it
+    // says otherwise, and this ranks where to look, not what is true.
+    const crd = (s.result && s.result.contextRank) || null;
+    const cr = crd && crd.available ? {
+      show: true,
+      nodes: crd.nodes,
+      note: crd.note,
+      axes: (crd.axes || []).map((x) => ({
+        axis: x.axis,
+        score: x.score.toFixed(2),
+        why: x.why,
+        // The top candidate reads as a suggestion worth following; the rest as
+        // also-rans. Same palette as a contextual verdict, never as a positive
+        // one — nothing here has been confirmed against a page yet.
+        bg: x === (crd.axes || [])[0] ? "#F6EBD4" : "#EFEDE6",
+        fg: x === (crd.axes || [])[0] ? "#7A5410" : "#8A9083",
+      })),
+      terms: crd.terms || [],
+      hasTerms: (crd.terms || []).length > 0,
+    } : { show: false, axes: [], terms: [], hasTerms: false, nodes: 0, note: "" };
+
     // ── registries: the vocabulary the corpus taught itself
     //
     // Split by origin, because the two halves are different claims. A seeded
@@ -1416,7 +1473,7 @@ class Component extends DCLogic {
       stats: { claims: (c.claims || 0).toLocaleString("en-IN"), grounded: (c.grounded || 0).toLocaleString("en-IN"),
         quarantined: c.quarantined || 0, relationships: c.relationships || 0 },
       A: this.factCard(A), B: this.factCard(B),
-      V, axes, masks, chain, evidence,
+      V, axes, masks, chain, evidence, cr,
       query: s.query, onQuery: (e) => this.setState({ query: e.target.value }),
       filters, factRows, factCount: `${rows.length} of ${s.facts.length} facts`, P,
       asOf: s.asOf, onAsOf: (e) => this.setState({ asOf: e.target.value }),
