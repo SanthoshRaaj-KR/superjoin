@@ -35,6 +35,7 @@ from dataclasses import dataclass, field
 from datetime import date
 
 from .periods import Period, compare_periods
+from .temporal import infer_cardinality
 from .units import Unit, compare_units
 from .values import ValueComparison, compare_text_values, compare_values
 
@@ -277,6 +278,24 @@ def compare(a: Comparable, b: Comparable,
             period_relation=period.relation,
         )
 
+    # 5b. A state whose predicate admits many values at once is not in
+    #     competition with itself. "Other Directorships: Spoton Logistics" and
+    #     "Other Directorships: Vave Health Inc" are both true of the same
+    #     person on the same day, and calling them a contradiction is the same
+    #     error the interval engine already avoids by checking cardinality —
+    #     it was simply never checked on this side, because until a document
+    #     listed a person's other directorships nothing reached it.
+    if a.claim_type == "state" and infer_cardinality(a.metric) != 1:
+        value = _compare_values(a, b)
+        if not value.agree:
+            return Verdict(
+                INCOMPARABLE, "cardinality",
+                f"{a.metric!r} holds more than one value at a time, so "
+                f"{a.value_text!r} and {b.value_text!r} are two of many rather "
+                f"than a disagreement about one",
+                a.ref, b.ref, value=value,
+            )
+
     # 6. Same entity, same metric, same period, same context. Only now do the
     #    values get to speak.
     notes = list(period.ambiguous and ["one period was read from a bare "
@@ -338,6 +357,20 @@ def _intervals_disjoint(a: Comparable, b: Comparable) -> bool:
     """
     if not any((a.valid_from, a.valid_to)) or not any((b.valid_from, b.valid_to)):
         return False
+
+    # Intervals that meet at a single date are consecutive, not concurrent.
+    # Documents differ on whether a change happens *on* the closing date or the
+    # day after: the annual report writes a handover as "to 31 May, from 1
+    # June", while the prospectus records the company's own renamings as ending
+    # and beginning on the same day. Reading that shared boundary as an overlap
+    # made the name history — SSN Logistics, then Delhivery Private, then
+    # Delhivery Limited, each with correct dates — come back as two
+    # contradictions about what the company is called.
+    if a.valid_to is not None and a.valid_to == b.valid_from:
+        return True
+    if b.valid_to is not None and b.valid_to == a.valid_from:
+        return True
+
     start_a, start_b = a.valid_from or date.min, b.valid_from or date.min
     end_a = date.max if (a.valid_to is None or a.valid_to_is_open) else a.valid_to
     end_b = date.max if (b.valid_to is None or b.valid_to_is_open) else b.valid_to

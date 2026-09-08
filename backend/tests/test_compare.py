@@ -223,14 +223,15 @@ def test_the_explanation_is_templated_and_therefore_stable():
     assert compare(a, b).explanation == compare(a, b).explanation
 
 
-def _role(ref, title, *, valid_from=None, valid_to=None, open_end=False):
+def _role(ref, title, *, valid_from=None, valid_to=None, open_end=False,
+          metric="non-executive director"):
     from datetime import date as _d
 
     def d(s):
         return _d.fromisoformat(s) if s else None
 
     return Comparable(
-        ref=ref, entity="mr. donald francis colleran", metric="non-executive director",
+        ref=ref, entity="mr. donald francis colleran", metric=metric,
         unit=parse_unit(None), period=parse_period(None), claim_type="state",
         value_text=title, valid_from=d(valid_from), valid_to=d(valid_to),
         valid_to_is_open=open_end,
@@ -259,9 +260,16 @@ def test_a_redesignation_is_a_sequence_not_a_contradiction():
 def test_states_that_overlap_in_time_are_still_compared():
     """The exemption is for intervals that genuinely do not meet. Two claims
     asserting different values over the *same* interval is the conflict the
-    interval engine exists to report, and excusing it would hide the case."""
-    a = _role("a", "Chief Executive Officer", valid_from="2022-01-01", open_end=True)
-    b = _role("b", "Chief Financial Officer", valid_from="2022-06-01", open_end=True)
+    interval engine exists to report, and excusing it would hide the case.
+
+    The seat has to be a single-holder one for that to be true, which is what
+    ``metric`` says here — on a role that admits many holders these two would
+    be two of many, and the gate now says so.
+    """
+    a = _role("a", "Sahil Barua", valid_from="2022-01-01", open_end=True,
+              metric="chief executive officer")
+    b = _role("b", "Kapil Bharati", valid_from="2022-06-01", open_end=True,
+              metric="chief executive officer")
     assert compare(a, b).verdict == CONTRADICTS
 
 
@@ -270,8 +278,8 @@ def test_undated_states_are_compared_on_their_values():
     this document knows" covers all time. Reading absent dates as disjoint would
     excuse every genuine conflict between two undated claims, and would break
     the registered-office corroboration, which has no dates on either side."""
-    a = _role("a", "Company Secretary")
-    b = _role("b", "Chief Executive Officer")
+    a = _role("a", "Sahil Barua", metric="chief executive officer")
+    b = _role("b", "Kapil Bharati", metric="chief executive officer")
     assert compare(a, b).verdict == CONTRADICTS
 
 
@@ -342,3 +350,47 @@ def test_masking_nothing_changes_nothing():
     b = measurement("b", "revenue", "81,415.38", "₹ Mn", "FY24",
                     qualifiers={"consolidation": "consolidated"})
     assert compare(a, b, mask_axes=[]).verdict == compare(a, b).verdict
+
+
+# --- found by ingesting a document the system had never seen ----------------
+
+
+def test_a_name_history_is_a_sequence_even_when_intervals_touch():
+    """Both bugs here came from one cold ingest of the 2022 prospectus.
+
+    The company's own renamings are recorded with correct, consecutive dates —
+    SSN Logistics to 2015-12-08, Delhivery Private from 2015-12-08 — because
+    the change happens *on* that date. The annual report writes a handover the
+    other way, "to 31 May, from 1 June". Reading the shared boundary as an
+    overlap turned a correctly extracted name history into two contradictions
+    about what the company is called.
+    """
+    a = _role("a", "SSN Logistics Private Limited", metric="name",
+              valid_from="2011-06-22", valid_to="2015-12-08")
+    b = _role("b", "Delhivery Private Limited", metric="name",
+              valid_from="2015-12-08", valid_to="2021-10-12")
+    result = compare(a, b)
+    assert result.verdict == CONTEXTUAL_TEMPORAL
+    assert result.axis == "valid_time"
+
+
+def test_a_predicate_that_holds_many_values_is_not_in_competition_with_itself():
+    """"Other Directorships: Spoton Logistics" and "Other Directorships: Vave
+    Health Inc" are both true of the same person on the same day. The interval
+    engine has always checked cardinality before reporting a conflict; the gate
+    never did, because until a document listed a person's other directorships
+    nothing reached it."""
+    a = _role("a", "Spoton Logistics Private Limited", metric="Other Directorships")
+    b = _role("b", "Vave Health Inc", metric="Other Directorships")
+    result = compare(a, b)
+    assert result.verdict == INCOMPARABLE
+    assert result.axis == "cardinality"
+
+
+def test_a_single_holder_seat_still_reports_its_conflicts():
+    """The cardinality check must not become a blanket excuse. One company has
+    one registered office, and two different ones asserted over the same time
+    is exactly the finding worth keeping."""
+    a = _role("a", "IGI Airport, New Delhi", metric="registered office")
+    b = _role("b", "Plot 5, Sector 44 Gurugram", metric="registered office")
+    assert compare(a, b).verdict == CONTRADICTS

@@ -95,6 +95,20 @@ def infer_cardinality(predicate: str) -> int:
         return 1
     if _PLURAL.search(text):
         return 0  # many
+    # A predicate whose head noun is plural is asking for a list. "Other
+    # Directorships" and "Previous roles" name several things at once, and a
+    # document that lists three of them is not contradicting itself twice.
+    # Generic rather than a vocabulary: it is the grammar that says so.
+    #
+    # The head is taken from before any dash, because role titles qualify a
+    # singular head with a plural complement — "Head - New Ventures" is one
+    # post, and reading "Ventures" as the head makes it a list and loses every
+    # succession in that seat.
+    head = re.split(r"\s[-–—]\s|\bof\b|\bfor\b", text.strip().rstrip(":"))[0]
+    words = head.split()
+    word = words[-1].lower() if words else ""
+    if len(word) > 3 and word.endswith("s") and not word.endswith(("ss", "us", "is")):
+        return 0
     return 1
 
 

@@ -376,6 +376,43 @@ company's annual report, prospectus and earnings deck, and macroeconomic
 reports from three different institutions. The same pipeline reads both, and
 the discovered axes come from both halves.
 
+**The cold test.** The 2022 prospectus had never been ingested — a different
+document type, from a different year, with sections nothing else in the corpus
+has. Run cold, with no code changes:
+
+```
+ingest   100 pages · doc_type "prospectus" · as_of_date 2022-05-14 read from
+         "Dated May 14, 2022" · default_consolidation left null, with the note
+         "contains both consolidated and proforma financials; do not assume a
+         single consolidation basis"
+extract  46 claims from 2 pages, grounding precision 100%
+relate   2 new cross-document corroborations, 1 new discovered axis (nominee_of)
+```
+
+Sahil Barua and Deepak Kapoor each resolved to one person across the prospectus
+and the annual report, and their roles corroborated across two documents two
+years apart. Nothing was configured for any of that.
+
+It also found two bugs, which is the more useful half of a generalisation test:
+
+- **Touching intervals read as overlapping.** The company's own renamings —
+  SSN Logistics, then Delhivery Private, then Delhivery Limited — are recorded
+  with correct consecutive dates, because a renaming happens *on* its date. The
+  annual report writes handovers the other way, "to 31 May, from 1 June".
+  Treating the shared boundary as an overlap turned a correctly extracted name
+  history into two contradictions about what the company is called.
+- **The gate never checked cardinality.** "Other Directorships: Spoton
+  Logistics" and "Other Directorships: Vave Health Inc" are both true of the
+  same person on the same day. The interval engine has always checked this
+  before reporting a conflict; the gate had not, because until a document
+  listed someone's other directorships nothing reached it. Cardinality is now
+  inferred from the predicate's grammar rather than a vocabulary — a plural
+  head noun asks for a list — with the head taken from before any dash, since
+  "Head - New Ventures" is one post and not a list of ventures.
+
+Both fixed, both regression-tested. Contradictions went 11 to 6, and the one
+that matters stayed.
+
 **Where the vocabulary is tuned, and it is worth being precise.** Parsers
 probed with inputs this corpus does not contain:
 
