@@ -4,6 +4,12 @@
 actually disagree — or whether they were only ever answering different
 questions.**
 
+No chunking. No embedding-similarity contradiction detection. No graph
+database. And a use of **PageRank nobody else is making**: not to rank which
+source to trust, but to rank *where a language model should look* before a
+contradiction is reported. It's stage ⑥ below, and it's the one part of this
+system without an obvious precedent.
+
 <sub>Python 3.13 · FastAPI · SQLite · 272 tests · 16/16 on the hand-labelled gold set</sub>
 
 ---
@@ -45,6 +51,28 @@ This matters beyond correctness. A model that says *"these contradict"* gives yo
 an opinion you have to trust. This system says *"these differ on reporting
 scope"* — a statement you can check against the page yourself.
 
+### What's actually new here, for anyone skimming
+
+- **The verdict is never the model's opinion.** A deterministic gate decides;
+  the model only supplies typed facts and, later, evidence to consider.
+- **No chunking, no embeddings-as-contradiction-detector.** The whole design
+  bets that the context a number needs lives in the document's *structure* —
+  headings, table columns, footnotes — not in semantic similarity between text
+  fragments.
+- **PageRank, repurposed.** Stage ⑥ runs a Personalized PageRank over a graph
+  of claims and their shared context — not to rank which source is more
+  trustworthy (that would be a bug, and there's a test for it), but to rank
+  *which sentence a language model should be pointed at* before a contradiction
+  is reported. Measured, not asserted: **+3 more contradictions correctly
+  explained, same cost, same corpus.** Full detail in stage ⑥ below.
+- **The axis vocabulary is learned, not hard-coded.** A distinguishing phrase
+  that recurs across independent pairs gets promoted into a real, reusable
+  axis; one that stops explaining anything lapses back out.
+- **A recovered contradiction is re-judged, not just reversed.** The system
+  checks its own reasoning for circularity before accepting a proposed
+  explanation, and a wrong self-correction has been caught in testing, not
+  just theorised about.
+
 ---
 
 ## How it works
@@ -70,8 +98,10 @@ scope"* — a statement you can check against the page yourself.
     │ yes
     ▼
    compare values  ──── agree → CORROBORATES
-                   └─── differ → ⑥ SECOND LOOK ──── context found → CONTEXTUAL
-                                                └── nothing found → CONTRADICTS
+                   └─── differ → ⑥ ContextRank ── PageRank picks WHERE to look
+                                       │
+                                  model looks there ── found it → CONTEXTUAL
+                                                    └─ nothing → CONTRADICTS
 ```
 
 ### ① Extraction — page by page, not one big prompt
@@ -208,51 +238,170 @@ promoted into the registry as a real axis, and affected pairs are re-compared. A
 axis that stops explaining anything lapses back out. The schema grows from the
 documents rather than from a list someone wrote in advance.
 
-### ⑥ The second look — recovering context that extraction missed
+### ⑥ ContextRank — PageRank, pointed at a problem PageRank doesn't usually solve
 
-Here's the honest limit of everything above: **the gate can only reason about
-context that reached it.**
+> **This is the part of the system with no obvious template to copy.**
+> Everything above this stage has a recognisable shape — extraction, grounding,
+> canonicalization, a rules engine. This stage doesn't. It takes the algorithm
+> behind Google's original web ranking and asks it a question it was never
+> designed for: *not* "which page is authoritative", but **"which sentence on
+> this page is worth a language model's attention before we accuse two
+> documents of disagreeing."**
 
-If two claims arrive with the same entity, the same metric, the same period and
-nothing to tell them apart, the gate *must* call it a contradiction. It's right,
-given what it was handed. The question is whether what it was handed was
-complete.
+#### The honest limit this stage exists to cover
+
+Everything up through the gate can only reason about context that **reached
+it.** If two claims arrive with the same entity, the same metric, the same
+period, and nothing on record to tell them apart, the gate *must* call it a
+contradiction — it's right, given what it was handed. The question is whether
+what it was handed was complete.
 
 Often it isn't. The distinguishing detail was printed on the page — in the
 sentence around the number, in a row label, in a footnote — and simply didn't
-survive extraction.
+survive extraction. Auditing the very first contradictions this corpus
+produced, **every single one** turned out to be exactly this: a real
+distinction, printed on the page, that the extractor walked past.
 
-So before a contradiction is reported, it is **sent back to its pages**:
+So before a contradiction is *reported*, it is sent back to its own pages for a
+second look. Two things happen, in order.
 
-1. **Free deterministic scouts run first.** Some distinctions need no model at
-   all — the same magnitude printed once in parentheses and once under a `Less:`
-   label is a sign convention, not a disagreement, and that is decidable by rule.
+**First, free deterministic scouts.** Some distinctions need no model at all.
+The same magnitude printed once in parentheses and once under a `Less:` row
+label is a sign convention, not a disagreement — that's decidable by a rule,
+costs nothing, and runs before anything expensive does.
 
-2. **ContextRank decides where to look.** The system builds a graph of the
-   claims and the things they share — sections, metrics, periods, qualifiers,
-   known axes, distinctive words in the evidence — and runs a personalized
-   PageRank seeded on the two claims. It reads off two signals: what sits near
-   **both** claims (a live concept in this neighbourhood) and what sits near
-   **one and not the other** (a candidate distinction). Edges are weighted by
-   inverse frequency, so a term attached to half the corpus can't win by being
-   popular.
+**Second — for what the rules can't catch — ContextRank decides where to point
+the model.** This is the new part.
 
-3. **The model investigates, and proposes a fact about the document** — never a
-   verdict. "This page labels one figure X and the other Y."
+#### Why PageRank, of all things
 
-4. **The recovered context is grounded like any other claim**, and then the same
-   deterministic gate re-decides.
+A contradiction usually involves two long documents. Sending both pages to a
+model and asking "what's different here?" works, but it's expensive per pair,
+and on a real corpus there can be hundreds of candidate pairs. Something has to
+decide, cheaply, *which* pairs are worth the call and *which sentence or
+qualifier* the model should be pointed at — without that decision being allowed
+to touch the verdict itself.
 
-The boundary is the whole point, and it's enforced in the code and in the tests:
-**ContextRank ranks contextual relevance, never truthfulness.** A figure repeated
-across ten documents is not thereby correct, and a graph that scored sources by
-centrality would say it was. Nothing here produces a verdict, changes a value, or
-withdraws a contradiction on its own. A wrong ranking costs one wasted
-suggestion.
+The pipeline had already built, as a side effect of everything above, a graph
+it never intended to use for reasoning: claims are linked to the documents that
+contain them, the sections they sit in, the metric and period they were
+resolved to, every qualifier the extractor bound to them, every axis a past
+review has recovered, and the distinctive words in their own evidence quotes.
+That graph is exactly the kind of structure PageRank was built to walk — the
+only twist is what gets asked of it.
 
-And a recovery has to be *knowledge about a claim*, not a story about a pair —
-so it propagates to every other comparison those claims take part in, and it
-carries across runs, re-judged rather than merely replayed.
+**Personalized PageRank**, not the global kind: the walk restarts at the two
+claims in question rather than wandering the whole graph, so what comes back is
+*local* to this specific pair, not a popularity contest across the whole
+corpus. Two independent walks run — one seeded on each claim — over up to 4
+hops (claim → section → sibling claim → qualifier → axis), for 40 iterations
+with a 0.85 damping factor, and two numbers are read off every node the walks
+touch:
+
+```
+connection(n)  =  min( r_a[n], r_b[n] )        n sits near BOTH claims
+divergence(n)  =  |r_a[n] − r_b[n]| / sum       n sits near ONE and not the other
+```
+
+That distinction is the whole idea, and it's easy to get backwards. A single
+walk seeded on both claims together would surface what's *central to the pair*
+— and what's central to a pair is usually what they have **in common**, which
+by definition cannot be what separates them. Two claims about FY2026 GDP growth
+are both, overwhelmingly, about FY2026 GDP growth — that's *why* they were
+compared, not why they disagree. Running two walks and *subtracting* them is
+what turns "what is this pair about" into "what tells these two apart."
+
+An axis is a candidate for explaining the difference when it scores high on
+**connection** (the concept is genuinely live in this neighbourhood) *and*
+**divergence** (the two claims land on different sides of it). An axis both
+claims already agree on scores high on the first and near-zero on the second —
+correctly, because it explains nothing.
+
+#### Two things that had to be measured before they could be trusted
+
+Both of these were wrong on the first attempt, and both failures were only
+visible by testing against a held-out answer, not by reading the code:
+
+**Inverse frequency isn't a tuning knob — it's the difference between working
+and useless.** The first version weighted every edge in the graph equally, and
+it was useless: on this corpus, `consolidation` is either recorded or declared
+undetermined on 366 of 666 claims, so on raw structure it's adjacent to nearly
+everything and it won *every* ranking — including for a pair the two pages
+actually distinguish by sign convention, nothing to do with consolidation at
+all. That's the exact popularity signal this whole approach exists to avoid,
+walking back in through the side door. Weighting each edge by `log(N / n)`
+fixes it: a node connected to most of the corpus is, by construction, not
+*about* any one pair.
+
+**The axis ranker looked perfect and was cheating.** Scored against the six
+context recoveries this corpus already had on file, ranking by *known axis
+name* got 6 out of 6 — and then, re-tested with each pair's own recovery
+removed from the graph before ranking, it got **0 out of 6.** It wasn't
+finding the answer; it was reading its own answer key, because an axis only
+becomes a node in the graph *after* something has already recorded it, so
+ranking known axes can surface a past recurrence but never a genuine
+discovery. What survived the held-out test was ranking **distinctive words**
+in the evidence instead: `less` came first for the pair the pages separate by
+sign convention, `adjusted` first for the EBITDA pair, `generated` and
+`operations` first and second for two cash-flow claims — five correct out of
+six, with zero knowledge of the right answer baked in. So the shortlist handed
+to the model is words first, known axes second, and the two are never
+presented as if they carry equal weight.
+
+#### What it measurably changes
+
+The fair test is a **cold run** — no remembered recoveries from any earlier
+pass, so every contradiction is genuinely investigated from scratch — with the
+ranked shortlist in the prompt, and without it. Same corpus, same candidate
+pairs, same number of model calls either way:
+
+| | contradictions withdrawn | left unresolved | reduction |
+|---|---|---|---|
+| without ContextRank | 5 | 5 | 78.7% |
+| **with ContextRank** | **8** | **2** | **79.0%** |
+
+Same twelve investigations, same cost, three more pairs correctly explained
+instead of left standing as unresolved contradictions. One corpus and twelve
+pairs is a real, reproducible result and not a large one — it's reported here
+as exactly that, not oversold as proof of anything at scale.
+
+#### The boundary, enforced in the code, not just in prose
+
+**ContextRank ranks contextual relevance. It is never asked, and structurally
+cannot be asked, what is true.** A figure repeated across ten documents is not
+thereby correct, and a graph that scored sources by centrality would say it
+was — that's the failure mode this whole design refuses. So:
+
+- nothing it returns is a verdict, a value, or a confidence in either claim
+- masking or reading the ranking cannot change what `compare()` decides
+- the model still has to find the value on the page, grounding still has to
+  verify it, and the same deterministic gate re-runs on whatever comes back
+- a wrong ranking costs exactly one wasted model call — never a wrong verdict
+
+There's a test asserting, structurally, that the object this stage returns
+carries no field that could be mistaken for an answer — not a convention,
+enforced.
+
+#### Where you can see it disagree with itself, in public
+
+On this corpus's one surviving cross-institution contradiction, ContextRank
+ranks `scenario` first — which is precisely the axis a model investigator once
+proposed to explain the disagreement away, and which a separate circularity
+check rejected, because the proposed distinction quoted the very figure it was
+trying to explain. The ranking layer suggested a way out. The deterministic
+layer checked it and refused it. **That disagreement, left visible rather than
+hidden, is the architecture doing its job** — a panel that only ever agreed
+with the verdict would be far less informative than one that shows its
+suggestion being overruled on the record.
+
+Every relation stores this exchange — its certificate — whether or not
+anything came of it. A suggestion that led nowhere is still part of the
+reasoning trail, not thrown away because it didn't pan out.
+
+A recovery is also treated as knowledge about a **claim**, not a story about
+one pair: it propagates to every other comparison either claim takes part in,
+and it's remembered across future runs — re-judged for circularity each time,
+never simply replayed.
 
 ### ⑦ Time — states are intervals, not values
 
